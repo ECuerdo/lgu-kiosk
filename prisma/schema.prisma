@@ -1,0 +1,997 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+}
+
+model User {
+  id                String    @id @default(cuid())
+  name              String?
+  email             String?   @unique
+  emailVerified     DateTime?
+  password          String?
+  role              UserRole  @default(USER)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  isEmailVerified   Boolean   @default(false)
+  isPasswordChanged Boolean   @default(false)
+  rejectionCount    Int       @default(0)
+  managedBarangay   String?
+  department        String?
+  accessiblePages   String[]  @default([])
+  accessibleCategories String[] @default([])
+  accessibleStatuses String[] @default([])
+  accounts          Account[]
+  reports           Report[]
+  residentProfile   Resident?
+  sessions          Session[]
+  transactions      Transaction[] @relation("ResidentTransactions")
+  driverTransactions Transaction[] @relation("DriverTransactions")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Dining {
+  id            String   @id @default(cuid())
+  name          String
+  description   String?
+  address       String
+  cuisineType   String?
+  openingHours  String?
+  contactNumber String?
+  facebookUrl   String?
+  imageUrl      String?
+  latitude      Float?
+  longitude     Float?
+  googleMapsUrl String?
+  isPublished   Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  barangay      String?
+}
+
+model Accommodation {
+  id            String   @id @default(cuid())
+  name          String
+  description   String?
+  address       String
+  type          String
+  priceRange    String?
+  amenities     String?
+  contactNumber String?
+  websiteUrl    String?
+  imageUrl      String?
+  latitude      Float?
+  longitude     Float?
+  googleMapsUrl String?
+  isPublished   Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  barangay      String?
+}
+
+model TourismSpot {
+  id              String   @id @default(cuid())
+  name            String
+  category        String
+  description     String?
+  address         String
+  entranceFee     String?
+  bestTimeToVisit String?
+  contactNumber   String?
+  imageUrl        String?
+  latitude        Float?
+  longitude       Float?
+  googleMapsUrl   String?
+  isPublished     Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  barangay        String?
+}
+
+model Event {
+  id            String   @id @default(cuid())
+  title         String
+  description   String?
+  category      String
+  startDate     DateTime
+  endDate       DateTime
+  venueName     String
+  address       String
+  contactNumber String?
+  imageUrl      String?
+  reminders     String[] @default([])
+  latitude      Float?
+  longitude     Float?
+  googleMapsUrl String?
+  isPublished   Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  barangay      String?
+}
+
+model News {
+  id          String   @id @default(cuid())
+  title       String
+  content     String
+  author      String?
+  category    String   @default("Announcement")
+  imageUrl    String?
+  publishDate DateTime @default(now())
+  isPublished Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  barangay    String?
+}
+
+model Announcement {
+  id         String    @id @default(cuid())
+  title      String
+  content    String
+  priority   String    @default("Normal")
+  category   String    @default("General")
+  isPinned   Boolean   @default(false)
+  isActive   Boolean   @default(true)
+  expiryDate DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  barangay   String?
+}
+
+model Job {
+  id             String    @id @default(cuid())
+  title          String
+  department     String
+  description    String
+  qualifications String
+  requirements   String
+  salary         String?
+  employmentType String
+  deadline       DateTime?
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  links          Json?     @default("[]")
+  location       String?
+  mapUrl         String?
+  barangay       String?
+}
+
+model Official {
+  id            String    @id @default(cuid())
+  name          String
+  position      String
+  contactNumber String?
+  bio           String?
+  imageUrl      String?
+  termStart     DateTime?
+  termEnd       DateTime?
+  order         Int       @default(99)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  achievements  String?
+  education     String?
+  email         String?
+  links         Json?     @default("[]")
+  motto         String?
+  barangay      String?
+  category      String    @default("LGU")
+}
+
+model Hotline {
+  id           String   @id @default(cuid())
+  name         String
+  category     String
+  mobileNumber String?
+  telephone    String?
+  address      String?
+  order        Int      @default(0)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Project {
+  id          String    @id @default(cuid())
+  title       String
+  description String
+  category    String
+  status      String
+  location    String
+  budget      String?
+  contractor  String?
+  startDate   DateTime?
+  endDate     DateTime?
+  progress    Int       @default(0)
+  imageUrl    String?
+  isPublished Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  barangay    String?
+}
+
+model Household {
+  id            String     @id @default(cuid())
+  headId        String?    @unique
+  barangay      String
+  latitude      Float?
+  longitude     Float?
+  householdSize Int        @default(1)
+  contactNumber String?
+  riskLevel     String     @default("Safe")
+  notes         String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  head          Resident?  @relation("HouseholdHead", fields: [headId], references: [id])
+  members       Resident[] @relation("HouseholdMembers")
+}
+
+model Resident {
+  id                    String            @id @default(cuid())
+  userId                String?           @unique
+  firstName             String
+  lastName              String
+  middleName            String?
+  suffix                String?
+  gender                String
+  dateOfBirth           DateTime
+  age                   Int?
+  placeOfBirth          String?
+  civilStatus           String
+  citizenship           String            @default("Filipino")
+  height                String?
+  weight                String?
+  religion              String?
+  bloodType             String?
+  houseNumber           String?
+  street                String?
+  sitio                 String?
+  purok                 String?
+  barangay              String
+  municipality          String            @default("Mapandan")
+  province              String            @default("Pangasinan")
+  contactNumber         String?
+  email                 String?
+  isHead                Boolean           @default(false)
+  relationshipToHead    String?
+  householdId           String?
+  tin                   String?
+  gsis                  String?
+  sss                   String?
+  occupation            String?
+  employer              String?
+  motherFirstName       String?
+  motherMiddleName      String?
+  motherLastName        String?
+  fatherFirstName       String?
+  fatherMiddleName      String?
+  fatherLastName        String?
+  idType                String?
+  idFrontUrl            String?
+  idBackUrl             String?
+  livenessUrl           String?
+  educationalAttainment String?
+  degreeProgram         String?
+  employmentStatus      String?
+  monthlyIncome         String?
+  isSenior              Boolean           @default(false)
+  isPWD                 Boolean           @default(false)
+  isSoloParent          Boolean           @default(false)
+  isIndigenous          Boolean           @default(false)
+  is4Ps                 Boolean           @default(false)
+  otherSector           String?
+  dataPrivacyConsent    Boolean           @default(false)
+  consentTimestamp      DateTime?
+  receivedBy            String?
+  officialPosition      String?
+  dateReceived          DateTime?
+  imageUrl              String?
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  facialRecognition     Json?
+  isDead                Boolean           @default(false)
+  registrationStatus    ResidentStatus    @default(PENDING)
+  registrationType      String?           @default("SELF")
+  rfid                  String?           @unique
+  familyHeadId          String?
+  latitude              Float?
+  longitude             Float?
+  categoryId            String?
+  rejectionRemarks      String?
+  reviewedAt            DateTime?
+  reviewedBy            String?
+  ownedHousehold        Household?        @relation("HouseholdHead")
+  category              ResidentCategory? @relation("ResidentCategory", fields: [categoryId], references: [id])
+  familyHead            Resident?         @relation("FamilyLink", fields: [familyHeadId], references: [id])
+  familyMembers         Resident[]        @relation("FamilyLink")
+  household             Household?        @relation("HouseholdMembers", fields: [householdId], references: [id])
+  user                  User?             @relation(fields: [userId], references: [id])
+
+  @@index([barangay])
+  @@index([registrationStatus])
+  @@index([lastName, firstName])
+  @@index([categoryId])
+  @@index([isSenior])
+  @@index([isPWD])
+  @@index([isSoloParent])
+  @@index([isDead])
+  @@index([createdAt])
+}
+
+
+model DisasterMap {
+  id          String         @id @default(cuid())
+  title       String
+  location    String?
+  description String?
+  imagePath   String?
+  riskLevel   String?
+  isPublished Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  zones       DisasterZone[]
+}
+
+model DisasterZone {
+  id            String       @id @default(cuid())
+  disasterMapId String?
+  type          String
+  typeColor     String
+  riskLevel     String
+  riskColor     String
+  shapes        Json         @default("[]")
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  disasterMap   DisasterMap? @relation(fields: [disasterMapId], references: [id])
+}
+
+model SystemSetting {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  description String?
+  updatedAt   DateTime @updatedAt
+}
+
+model HeroSlide {
+  id               String   @id @default(cuid())
+  title            String
+  subtitle         String?
+  tagline          String?
+  imageUrl         String
+  order            Int      @default(0)
+  isActive         Boolean  @default(true)
+  primaryBtnText   String?
+  primaryBtnLink   String?
+  secondaryBtnText String?
+  secondaryBtnLink String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  barangay         String?
+}
+
+model ResidentCategory {
+  id          String     @id @default(cuid())
+  name        String     @unique
+  description String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  residents   Resident[] @relation("ResidentCategory")
+}
+
+model Report {
+  id           String       @id @default(cuid())
+  userId       String
+  category     String
+  description  String
+  status       ReportStatus @default(PENDING)
+  images       String[]     @default([])
+  latitude     Float?
+  longitude    Float?
+  address      String?
+  adminComment String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  user         User         @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+  @@index([category])
+  @@index([createdAt])
+}
+
+
+model AboutPage {
+  id                      String   @id @default(cuid())
+  history                 String
+  mission                 String
+  vision                  String
+  coreValues              String
+  mayorName               String   @default("")
+  mayorMessage            String
+  mayorImageUrl           String?
+  geographyOrDemographics String?
+  coverImages             Json?    @default("[]")
+  updatedAt               DateTime @updatedAt
+  createdAt               DateTime @default(now())
+}
+
+model PastMayor {
+  id          String   @id @default(cuid())
+  name        String
+  termStart   String
+  termEnd     String
+  imageUrl    String?
+  description String?
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  barangay    String?
+}
+
+model ChurchInfo {
+  id          String             @id @default(cuid())
+  name        String
+  address     String?
+  locationUrl String?
+  flyerUrl    String?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  latitude    Float?
+  longitude   Float?
+  barangay    String?
+  collections ChurchCollection[]
+  schedules   ChurchSchedule[]
+}
+
+model ChurchSchedule {
+  id           String     @id @default(cuid())
+  churchInfoId String
+  day          String
+  time         String
+  language     String?
+  type         String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  date         DateTime?
+  description  String?
+  prio         Int        @default(0)
+  churchInfo   ChurchInfo @relation(fields: [churchInfoId], references: [id], onDelete: Cascade)
+}
+
+model ChurchCollection {
+  id             String      @id @default(cuid())
+  date           DateTime    @default(now())
+  sundayMassJson Json?
+  secondBasket   Float       @default(0)
+  weekdays       Float       @default(0)
+  envelopes      Float       @default(0)
+  donationsJson  Json?
+  totalAmount    Float       @default(0)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  churchInfoId   String?
+  churchInfo     ChurchInfo? @relation(fields: [churchInfoId], references: [id], onDelete: Cascade)
+}
+
+model BarangayInfo {
+  id                      String   @id @default(cuid())
+  name                    String   @unique
+  description             String?
+  logoUrl                 String?
+  coverImageUrl           String?
+  captainName             String?
+  captainMessage          String?
+  captainImageUrl         String?
+  history                 String?
+  mission                 String?
+  vision                  String?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+  coreValues              String?
+  coverImages             Json?    @default("[]")
+  geographyOrDemographics String?
+  
+  // Logistics Configuration
+  deliveryFee             Float    @default(0)
+  isLogisticsActive       Boolean  @default(true)
+  estimatedDeliveryDays   Int      @default(3)
+}
+
+enum UserRole {
+  ADMIN
+  USER
+  CONTENT_ADMIN
+  BARANGAY_ADMIN
+  TREASURY_STAFF
+  ADMIN_AIDE
+  RIDER
+  ENGINEER
+}
+
+enum ResidentStatus {
+  PENDING
+  APPROVED
+  DRAFT
+  REJECTED
+}
+
+enum ReportStatus {
+  PENDING
+  SEEN
+  IN_PROGRESS
+  COMPLETED
+  REJECTED
+}
+
+model TransactionType {
+  id            String   @id @default(cuid())
+  code          String   @unique // e.g., "CEDULA_IND", "CEDULA_JUR", "BRGY_CLEARANCE"
+  name          String   // Official Title (e.g., "Community Tax Certificate - Individual")
+  description   String?  @db.Text
+  level         Int      @default(1) // 1: Municipality, 2: Barangay
+  category      String   // "Treasurer", "Permits", "Civil Registry"
+  
+  // Fees
+  baseFee       Float    @default(0)
+  deliveryFee   Float    @default(0)
+  isFixed       Boolean  @default(true) // false = triggers custom math (like Cedula)
+  
+  // Service Capabilities
+  requiresBusinessName Boolean @default(false)
+  supportsECopy        Boolean @default(false)
+  
+  // Dynamic Configuration
+  requiredDocs  Json     @default("[]") // e.g., ["Valid ID", "Proof of Income"]
+  formSchema    Json     @default("{}") // Definitions for extra fields needed
+  logicCode     String?  // Code-hook for backend calculator (e.g., "cedula_calc_v1")
+  defaultFees   Json     @default("[]")
+  
+  
+  // Operations
+  slaDays       Int      @default(3)
+  processorRole UserRole @default(TREASURY_STAFF)
+  isActive      Boolean  @default(true)
+  studentFee    Float?   @default(0)
+
+  transactions  Transaction[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Transaction {
+  id                String            @id @default(cuid())
+  userId            String
+  user              User              @relation("ResidentTransactions", fields: [userId], references: [id])
+  driverId          String?
+  driver            User?             @relation("DriverTransactions", fields: [driverId], references: [id])
+  typeId            String
+  type              TransactionType   @relation(fields: [typeId], references: [id])
+  status            TransactionStatus @default(DRAFT)
+  
+  // Data Snapshots
+  residentSnapshot  Json              // Captured Name, Address, etc. from Resident table
+  additionalData    Json              // Inputs for extra fields (e.g., Gross Income)
+  
+  // Fulfillment & Payment
+  fulfillmentType   FulfillmentType?
+  deliveryAddress   Json?             // Structured address for logistics
+  deliveryLat       Float?            // Pin location latitude
+  deliveryLng       Float?            // Pin location longitude
+  deliveryLandmark  String?           // Landmark to help delivery
+  paymentType       PaymentType?
+  paymentReference  String?           // Reference No. for E-Payments
+  
+  // Financials (Final computed amounts)
+  totalAmount       Float             @default(0)
+  fiscalSnapshot    Json?             // { basicTax, additionalTax, penaltyCharge, totalAmount }
+  
+  // Tracking limits
+  revisionCount     Int               @default(0)
+  
+  // Specific Context
+  businessName      String?           // For Juridical requests
+  eCopyUrl          String?           // Link to generated digital file
+  orUrl             String?           // Link to Official Receipt file
+  isStudent         Boolean           @default(false)
+
+  // Audit & Workflow
+  processedBy       String?           // User ID of the Treasury Staff who handled it
+  rejectionRemarks  String?
+  podUrl            String?           // Proof of Delivery Image URL
+  podData           Json?             // Stores paidAmount, change, timestamp, etc.
+  inRouteAt         DateTime?         // Tracking for when the delivery started
+  deliveredAt       DateTime?
+
+  payment           Payment?          // One-to-one payment record
+
+  // Dispute / Return / Refund
+  disputeReason     String?
+  disputeRemarks    String?
+  disputeProofUrl   String?
+  
+  cedula            Cedula?           // One-to-one link to the issued document
+  businessPermit    BusinessPermit?   // One-to-one link to the issued business permit
+  buildingPermit    BuildingPermit?   // One-to-one link to the issued building permit
+  birthCertificateRequest BirthCertificateRequest? // One-to-one link to the birth certificate request
+  birthCertificateRegistry BirthCertificateRegistry? // One-to-one link for new registrations
+  deathRegistration DeathRegistration? // One-to-one link for death registrations
+  deathCertificateRequest DeathCertificateRequest? // One-to-one link to the death certificate request
+  marriageRegistration MarriageRegistration? // One-to-one link for marriage registrations
+  marriageLicenseApplication MarriageLicenseApplication? // One-to-one link for marriage license applications
+  marriageCertificateRequest MarriageCertificateRequest? // One-to-one link to the marriage certificate request
+  
+  isCancelled       Boolean           @default(false)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@index([userId])
+  @@index([driverId])
+  @@index([status])
+  @@index([typeId])
+  @@index([createdAt])
+}
+
+
+model Cedula {
+  id             String      @id @default(cuid())
+  transactionId  String      @unique
+  transaction    Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  
+  ctcNumber      String?     @unique // The physical serial number from the booklet
+  taxYear        Int         // e.g., 2026
+  dateIssued     DateTime    @default(now())
+  expiryDate     DateTime    // Automatically calculated based on tax year
+  
+  // Official Tax Breakdown (For Certificate Printing)
+  basicTax       Float
+  additionalTax  Float
+  penalty        Float
+  totalPaid      Float
+  
+  businessName   String?     // Official Name for Juridical entities
+  documentUrl    String?     // Link for E-Copy downloads
+  
+  issuedBy       String      // Name of the Treasury Personnel
+  verificationId String      @unique @default(cuid()) // Unique hash for the QR Code
+}
+
+model DeathRegistration {
+  id             String      @id @default(cuid())
+  transactionId  String?     @unique
+  transaction    Transaction? @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  registryNumber String?     @unique
+  dateOfEvent    DateTime?   // Date of death
+  placeOfEvent   String?
+
+  subjectName    String?     // Deceased full name
+  fatherName     String?
+  motherName     String?
+
+  documentUrl    String?     // Link for E-Copy or scanned record
+  issuedBy       String?     // LCR Officer Name
+  verificationId String      @unique @default(cuid()) // Secure hash for verification QR Code
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+model MarriageRegistration {
+  id             String      @id @default(cuid())
+  transactionId  String      @unique
+  transaction    Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  
+  ctcNumber      String?     @unique // The physical serial number from the booklet
+  taxYear        Int         // e.g., 2026
+  dateIssued     DateTime    @default(now())
+  expiryDate     DateTime    // Automatically calculated based on tax year
+  
+  // Official Tax Breakdown (For Certificate Printing)
+  basicTax       Float
+  additionalTax  Float
+  penalty        Float
+  totalPaid      Float
+  
+  businessName   String?     // Official Name for Juridical entities
+  documentUrl    String?     // Link for E-Copy downloads
+  
+  issuedBy       String      // Name of the LCR/Treasury Personnel
+  verificationId String      @unique @default(cuid()) // Unique hash for the QR Code
+
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+}
+
+model MarriageLicenseApplication {
+  id                  String      @id @default(cuid())
+  transactionId       String      @unique
+  transaction         Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  registryNumber      String?     @unique // Book/Page number or Registry ID
+  dateIssued          DateTime    @default(now())
+  expiryDate          DateTime?   // Valid for 120 days from the date of issue
+
+  // Applicant 1
+  app1FullName        String
+  app1BirthDate       DateTime?
+  app1BirthPlace      String?
+  app1Citizenship     String?
+
+  // Applicant 2
+  app2FullName        String
+  app2BirthDate       DateTime?
+  app2BirthPlace      String?
+  app2Citizenship     String?
+
+  documentUrl         String?     // Link to official generated E-Copy PDF
+  issuedBy            String      // LCR Officer Name
+  verificationId      String      @unique @default(cuid()) // Secure hash for verification QR Code
+
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+}
+
+model BusinessPermit {
+  id                 String      @id @default(cuid())
+  transactionId      String      @unique
+  transaction        Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  
+  permitNumber       String // The physical serial number from the booklet / license index
+  taxYear            Int         // e.g., 2026
+  dateIssued         DateTime    @default(now())
+  expiryDate         DateTime    // Standard BPLO permit expiration is Dec 31
+  
+  businessName       String      // Legal Entity Name
+  tradeName          String?     // Operating Trade Name
+  orgType            String      // Sole Proprietorship, Partnership, Corp, Coop
+  dtiSecNumber       String?     // Business Registration ID
+  lineOfBusiness     String      // Primary Industry Classification
+  
+  capitalInvestment  Float
+  grossSales         Float       @default(0)
+  employeeCount      Int         @default(1)
+  businessArea       Float?      // In square meters
+  
+  documentUrl        String?     // Link to official generated E-Permit PDF
+  stickerNumber      String?     // BPLO physical permit sticker registration
+  issuedBy           String      // BPLO / Treasury Approver Name
+  verificationId     String      @unique @default(cuid()) // Secure hash for verification QR Code
+}
+
+model BuildingPermit {
+  id                 String      @id @default(cuid())
+  transactionId      String      @unique
+  transaction        Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  
+  permitNumber       String      @unique
+  dateIssued         DateTime    @default(now())
+  
+  applicantName      String
+  projectType        String
+  occupancyUse       String
+  location           String?
+  estimatedCost      Float
+  
+  documentUrl        String?     // Link to official generated E-Permit PDF
+  issuedBy           String      // Engineering Approver Name
+  verificationId     String      @unique @default(cuid()) // Secure hash for verification QR Code
+}
+
+model BirthCertificateRequest {
+  id              String      @id @default(cuid())
+  transactionId   String      @unique
+  transaction     Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  registryNumber  String?     @unique // Book/Page number or Registry ID
+  dateIssued      DateTime    @default(now())
+  
+  // Subject Details (Generic names to cover all types)
+  subjectName     String      // Person on the cert (Child)
+  subjectName2    String?     // Spouse name (if applicable)
+  dateOfEvent     DateTime    // Date of Birth
+  placeOfEvent    String      // Location of the event
+  
+  // Parental details (Commonly requested for verification)
+  fatherName      String?
+  motherName      String?
+  
+  documentUrl     String?     // Link to official generated E-Copy PDF
+  issuedBy        String      // LCR Officer Name
+  verificationId  String      @unique @default(cuid()) // Secure hash for verification QR Code
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+model DeathCertificateRequest {
+  id              String      @id @default(cuid())
+  transactionId   String      @unique
+  transaction     Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  registryNumber  String?     @unique // Book/Page number or Registry ID
+  dateIssued      DateTime    @default(now())
+  
+  // Subject Details (Deceased)
+  subjectName     String      // Deceased full name
+  dateOfEvent     DateTime    // Date of Death
+  placeOfEvent    String      // Location of the event
+  
+  // Parental details
+  fatherName      String?
+  motherName      String?
+  
+  documentUrl     String?     // Link to official generated E-Copy PDF
+  issuedBy        String?     // LCR Officer Name
+  verificationId  String      @unique @default(cuid()) // Secure hash for verification QR Code
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+model MarriageCertificateRequest {
+  id              String      @id @default(cuid())
+  transactionId   String      @unique
+  transaction     Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  registryNumber  String?     @unique // Book/Page number or Registry ID
+  dateIssued      DateTime    @default(now())
+  
+  // Contracting Couple details
+  subjectName     String      // Husband's Full Name
+  spouseName      String      // Wife's Maiden Full Name
+  dateOfEvent     DateTime    // Date of Marriage
+  placeOfEvent    String      // Location of the Marriage
+  
+  documentUrl     String?     // Link to official generated E-Copy PDF
+  issuedBy        String      // LCR Officer Name
+  verificationId  String      @unique @default(cuid()) // Secure hash for verification QR Code
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+model BirthCertificateRegistry {
+  id              String      @id @default(cuid())
+  transactionId   String?     @unique
+  transaction     Transaction? @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  registryNumber  String      @unique // Book/Page number or Registry ID
+  dateIssued      DateTime    @default(now())
+  issuedBy        String?     // Name of the staff member who issued this registry
+  
+  subjectName     String      // Child's name
+  dateOfEvent     DateTime    // Date of Birth
+  placeOfEvent    String      // Place of Birth
+  
+  fatherName      String?
+  motherName      String?
+  
+  supportingEvidence1Type String?
+  supportingEvidence2Type String?
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+enum RegistryType {
+  BIRTH
+  MARRIAGE
+  DEATH
+}
+
+enum TransactionStatus {
+  DRAFT
+  FOR_REQUESTING
+  FOR_REVISION
+  FOR_INSPECTION
+  FOR_REINSPECTION
+  FOR_PROCESSING
+  EVALUATED
+  FOR_CLAIM
+  FOR_PICKING
+  IN_ROUTE
+  DELIVERED
+  UNPAID
+  PAID
+  RELEASED
+  REJECTED
+  
+  // Dispute Lifecycle
+  RETURN_REQUESTED
+  REFUND_REQUESTED
+  RETURNED
+  REFUNDED
+  DISPUTE_REJECTED
+}
+
+enum FulfillmentType {
+  PICK_UP
+  DELIVERY
+  E_COPY
+}
+
+enum PaymentType {
+  CASH
+  CASH_ON_DELIVERY
+  E_PAYMENT
+  BANK_TRANSFER
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  transactionId String        @unique
+  transaction   Transaction   @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  amount        Float         @default(0)
+  method        PaymentType   @default(CASH)
+  status        PaymentStatus @default(PENDING)
+  reference     String?
+  meta          Json?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model RateLimit {
+  id         String   @id @default(cuid())
+  key        String   @unique // Action + email/IP combination
+  attempts   Int      @default(0)
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([expiresAt])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  token     String    @unique
+  email     String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([email])
+  @@index([expiresAt])
+}

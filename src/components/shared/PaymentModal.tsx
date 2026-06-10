@@ -1,0 +1,239 @@
+"use client";
+
+import React, { useEffect, useMemo, useState } from "react";
+import { Building2, Check, CreditCard, Loader2, QrCode, ShieldCheck, Truck, Wallet } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
+
+export type PaymentMethod = "gcash" | "qrph" | "dob";
+export type FulfillmentMethod = "PICK_UP" | "DELIVERY";
+
+export interface DeliveryAddress {
+  barangay: string;
+  houseNumber: string;
+  street: string;
+  sitio: string;
+  purok: string;
+  municipality: string;
+  province: string;
+  landmark: string;
+}
+
+export interface CheckoutDetails {
+  fulfillmentType: FulfillmentMethod;
+  paymentMethod: PaymentMethod;
+  deliveryAddress: DeliveryAddress;
+  deliveryFee: number;
+  totalAmount: number;
+}
+
+interface PaymentModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  amount: number;
+  transactionId: string;
+  deliveryFee?: number;
+  initialFulfillment?: FulfillmentMethod;
+  initialAddress?: Partial<DeliveryAddress>;
+  onBeforeCheckout: (details: CheckoutDetails) => Promise<boolean>;
+}
+
+const emptyAddress: DeliveryAddress = {
+  barangay: "",
+  houseNumber: "",
+  street: "",
+  sitio: "",
+  purok: "",
+  municipality: "Mapandan",
+  province: "Pangasinan",
+  landmark: "",
+};
+
+export default function PaymentModal({
+  open,
+  onOpenChange,
+  amount,
+  transactionId,
+  deliveryFee = 50,
+  initialFulfillment = "PICK_UP",
+  initialAddress,
+  onBeforeCheckout,
+}: PaymentModalProps) {
+  const [fulfillment, setFulfillment] = useState<FulfillmentMethod>(initialFulfillment);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("gcash");
+  const [address, setAddress] = useState<DeliveryAddress>({ ...emptyAddress, ...initialAddress });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!open) return;
+    setFulfillment(initialFulfillment);
+    setAddress({ ...emptyAddress, ...initialAddress });
+    setError("");
+  }, [open, initialFulfillment, initialAddress]);
+
+  const appliedDeliveryFee = fulfillment === "DELIVERY" ? deliveryFee : 0;
+  const totalAmount = amount + appliedDeliveryFee;
+  const formattedTotal = useMemo(
+    () => totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+    [totalAmount],
+  );
+
+  const updateAddress = (field: keyof DeliveryAddress, value: string) => {
+    setAddress(current => ({ ...current, [field]: value }));
+  };
+
+  const handleCheckout = async () => {
+    if (fulfillment === "DELIVERY" && (!address.barangay || !address.houseNumber)) {
+      setError("Barangay and house number are required for home delivery.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+    try {
+      const details: CheckoutDetails = {
+        fulfillmentType: fulfillment,
+        paymentMethod,
+        deliveryAddress: address,
+        deliveryFee: appliedDeliveryFee,
+        totalAmount,
+      };
+      if (!(await onBeforeCheckout(details))) return;
+
+      const response = await fetch("/api/paymongo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: totalAmount,
+          type: paymentMethod,
+          transactionId,
+          reference: "Building Permit Payment",
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        const message = data?.error?.[0]?.detail || data?.error || "Failed to initialize payment.";
+        throw new Error(typeof message === "string" ? message : "Failed to initialize payment.");
+      }
+
+      const checkoutUrl = data?.data?.attributes?.checkout_url;
+      if (!checkoutUrl) throw new Error("Secure checkout URL was not returned.");
+      window.location.assign(checkoutUrl);
+    } catch (checkoutError) {
+      setError(checkoutError instanceof Error ? checkoutError.message : "Unable to start secure checkout.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[92vh] max-w-5xl overflow-y-auto rounded-[2rem] border-white/10 bg-[#090c11] p-5 text-white shadow-2xl sm:p-8">
+        <DialogHeader>
+          <DialogTitle className="sr-only">Treasury Protocol Payment</DialogTitle>
+        </DialogHeader>
+
+        <div className="grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
+          <section className="relative overflow-hidden rounded-[2rem] bg-[#02071f] p-7 lg:self-start">
+            <CreditCard className="absolute right-4 top-12 h-40 w-40 rotate-12 text-white/[0.07]" />
+            <div className="relative space-y-7">
+              <div>
+                <p className="flex items-center gap-2 text-[10px] font-black italic uppercase tracking-[0.35em] text-emerald-500">
+                  <ShieldCheck className="h-4 w-4" /> Treasury Protocol
+                </p>
+                <p className="mt-3 text-sm font-semibold italic text-slate-400">Evaluation complete. Secure your issuance.</p>
+              </div>
+
+              <FeeRow label="Building Permit Fee" amount={amount} />
+              <FeeRow label="Other Applicable Municipal Charges" amount={0} />
+              {fulfillment === "DELIVERY" && <FeeRow label="Delivery Service" amount={appliedDeliveryFee} accent />}
+
+              <div className="flex items-end justify-between border-t border-white/10 pt-7">
+                <div>
+                  <p className="text-[10px] font-black italic uppercase tracking-[0.3em] text-emerald-400">Total Amount</p>
+                  <p className="text-[8px] font-bold uppercase text-white/20">Payable via channel</p>
+                </div>
+                <p className="text-2xl font-black italic">₱{formattedTotal}</p>
+              </div>
+            </div>
+          </section>
+
+          <section className="space-y-8 rounded-[2rem] border border-white/10 bg-[#0d1015] p-6 sm:p-8">
+            <div className="space-y-5">
+              <SectionTitle icon={Truck} title="Deployment Strategy" />
+              <div className="grid grid-cols-2 gap-4">
+                <ChoiceCard active={fulfillment === "PICK_UP"} onClick={() => setFulfillment("PICK_UP")} icon={Building2} label="Office Pickup" />
+                <ChoiceCard active={fulfillment === "DELIVERY"} onClick={() => setFulfillment("DELIVERY")} icon={Truck} label="Home Delivery" />
+              </div>
+            </div>
+
+            {fulfillment === "DELIVERY" && (
+              <div className="grid grid-cols-2 gap-4 border-t border-white/10 pt-6 sm:grid-cols-3">
+                <AddressField label="Barangay" value={address.barangay} onChange={value => updateAddress("barangay", value)} />
+                <AddressField label="House #" value={address.houseNumber} onChange={value => updateAddress("houseNumber", value)} />
+                <AddressField label="Street" value={address.street} onChange={value => updateAddress("street", value)} />
+                <AddressField label="Sitio" value={address.sitio} onChange={value => updateAddress("sitio", value)} />
+                <AddressField label="Purok" value={address.purok} onChange={value => updateAddress("purok", value)} />
+                <AddressField label="Municipality" value={address.municipality} onChange={value => updateAddress("municipality", value)} />
+                <AddressField label="Province" value={address.province} onChange={value => updateAddress("province", value)} />
+                <div className="col-span-2">
+                  <AddressField label="Landmark / Instructions" value={address.landmark} onChange={value => updateAddress("landmark", value)} />
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-5 border-t border-white/10 pt-6">
+              <SectionTitle icon={CreditCard} title="Payment" />
+              <div className="grid grid-cols-3 gap-3">
+                <ChoiceCard active={paymentMethod === "gcash"} onClick={() => setPaymentMethod("gcash")} icon={Wallet} label="GCash Wallet" description="GCash E-Wallet" light />
+                <ChoiceCard active={paymentMethod === "qrph"} onClick={() => setPaymentMethod("qrph")} icon={QrCode} label="QRPH Scan" description="Maya, BPI, GCash" light />
+                <ChoiceCard active={paymentMethod === "dob"} onClick={() => setPaymentMethod("dob")} icon={Building2} label="Direct Banking" description="UnionBank / BPI" light />
+              </div>
+
+              {error && <p className="rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-xs font-semibold text-red-300">{error}</p>}
+
+              <button
+                type="button"
+                onClick={handleCheckout}
+                disabled={loading}
+                className="flex h-12 w-full items-center justify-center rounded-xl bg-[#08751f] px-4 text-[10px] font-black italic uppercase tracking-widest text-white transition hover:bg-[#0a8a26] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</> : `Proceed to secure ${paymentMethod.toUpperCase()} checkout (₱${formattedTotal})`}
+              </button>
+            </div>
+          </section>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function FeeRow({ label, amount, accent = false }: { label: string; amount: number; accent?: boolean }) {
+  return (
+    <div className="flex items-end justify-between border-b border-white/10 pb-4">
+      <span className={cn("max-w-[65%] text-[9px] font-black italic uppercase tracking-widest text-slate-500", accent && "text-emerald-400")}>{label}</span>
+      <span className={cn("text-xl font-black italic", accent && "text-emerald-400")}>₱{amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+    </div>
+  );
+}
+
+function SectionTitle({ icon: Icon, title }: { icon: React.ElementType; title: string }) {
+  return <div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-950 text-emerald-500"><Icon className="h-5 w-5" /></span><h3 className="text-xl font-black italic uppercase tracking-tighter">{title}</h3></div>;
+}
+
+function ChoiceCard({ active, onClick, icon: Icon, label, description, light = false }: { active: boolean; onClick: () => void; icon: React.ElementType; label: string; description?: string; light?: boolean }) {
+  return (
+    <button type="button" onClick={onClick} className={cn("relative flex min-h-28 flex-col items-center justify-center gap-3 rounded-2xl border-2 p-4 text-center transition active:scale-95", active ? (light ? "border-white bg-white text-slate-950" : "border-[#08751f] bg-[#08751f] text-white") : "border-white/10 bg-white/5 text-slate-300 hover:border-emerald-500/40")}>
+      <Icon className={cn("h-7 w-7", active && light && "text-[#08751f]")} />
+      <div><span className="block text-[9px] font-black italic uppercase tracking-wider">{label}</span>{description && <span className="mt-1 block text-[7px] font-bold uppercase opacity-60">{description}</span>}</div>
+      {active && <span className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border-2 border-[#0d1015] bg-emerald-500"><Check className="h-3 w-3 text-white" /></span>}
+    </button>
+  );
+}
+
+function AddressField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  return <div className="space-y-2"><Label className="ml-1 text-[9px] font-black italic uppercase tracking-widest text-slate-400">{label}</Label><Input value={value} onChange={event => onChange(event.target.value)} className="h-11 rounded-xl border-white/10 bg-black/20 text-sm font-bold italic text-white" /></div>;
+}

@@ -1,0 +1,18 @@
+services:
+  clamav:
+    image: clamav/clamav:stable
+    container_name: elgu-clamav
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3310:3310"
+    volumes:
+      - clamav-signatures:/var/lib/clamav
+    healthcheck:
+      test: ["CMD", "clamdscan", "--ping", "3"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 2m
+
+volumes:
+  clamav-signatures:
