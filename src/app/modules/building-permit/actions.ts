@@ -56,6 +56,11 @@ export async function submitBuildingPermit(formData: FormData, userId: string) {
     const estimatedCost = formData.get("estimatedCost") as string;
     const locationOfConstruction = formData.get("locationOfConstruction") as string;
     const isLotOwner = formData.get("isLotOwner") as string;
+    const houseNumber = formData.get("houseNumber") as string;
+    const street = formData.get("street") as string;
+    const barangay = formData.get("barangay") as string;
+    const totalFloorsValue = formData.get("totalFloors") as string;
+    const totalFloors = totalFloorsValue ? parseInt(totalFloorsValue, 10) : null;
     const privacyConsentAccepted = formData.get("privacyConsentAccepted") === "true";
 
     // Prepare JSON for additional Data
@@ -65,6 +70,10 @@ export async function submitBuildingPermit(formData: FormData, userId: string) {
       estimatedCost,
       locationOfConstruction,
       isLotOwner,
+      houseNumber,
+      street,
+      barangay,
+      totalFloors,
       privacyConsentAccepted,
       privacyConsentAcceptedAt: privacyConsentAccepted ? new Date().toISOString() : null,
       documents: {}
@@ -87,6 +96,7 @@ export async function submitBuildingPermit(formData: FormData, userId: string) {
 
     // Upload ID and TCT if they exist
     await processFile("newIdFile", "ids");
+    await processFile("newIdFileBack", "ids");
     await processFile("tctFile", "tct");
 
     // Loop through requirements and permits
@@ -208,6 +218,11 @@ export async function resubmitBuildingPermit(transactionId: string, formData: Fo
     const estimatedCost = formData.get("estimatedCost") as string;
     const locationOfConstruction = formData.get("locationOfConstruction") as string;
     const isLotOwner = formData.get("isLotOwner") as string;
+    const houseNumber = formData.get("houseNumber") as string;
+    const street = formData.get("street") as string;
+    const barangay = formData.get("barangay") as string;
+    const totalFloorsValue = formData.get("totalFloors") as string;
+    const totalFloors = totalFloorsValue ? parseInt(totalFloorsValue, 10) : null;
     const privacyConsentAccepted = formData.get("privacyConsentAccepted") === "true";
 
     if (descriptionOfWork) additionalData.descriptionOfWork = descriptionOfWork;
@@ -215,6 +230,10 @@ export async function resubmitBuildingPermit(transactionId: string, formData: Fo
     if (estimatedCost) additionalData.estimatedCost = estimatedCost;
     if (locationOfConstruction) additionalData.locationOfConstruction = locationOfConstruction;
     if (isLotOwner) additionalData.isLotOwner = isLotOwner;
+    if (houseNumber) additionalData.houseNumber = houseNumber;
+    if (street) additionalData.street = street;
+    if (barangay) additionalData.barangay = barangay;
+    if (totalFloors !== null) additionalData.totalFloors = totalFloors;
     if (privacyConsentAccepted) {
       additionalData.privacyConsentAccepted = true;
       additionalData.privacyConsentAcceptedAt = new Date().toISOString();
@@ -237,6 +256,7 @@ export async function resubmitBuildingPermit(transactionId: string, formData: Fo
 
     // Upload ID and TCT if they exist
     await processFile("newIdFile", "ids");
+    await processFile("newIdFileBack", "ids");
     await processFile("tctFile", "tct");
 
     // Loop through requirements and permits

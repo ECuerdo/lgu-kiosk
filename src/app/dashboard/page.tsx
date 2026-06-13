@@ -24,6 +24,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
+const AUTO_LOGOUT_ENABLED =
+  process.env.NEXT_PUBLIC_ENABLE_SERVICE_AUTO_LOGOUT?.toLowerCase() === "true";
+
 type Service = {
   id: string;
   title: string;
@@ -256,6 +259,9 @@ function DashboardContent() {
     fullName: string;
     firstName: string;
     photoUrl?: string;
+    livenessUrl?: string;
+    imageUrl?: string;
+    idFrontUrl?: string;
     barangay?: string;
     email?: string;
   } | null>(null);
@@ -272,6 +278,11 @@ function DashboardContent() {
   }, []);
 
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(false);
+  const residentPhotoUrl =
+    resident?.photoUrl ||
+    resident?.livenessUrl ||
+    resident?.imageUrl ||
+    resident?.idFrontUrl;
 
   const speakText = (text: string, voiceLang: string = "en-US") => {
     if (typeof window !== "undefined" && window.speechSynthesis) {
@@ -348,13 +359,17 @@ function DashboardContent() {
   const [timeLeft, setTimeLeft] = React.useState(60);
 
   React.useEffect(() => {
+    if (!AUTO_LOGOUT_ENABLED) return;
+
     let timeout: ReturnType<typeof setTimeout>;
 
     const resetTimer = () => {
       if (timeout) clearTimeout(timeout);
       setTimeLeft(60);
       timeout = setTimeout(() => {
-        router.push("/");
+        sessionStorage.removeItem("active_resident");
+        window.speechSynthesis?.cancel();
+        router.replace("/");
       }, 60000);
     };
 
@@ -362,7 +377,7 @@ function DashboardContent() {
     resetTimer();
 
     // Activities that reset the timer
-    const activities = ["mousedown", "mousemove", "keypress", "touchstart", "scroll"];
+    const activities = ["pointerdown", "keydown", "touchstart", "wheel", "scroll"];
     
     activities.forEach(event => {
       window.addEventListener(event, resetTimer);
@@ -384,6 +399,48 @@ function DashboardContent() {
 
   return (
     <div className="flex h-screen w-full bg-[#f8fafc] overflow-hidden font-sans select-none">
+      {AUTO_LOGOUT_ENABLED && timeLeft <= 15 && (
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/70 p-6 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-[2rem] border border-amber-200 bg-white p-8 text-center shadow-2xl">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 text-amber-600">
+              <Clock className="h-8 w-8" />
+            </div>
+            <p className="mt-5 text-[10px] font-black uppercase tracking-[0.25em] text-amber-600">
+              Session Timeout
+            </p>
+            <h2 className="mt-2 text-2xl font-black uppercase text-slate-900">
+              Are you still there?
+            </h2>
+            <p className="mt-3 text-sm font-medium text-slate-500">
+              For your security, the kiosk will automatically log out in{" "}
+              <span className="font-black text-red-600">
+                {timeLeft} second{timeLeft === 1 ? "" : "s"}
+              </span>.
+            </p>
+            <div className="mt-7 flex gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  sessionStorage.removeItem("active_resident");
+                  window.speechSynthesis?.cancel();
+                  router.replace("/");
+                }}
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-5 py-3 text-xs font-black uppercase tracking-wider text-red-600"
+              >
+                <LogOut className="h-4 w-4" />
+                Log Out
+              </button>
+              <button
+                type="button"
+                onClick={() => setTimeLeft(60)}
+                className="flex-1 rounded-xl bg-[#1a6b3a] px-5 py-3 text-xs font-black uppercase tracking-wider text-white shadow-lg"
+              >
+                Continue Session
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* SIDEBAR - HIGH END DARK MODERN */}
       <aside className="w-24 md:w-28 bg-[#0F172A] flex flex-col items-center py-8 shadow-2xl relative z-30">
@@ -495,12 +552,12 @@ function DashboardContent() {
                 </div>
              </div>
              <div className="w-16 h-16 rounded-[2rem] bg-slate-50 border border-slate-200 flex items-center justify-center overflow-hidden shadow-inner relative">
-                {resident?.photoUrl ? (
-                  <Image 
-                    src={resident.photoUrl} 
+                {residentPhotoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={residentPhotoUrl}
                     alt={resident.fullName} 
-                    fill 
-                    className="object-cover"
+                    className="h-full w-full object-cover"
                   />
                 ) : (
                   <UserCircle className="w-10 h-10 text-slate-300" />

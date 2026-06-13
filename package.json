@@ -6,10 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "postinstall": "prisma generate",
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc --noEmit",
     "prisma:check": "prisma format --check && prisma validate && prisma generate",
-    "ci": "npm run lint && npm run typecheck && npm run prisma:check && npm run build"
+    "ci": "npm run lint && npm run prisma:check && npm run typecheck && npm run build"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.5.0",
@@ -19,6 +20,7 @@
     "@types/pg": "^8.18.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "docx-preview": "^0.3.7",
     "lucide-react": "^0.577.0",
     "next": "16.1.6",
     "nodemailer": "^8.0.2",

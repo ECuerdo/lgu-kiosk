@@ -16,6 +16,9 @@ type Resident = {
   barangay?: string;
   municipality?: string;
   photoUrl?: string;
+  livenessUrl?: string;
+  imageUrl?: string;
+  idFrontUrl?: string;
 };
 
 const SERVICE_NAMES: Record<string, string> = {
@@ -55,6 +58,11 @@ export default function ServiceHeader() {
     resident?.fullName ||
     [resident?.firstName, resident?.middleName, resident?.lastName].filter(Boolean).join(" ") ||
     "Resident";
+  const residentPhotoUrl =
+    resident?.photoUrl ||
+    resident?.livenessUrl ||
+    resident?.imageUrl ||
+    resident?.idFrontUrl;
 
   const logout = () => {
     sessionStorage.removeItem("active_resident");
@@ -80,9 +88,9 @@ export default function ServiceHeader() {
         <div className="flex items-center gap-2 md:gap-3">
           <button type="button" onClick={() => setProfileOpen(true)} className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-left shadow-sm transition hover:border-emerald-300 hover:bg-emerald-50 md:px-4">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-emerald-100 text-[#1a6b3a]">
-              {resident?.photoUrl ? (
+              {residentPhotoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={resident.photoUrl} alt="" className="h-full w-full object-cover" />
+                <img src={residentPhotoUrl} alt="" className="h-full w-full object-cover" />
               ) : <User className="h-5 w-5" />}
             </span>
             <span className="hidden md:block">

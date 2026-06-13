@@ -11,7 +11,10 @@ interface OtpVerificationProps {
 export default function OtpVerification({ email, onSuccess, onCancel }: OtpVerificationProps) {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
   const inputs = useRef<(HTMLInputElement | null)[]>([]);
 
   const handleChange = (element: HTMLInputElement, index: number) => {
@@ -63,6 +66,43 @@ export default function OtpVerification({ email, onSuccess, onCancel }: OtpVerif
     }
   }, [otp, verifyOtp]);
 
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const countdown = window.setInterval(() => {
+      setResendCooldown(value => Math.max(0, value - 1));
+    }, 1000);
+    return () => window.clearInterval(countdown);
+  }, [resendCooldown]);
+
+  const resendOtp = async () => {
+    if (resending || resendCooldown > 0) return;
+
+    setResending(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const response = await fetch("/api/auth/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        setError(result.error || "Unable to resend the code.");
+        return;
+      }
+
+      setOtp(["", "", "", "", "", ""]);
+      setResendCooldown(30);
+      setMessage("A new verification code was sent to your email.");
+      inputs.current[0]?.focus();
+    } catch {
+      setError("Unable to resend the code. Please try again.");
+    } finally {
+      setResending(false);
+    }
+  };
+
   return (
     <div className="flex flex-col items-center py-8">
       <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-[#4caf7d]/10 text-[#4caf7d]">
@@ -92,6 +132,7 @@ export default function OtpVerification({ email, onSuccess, onCancel }: OtpVerif
       </div>
 
       {error && <p className="mb-6 text-red-400 font-medium">{error}</p>}
+      {message && <p className="mb-6 text-emerald-400 font-medium">{message}</p>}
 
       <div className="flex w-full gap-4">
         <button 
@@ -109,8 +150,17 @@ export default function OtpVerification({ email, onSuccess, onCancel }: OtpVerif
         </button>
       </div>
       
-      <button className="mt-8 text-[#4caf7d] hover:underline font-medium">
-        Resend Code
+      <button
+        type="button"
+        onClick={resendOtp}
+        disabled={resending || resendCooldown > 0}
+        className="mt-8 font-medium text-[#4caf7d] hover:underline disabled:cursor-not-allowed disabled:text-white/30 disabled:no-underline"
+      >
+        {resending
+          ? "Sending..."
+          : resendCooldown > 0
+            ? `Resend Code in ${resendCooldown}s`
+            : "Resend Code"}
       </button>
     </div>
   );
