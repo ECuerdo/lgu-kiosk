@@ -1,9 +1,10 @@
 "use client";
-/* eslint-disable react-hooks/set-state-in-effect, @next/next/no-img-element */
+/* eslint-disable @next/next/no-img-element */
 
 import React, { useEffect } from "react";
-import { X, Eye, FileText, Download, ZoomIn, ZoomOut, RotateCw, RotateCcw, RefreshCw, Move, ChevronLeft, ChevronRight } from "lucide-react";
+import { X, Eye, FileText, Download, ZoomIn, ZoomOut, RotateCw, RotateCcw, RefreshCw, Move, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface DocumentViewerModalProps {
     isOpen: boolean;
@@ -61,6 +62,9 @@ export default function DocumentViewerModal({
 
     const [fetchedType, setFetchedType] = React.useState<string | null>(null);
     const [currentIndex, setCurrentIndex] = React.useState(0);
+    const docxContainerRef = React.useRef<HTMLDivElement>(null);
+    const [docxRendering, setDocxRendering] = React.useState(false);
+    const [docxError, setDocxError] = React.useState<string | null>(null);
 
     const [scale, setScale] = React.useState(1);
     const [rotation, setRotation] = React.useState(0);
@@ -95,6 +99,9 @@ export default function DocumentViewerModal({
     }, [documents, currentIndex]);
 
     const activeUrl = React.useMemo(() => {
+        if (fileUrl && /^https?:\/\//i.test(fileUrl)) {
+            return fileUrl;
+        }
         if (file) {
             return URL.createObjectURL(file);
         }
@@ -102,6 +109,18 @@ export default function DocumentViewerModal({
     }, [file, currentDoc, fileUrl]);
 
     const activeTitle = currentDoc ? currentDoc.label : title;
+
+    const fileExtension = React.useMemo(() => {
+        if (file?.name) return getFileExtension(file.name);
+        if (activeUrl) return getFileExtension(activeUrl);
+        return "";
+    }, [file, activeUrl]);
+
+    const isLocalDocx = React.useMemo(() => {
+        if (fileExtension !== "docx") return false;
+        if (file) return true;
+        return !!activeUrl && (activeUrl.startsWith("blob:") || activeUrl.startsWith("data:"));
+    }, [fileExtension, file, activeUrl]);
 
     useEffect(() => {
         if (activeUrl && activeUrl.startsWith("blob:")) {
@@ -113,6 +132,53 @@ export default function DocumentViewerModal({
             setFetchedType(null);
         }
     }, [activeUrl]);
+
+    useEffect(() => {
+        if (!isOpen || !isLocalDocx || !docxContainerRef.current) return;
+
+        let active = true;
+        setDocxRendering(true);
+        setDocxError(null);
+
+        async function renderDocx() {
+            try {
+                let docxBlob: Blob;
+                if (file) {
+                    docxBlob = file;
+                } else if (activeUrl) {
+                    const response = await fetch(activeUrl);
+                    docxBlob = await response.blob();
+                } else {
+                    throw new Error("No file or URL provided");
+                }
+
+                if (!active) return;
+                const docxPreviewModule = await import("docx-preview");
+                if (docxContainerRef.current && active) {
+                    docxContainerRef.current.innerHTML = "";
+                    await docxPreviewModule.renderAsync(docxBlob, docxContainerRef.current, undefined, {
+                        className: "docx-preview",
+                        inWrapper: false,
+                        ignoreWidth: true,
+                        ignoreHeight: true,
+                        breakPages: true,
+                    });
+                }
+            } catch (error) {
+                console.error("Failed to render DOCX:", error);
+                if (active) {
+                    setDocxError(error instanceof Error ? error.message : "Failed to render DOCX document.");
+                }
+            } finally {
+                if (active) setDocxRendering(false);
+            }
+        }
+
+        void renderDocx();
+        return () => {
+            active = false;
+        };
+    }, [isOpen, file, activeUrl, isLocalDocx]);
 
     const isPdf = React.useMemo(() => {
         if (file) {
@@ -131,12 +197,6 @@ export default function DocumentViewerModal({
         }
         return false;
     }, [file, activeUrl, fetchedType, activeTitle]);
-
-    const fileExtension = React.useMemo(() => {
-        if (file?.name) return getFileExtension(file.name);
-        if (activeUrl) return getFileExtension(activeUrl);
-        return "";
-    }, [file, activeUrl]);
 
     const isDocument = React.useMemo(() => {
         if (isPdf) return true;
@@ -351,6 +411,33 @@ export default function DocumentViewerModal({
                             className="w-full h-full rounded-2xl border-0 bg-white"
                             title="PDF Document Viewer"
                         />
+                    ) : isLocalDocx ? (
+                        <div className="flex h-full w-full flex-col overflow-hidden rounded-2xl bg-slate-50">
+                            {docxRendering && (
+                                <div className="flex flex-grow flex-col items-center justify-center p-8 text-slate-500">
+                                    <Loader2 className="mb-2 h-8 w-8 animate-spin text-emerald-500" />
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                        Rendering document content...
+                                    </p>
+                                </div>
+                            )}
+                            {docxError && (
+                                <div className="flex flex-grow flex-col items-center justify-center p-8 text-center">
+                                    <p className="mb-2 text-sm font-bold text-red-500">Failed to render preview</p>
+                                    <p className="mb-4 max-w-sm text-xs text-slate-400">{docxError}</p>
+                                    <Button onClick={handleDownload} style={{ backgroundColor: themeColor }}>
+                                        <Download className="mr-2 h-4 w-4" /> Download File
+                                    </Button>
+                                </div>
+                            )}
+                            <div
+                                ref={docxContainerRef}
+                                className={cn(
+                                    "flex-grow overflow-auto border-0 bg-white p-4 text-left text-black md:p-8",
+                                    docxError && "hidden"
+                                )}
+                            />
+                        </div>
                     ) : isDocument ? (
                         officeViewerUrl ? (
                             <iframe

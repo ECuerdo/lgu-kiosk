@@ -3,7 +3,6 @@
 
 import React, { useState, useEffect } from "react";
 import QRCode from "qrcode";
-import SecureIdleTimer from "@/components/shared/SecureIdleTimer";
 import PrivacyTermsModal from "@/components/shared/PrivacyTermsModal";
 import PaymentModal, { CheckoutDetails } from "@/components/shared/PaymentModal";
 import {
@@ -1221,7 +1220,6 @@ export default function BuildingPermitPage() {
       ref={pageScrollRef}
       className="h-full max-w-5xl mx-auto overflow-y-auto overscroll-y-contain touch-pan-y [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden px-4 sm:px-6 py-8 space-y-12 pb-32 font-sans relative"
     >
-      <SecureIdleTimer />
       <DocumentViewerModal
         isOpen={viewerOpen}
         onClose={() => { setViewerOpen(false); setViewerFile(null); setViewerUrl(null); }}
@@ -1261,10 +1259,10 @@ export default function BuildingPermitPage() {
 
       {/* Progress Stepper */}
       {currentStep !== "EXISTING" && (() => {
-        let allowedMaxIdx = 5;
-        if (selectedApplication) {
-          allowedMaxIdx = getApplicationPhase(selectedApplication.status).maxStep;
-        }
+        const isViewingSubmittedApplication = !!selectedApplication && !isRevision;
+        const allowedMaxIdx = isViewingSubmittedApplication
+          ? getApplicationPhase(selectedApplication.status).maxStep
+          : maxStepIdx;
         return (
           <div className="grid grid-cols-6 gap-1.5 md:gap-4 relative px-1 md:px-2">
             {STEPS.map((step, idx) => {
@@ -1272,7 +1270,7 @@ export default function BuildingPermitPage() {
                 ? getApplicationPhase(selectedApplication.status).step
                 : currentStep;
               const isActive = effectiveStep === step.id;
-              const isCompleted = idx <= Math.min(maxStepIdx, allowedMaxIdx);
+              const isCompleted = idx <= allowedMaxIdx;
               const Icon = step.icon;
               return (
                 <div
@@ -1397,7 +1395,14 @@ export default function BuildingPermitPage() {
                 <button
                   onClick={() => {
                     setSelectedApplication(null);
+                    setIsRevision(false);
+                    setMaxStepIdx(0);
                     setSignatureData(null);
+                    setPrivacyAccepted(false);
+                    setShowValidationErrors(false);
+                    setHandoffDocuments({});
+                    setTctHandoffUrl(null);
+                    setTctHandoffFileName("");
                     setFormData({
                       descriptionOfWork: "",
                       scopeNewConstruction: false,
@@ -3316,6 +3321,7 @@ const SignaturePad = ({ onSave }: { onSave: (dataUrl: string) => void }) => {
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [isDrawing, setIsDrawing] = React.useState(false);
+  const [isUploadedSignature, setIsUploadedSignature] = React.useState(false);
 
   React.useEffect(() => {
     const canvas = canvasRef.current;
@@ -3327,6 +3333,7 @@ const SignaturePad = ({ onSave }: { onSave: (dataUrl: string) => void }) => {
   }, []);
 
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    if (isUploadedSignature) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -3348,7 +3355,7 @@ const SignaturePad = ({ onSave }: { onSave: (dataUrl: string) => void }) => {
   };
 
   const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    if (!isDrawing) return;
+    if (isUploadedSignature || !isDrawing) return;
     e.preventDefault();
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -3380,9 +3387,11 @@ const SignaturePad = ({ onSave }: { onSave: (dataUrl: string) => void }) => {
     if (!ctx) return;
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+    setIsUploadedSignature(false);
   };
 
   const handleSave = () => {
+    if (isUploadedSignature) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const dataUrl = canvas.toDataURL('image/png');
@@ -3410,6 +3419,7 @@ const SignaturePad = ({ onSave }: { onSave: (dataUrl: string) => void }) => {
         ctx.drawImage(img, 0, 0, img.width, img.height,
           centerShift_x, centerShift_y, img.width * ratio, img.height * ratio);
 
+        setIsUploadedSignature(true);
         onSave(canvas.toDataURL('image/png'));
       }
       img.src = event.target?.result as string;
@@ -3424,7 +3434,10 @@ const SignaturePad = ({ onSave }: { onSave: (dataUrl: string) => void }) => {
         ref={canvasRef}
         width={800}
         height={250}
-        className="w-full h-[250px] cursor-crosshair touch-none"
+        className={cn(
+          "w-full h-[250px] cursor-crosshair touch-none transition-all",
+          isUploadedSignature && "pointer-events-none opacity-80"
+        )}
         onMouseDown={startDrawing}
         onMouseMove={draw}
         onMouseUp={stopDrawing}
@@ -3440,10 +3453,17 @@ const SignaturePad = ({ onSave }: { onSave: (dataUrl: string) => void }) => {
         </button>
         <button onClick={() => fileInputRef.current?.click()} className="px-6 py-2 rounded-full border border-blue-300 dark:border-blue-500/30 text-blue-600 dark:text-blue-400 text-sm font-bold flex items-center gap-2 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors">
           <UploadCloud className="w-4 h-4" />
-          Upload Image
+          Upload E-Signature
         </button>
         <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
-        <button onClick={handleSave} className="px-6 py-2 rounded-full bg-emerald-500 text-white text-sm font-bold flex items-center gap-2 shadow-md hover:bg-emerald-600 transition-colors">
+        <button
+          onClick={handleSave}
+          disabled={isUploadedSignature}
+          className={cn(
+            "px-6 py-2 rounded-full bg-emerald-500 text-white text-sm font-bold flex items-center gap-2 shadow-md hover:bg-emerald-600 transition-colors",
+            isUploadedSignature && "opacity-50 cursor-not-allowed"
+          )}
+        >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg>
           Save Signature
         </button>

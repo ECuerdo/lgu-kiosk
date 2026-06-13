@@ -557,8 +557,8 @@ export default function KioskSlideshow() {
 
         <div className="progress-bar-wrap">
           <div
-            className="progress-bar-inner"
-            style={{ width: `${progress}%` }}
+            className="progress-bar-inner progress-bar-inner-left"
+            style={{ transform: `scaleX(${progress / 100})` }}
           />
         </div>
 
@@ -574,8 +574,8 @@ export default function KioskSlideshow() {
 
         <div className="progress-bar-wrap">
           <div
-            className="progress-bar-inner"
-            style={{ width: `${progress}%`, opacity: 0 }}
+            className="progress-bar-inner progress-bar-inner-right"
+            style={{ transform: `scaleX(${progress / 100})` }}
           />
         </div>
 

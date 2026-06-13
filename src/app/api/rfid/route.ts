@@ -20,6 +20,8 @@ export async function GET(req: NextRequest) {
         email: true,
         barangay: true,
         imageUrl: true,
+        livenessUrl: true,
+        idFrontUrl: true,
         facialRecognition: true,
       },
     });
@@ -41,7 +43,7 @@ export async function GET(req: NextRequest) {
         userId: resident.userId,
         fullName,
         firstName: resident.firstName,
-        photoUrl: resident.imageUrl,
+        photoUrl: resident.livenessUrl || resident.imageUrl || resident.idFrontUrl,
         barangay: resident.barangay,
         email: resident.email,
         hasFaceAuth: !!resident.facialRecognition,

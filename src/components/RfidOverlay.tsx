@@ -180,7 +180,8 @@ export default function RfidOverlay() {
               <div className="mb-6 flex justify-center">
                 <div className="relative h-24 w-24 overflow-hidden rounded-full border-2 border-[#4caf7d]">
                   {resident.photoUrl ? (
-                    <Image src={resident.photoUrl} alt={resident.fullName} fill className="object-cover" />
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={resident.photoUrl} alt={resident.fullName} className="h-full w-full object-cover" />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center bg-[#1a6b3a] text-2xl text-white">
                       {resident.fullName.charAt(0)}

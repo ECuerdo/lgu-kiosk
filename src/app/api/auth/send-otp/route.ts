@@ -14,24 +14,17 @@ export async function POST(req: NextRequest) {
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-    // Store in VerificationToken table
-    // identifier will be the email, token will be the OTP
-    await prisma.verificationToken.upsert({
-      where: {
-        identifier_token: {
+    // Keep only the latest active code for this email.
+    await prisma.$transaction([
+      prisma.verificationToken.deleteMany({ where: { identifier: email } }),
+      prisma.verificationToken.create({
+        data: {
           identifier: email,
           token: otp,
+          expires,
         },
-      },
-      update: {
-        expires,
-      },
-      create: {
-        identifier: email,
-        token: otp,
-        expires,
-      },
-    });
+      }),
+    ]);
 
     // Send email
     await sendOtpEmail(email, otp, name || "Resident");
