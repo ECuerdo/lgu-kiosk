@@ -37,11 +37,11 @@ jobs:
       - name: Lint (warnings are errors)
         run: npm run lint
 
-      - name: Typecheck
-        run: npm run typecheck
-
       - name: Check Prisma schema and client
         run: npm run prisma:check
+
+      - name: Typecheck
+        run: npm run typecheck
 
       - name: Build
         run: npm run build
