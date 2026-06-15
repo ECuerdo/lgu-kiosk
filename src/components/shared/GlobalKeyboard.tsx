@@ -2,15 +2,12 @@
 
 import React, { useEffect, useState, useRef } from "react";
 import { 
-  Keyboard as KeyboardIcon, 
   Delete, 
   CornerDownLeft, 
   ChevronDown, 
   Space, 
   ArrowUp, 
-  CaseSensitive,
-  Sparkles,
-  Shuffle
+  Sparkles
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -81,7 +78,7 @@ export default function GlobalKeyboard() {
       }
     };
 
-    const handleFocusOut = (e: FocusEvent) => {
+    const handleFocusOut = (_e: FocusEvent) => {
       setTimeout(() => {
         if (isInteracting.current) return;
         const active = document.activeElement;

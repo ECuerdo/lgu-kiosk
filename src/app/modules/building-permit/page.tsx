@@ -49,7 +49,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
   Select,
@@ -610,9 +609,7 @@ export default function BuildingPermitPage() {
   const permitsProgress = requiredPermitIndexes
     .filter(index => uploadedPermitKeys.has(`permit_${index}`)).length;
 
-  const hasActiveApplication = existingApplications.some(app =>
-    !["RELEASED", "REJECTED", "DELIVERED", "CANCELLED"].includes(app.status) && !app.isCancelled
-  );
+
 
   const documentRequirementsList = [
     "Barangay Clearance/Certification",
