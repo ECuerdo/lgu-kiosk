@@ -7,6 +7,38 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
+const MAPANDAN_BARANGAYS = [
+  "Asongan",
+  "Baloling",
+  "Banaoang",
+  "Bantay",
+  "Bantocaling",
+  "Baracbac",
+  "Buenlag",
+  "Caoayan",
+  "Dulag",
+  "Guesang",
+  "Lipit Norte",
+  "Lipit Sur",
+  "Macalong",
+  "Magsaysay",
+  "Nancamarinan",
+  "Osiem",
+  "Paitan",
+  "Pangalangan",
+  "Poblacion",
+  "Potpot",
+  "Primicias",
+  "San Miguel",
+  "San Vicente",
+  "Santa Maria",
+  "Talogtog",
+  "Tebag",
+  "Tebag East",
+  "Tebag West",
+  "Warding",
+];
+
 export type PaymentMethod = "gcash" | "qrph" | "dob";
 export type FulfillmentMethod = "PICK_UP" | "DELIVERY";
 
@@ -86,8 +118,8 @@ export default function PaymentModal({
   };
 
   const handleCheckout = async () => {
-    if (fulfillment === "DELIVERY" && (!address.barangay || !address.houseNumber)) {
-      setError("Barangay and house number are required for home delivery.");
+    if (fulfillment === "DELIVERY" && !address.barangay) {
+      setError("Barangay is required for home delivery.");
       return;
     }
 
@@ -172,9 +204,14 @@ export default function PaymentModal({
 
             {fulfillment === "DELIVERY" && (
               <div className="grid grid-cols-2 gap-4 border-t border-white/10 pt-6 sm:grid-cols-3">
-                <AddressField label="Barangay" value={address.barangay} onChange={value => updateAddress("barangay", value)} />
-                <AddressField label="House #" value={address.houseNumber} onChange={value => updateAddress("houseNumber", value)} />
-                <AddressField label="Street" value={address.street} onChange={value => updateAddress("street", value)} />
+                <SelectField
+                  label="Barangay"
+                  value={address.barangay}
+                  onChange={value => updateAddress("barangay", value)}
+                  options={MAPANDAN_BARANGAYS}
+                />
+                <AddressField label="House No. / Lot No. (Optional)" value={address.houseNumber} onChange={value => updateAddress("houseNumber", value)} />
+                <AddressField label="Street (Optional)" value={address.street} onChange={value => updateAddress("street", value)} />
                 <AddressField label="Sitio" value={address.sitio} onChange={value => updateAddress("sitio", value)} />
                 <AddressField label="Purok" value={address.purok} onChange={value => updateAddress("purok", value)} />
                 <AddressField label="Municipality" value={address.municipality} onChange={value => updateAddress("municipality", value)} />
@@ -236,4 +273,22 @@ function ChoiceCard({ active, onClick, icon: Icon, label, description, light = f
 
 function AddressField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
   return <div className="space-y-2"><Label className="ml-1 text-[9px] font-black italic uppercase tracking-widest text-slate-400">{label}</Label><Input value={value} onChange={event => onChange(event.target.value)} className="h-11 rounded-xl border-white/10 bg-black/20 text-sm font-bold italic text-white" /></div>;
+}
+
+function SelectField({ label, value, onChange, options }: { label: string; value: string; onChange: (value: string) => void; options: string[] }) {
+  return (
+    <div className="space-y-2">
+      <Label className="ml-1 text-[9px] font-black italic uppercase tracking-widest text-slate-400">{label}</Label>
+      <select
+        value={value}
+        onChange={event => onChange(event.target.value)}
+        className="h-11 w-full rounded-xl border border-white/10 bg-black/20 px-3 text-sm font-bold italic text-white outline-none"
+      >
+        <option value="">Select barangay</option>
+        {options.map(option => (
+          <option key={option} value={option}>{option}</option>
+        ))}
+      </select>
+    </div>
+  );
 }

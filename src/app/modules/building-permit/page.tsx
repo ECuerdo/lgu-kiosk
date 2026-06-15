@@ -69,13 +69,15 @@ import {
   cancelTransaction,
   saveBfpClearanceProofAction,
   saveZoningClearanceProofAction,
-  getCurrentUserResident
+  getCurrentUserResident,
+  getBarangayNames
 } from "./actions";
 import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import DocumentViewerModal from "@/components/shared/DocumentViewerModal";
 import { supabase } from "@/lib/supabase";
+
 
 const STEPS = [
   { id: "GUIDE", label: "Guide", icon: ClipboardList },
@@ -356,6 +358,16 @@ export default function BuildingPermitPage() {
   const [viewerTitle, setViewerTitle] = useState("");
   const [viewerFile, setViewerFile] = useState<File | null>(null);
 
+  // Barangay list fetched from BarangayInfo table
+  const [barangayNames, setBarangayNames] = useState<string[]>([]);
+  useEffect(() => {
+    getBarangayNames().then((res) => {
+      if (res.success && res.data.length > 0) {
+        setBarangayNames(res.data);
+      }
+    });
+  }, []);
+
   // Kiosk-compatible client toast banner state
   const [toastMessage, setToastMessage] = useState<{ type: "success" | "error" | "info" | "warning"; message: string } | null>(null);
   
@@ -406,11 +418,15 @@ export default function BuildingPermitPage() {
     scopeOthers2Text1: "",
     scopeOthers2Text2: "",
     descriptionOfWorkLegacyText: "",
-    occupancyCategory: "Residential",
+    occupancyCategory: "",
     selectedSubOccupancies: [] as string[],
     subOccupancyOthersSpecify: "",
     estimatedCost: "",
     locationOfConstruction: "",
+    locHouseNo: "",
+    locStreet: "",
+    locBarangay: "",
+    totalFloors: "",
     isLotOwner: "",
     newIdFile: null as File | null,
     tctFile: null as File | null,
@@ -593,9 +609,7 @@ export default function BuildingPermitPage() {
   const permitsProgress = requiredPermitIndexes
     .filter(index => uploadedPermitKeys.has(`permit_${index}`)).length;
 
-  const hasActiveApplication = existingApplications.some(app =>
-    !["RELEASED", "REJECTED", "DELIVERED", "CANCELLED"].includes(app.status) && !app.isCancelled
-  );
+
 
   const documentRequirementsList = [
     "Barangay Clearance/Certification",
@@ -718,6 +732,10 @@ export default function BuildingPermitPage() {
         subOccupancyOthersSpecify: parsedOccupancy.specify,
         estimatedCost: addData.estimatedCost || "",
         locationOfConstruction: addData.locationOfConstruction || "",
+        locHouseNo: addData.houseNumber || "",
+        locStreet: addData.street || "",
+        locBarangay: addData.barangay || "",
+        totalFloors: addData.totalFloors ? String(addData.totalFloors) : "",
         isLotOwner: addData.isLotOwner || "",
         newIdFile: null,
         tctFile: null,
@@ -981,6 +999,36 @@ export default function BuildingPermitPage() {
       infoType: "note",
       infoLabel: "Legal weight",
       infoText: "A notarized affidavit is stronger evidence than a simple confirmation."
+    },
+    {
+      id: 13,
+      title: "BFP Clearance",
+      office: "Bureau of Fire Protection",
+      icon: <FileWarning className="w-5 h-5 text-red-600" />,
+      steps: [
+        "Go to the local Bureau of Fire Protection (BFP) office.",
+        "Submit your building plans for fire safety evaluation.",
+        "Pay the prescribed fire code fees.",
+        "Wait for the issuance of the Fire Safety Evaluation Clearance (FSEC)."
+      ],
+      infoType: "important",
+      infoLabel: "Mandatory",
+      infoText: "Ensure building designs comply with the Fire Code of the Philippines."
+    },
+    {
+      id: 14,
+      title: "Zoning Clearance",
+      office: "Zoning Office / MPDC",
+      icon: <MapPin className="w-5 h-5 text-indigo-500" />,
+      steps: [
+        "Go to the Zoning Office or Municipal Planning & Development Coordinator (MPDC).",
+        "Submit your lot plan, title, and building design.",
+        "Pay the appropriate zoning fees.",
+        "Secure the official Zoning Clearance confirming land use compliance."
+      ],
+      infoType: "time",
+      infoLabel: "Processing time",
+      infoText: "Takes 2-5 days depending on the classification of the project."
     }
   ];
 
@@ -1166,7 +1214,9 @@ export default function BuildingPermitPage() {
       data.append("occupancyUse", finalOccupancy);
 
       data.append("estimatedCost", formData.estimatedCost);
-      data.append("locationOfConstruction", formData.locationOfConstruction);
+      const finalLocation = formData.locHouseNo ? `#${formData.locHouseNo} ${formData.locStreet}, Brgy. ${formData.locBarangay}, Mapandan, Pangasinan` : formData.locationOfConstruction;
+      data.append("locationOfConstruction", finalLocation);
+      data.append("totalFloors", formData.totalFloors);
       data.append("isLotOwner", formData.isLotOwner);
       data.append("privacyConsentAccepted", String(privacyAccepted));
 
@@ -1295,8 +1345,10 @@ export default function BuildingPermitPage() {
                     <Icon className="w-4 h-4 md:w-7 md:h-7" />
                   </div>
                   <span className={cn(
-                    "text-[7px] md:text-[10px] uppercase tracking-widest text-center italic hidden sm:block",
-                    isActive ? "text-[#1a6b3a] opacity-100 font-black" : "opacity-40 group-hover:opacity-100 transition-opacity"
+                    "text-[7px] md:text-[10px] uppercase tracking-widest text-center italic font-bold",
+                    isActive ? "text-white font-black" :
+                    isCompleted ? "text-slate-300" :
+                    "text-slate-500"
                   )}>
                     {step.label}
                   </span>
@@ -1373,76 +1425,61 @@ export default function BuildingPermitPage() {
               ))}
             </div>
 
-            {hasActiveApplication ? (
-              <div className="mt-12 border-t border-slate-200 dark:border-white/10 pt-8 flex flex-col items-center">
-                <div className="bg-amber-500/10 dark:bg-amber-500/5 border border-amber-500/20 dark:border-amber-500/10 rounded-2xl p-6 max-w-xl text-center space-y-3 shadow-[0_0_20px_rgba(245,158,11,0.05)]">
-                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-amber-500/10 text-amber-500 mb-1">
-                    <AlertCircle className="w-6 h-6 animate-pulse" />
-                  </div>
-                  <h4 className="font-black text-slate-800 dark:text-white uppercase tracking-wider text-sm">
-                    Active Application In Progress
-                  </h4>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-relaxed">
-                    You currently have a pending building permit application. To ensure proper processing, LGU Mapandan regulations require your active application to be completed (Released) or Rejected before starting a new one.
-                  </p>
-                  <div className="text-[10px] text-amber-600 dark:text-amber-500/80 font-bold uppercase tracking-widest bg-amber-500/[0.03] border border-amber-500/10 px-3 py-1 rounded-full w-fit mx-auto italic">
-                    New Application Locked
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="mt-12 flex justify-center border-t border-slate-200 dark:border-white/10 pt-8">
-                <button
-                  onClick={() => {
-                    setSelectedApplication(null);
-                    setIsRevision(false);
-                    setMaxStepIdx(0);
-                    setSignatureData(null);
-                    setPrivacyAccepted(false);
-                    setShowValidationErrors(false);
-                    setHandoffDocuments({});
-                    setTctHandoffUrl(null);
-                    setTctHandoffFileName("");
-                    setFormData({
-                      descriptionOfWork: "",
-                      scopeNewConstruction: false,
-                      scopeAddition: false,
-                      scopeAdditionText: "",
-                      scopeRepair: false,
-                      scopeRepairText: "",
-                      scopeRenovation: false,
-                      scopeRenovationText: "",
-                      scopeDemolition: false,
-                      scopeDemolitionText: "",
-                      scopeOthers1: false,
-                      scopeOthers1Text1: "",
-                      scopeOthers1Text2: "",
-                      scopeOthers2: false,
-                      scopeOthers2Text1: "",
-                      scopeOthers2Text2: "",
-                      descriptionOfWorkLegacyText: "",
-                      occupancyCategory: "Residential",
-                      selectedSubOccupancies: [],
-                      subOccupancyOthersSpecify: "",
-                      estimatedCost: "",
-                      locationOfConstruction: "",
-                      isLotOwner: "",
-                      newIdFile: null,
-                      tctFile: null,
-                      occupancyUse: "Residential (Single Family)",
-                      otherOccupancyUse: "",
-                    });
-                    setUploadedRequirements({});
-                    setUploadedPermits({});
-                    setCurrentStep("GUIDE");
-                  }}
-                  className="bg-[#1a6b3a] text-white hover:bg-[#1a6b3a]/90 px-8 py-4 rounded-[2rem] font-black uppercase tracking-widest text-[10px] md:text-xs flex items-center gap-3 transition-all shadow-xl shadow-emerald-500/20"
-                >
-                  Start a New Application
-                  <span className="text-xl leading-none">+</span>
-                </button>
-              </div>
-            )}
+            <div className="mt-12 flex justify-center border-t border-slate-200 dark:border-white/10 pt-8">
+              <button
+                onClick={() => {
+                  setSelectedApplication(null);
+                  setIsRevision(false);
+                  setMaxStepIdx(0);
+                  setSignatureData(null);
+                  setPrivacyAccepted(false);
+                  setShowValidationErrors(false);
+                  setHandoffDocuments({});
+                  setTctHandoffUrl(null);
+                  setTctHandoffFileName("");
+                  setFormData({
+                    descriptionOfWork: "",
+                    scopeNewConstruction: false,
+                    scopeAddition: false,
+                    scopeAdditionText: "",
+                    scopeRepair: false,
+                    scopeRepairText: "",
+                    scopeRenovation: false,
+                    scopeRenovationText: "",
+                    scopeDemolition: false,
+                    scopeDemolitionText: "",
+                    scopeOthers1: false,
+                    scopeOthers1Text1: "",
+                    scopeOthers1Text2: "",
+                    scopeOthers2: false,
+                    scopeOthers2Text1: "",
+                    scopeOthers2Text2: "",
+                    descriptionOfWorkLegacyText: "",
+                    occupancyCategory: "",
+                    selectedSubOccupancies: [],
+                    subOccupancyOthersSpecify: "",
+                    estimatedCost: "",
+                    locationOfConstruction: "",
+                    locHouseNo: "",
+                    locStreet: "",
+                    locBarangay: "",
+                    totalFloors: "",
+                    isLotOwner: "",
+                    newIdFile: null,
+                    tctFile: null,
+                    occupancyUse: "Residential (Single Family)",
+                    otherOccupancyUse: "",
+                  });
+                  setUploadedRequirements({});
+                  setUploadedPermits({});
+                  setCurrentStep("GUIDE");
+                }}
+                className="bg-[#1a6b3a] text-white hover:bg-[#1a6b3a]/90 px-8 py-4 rounded-[2rem] font-black uppercase tracking-widest text-[10px] md:text-xs flex items-center gap-3 transition-all shadow-xl shadow-emerald-500/20"
+              >
+                Start a New Application
+                <span className="text-xl leading-none">+</span>
+              </button>
+            </div>
           </div>
         )}
 
@@ -1547,6 +1584,40 @@ export default function BuildingPermitPage() {
               </div>
             </div>
 
+            {/* Acceptable Valid IDs Section */}
+            <div className="mt-8 bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-[2rem] p-6 md:p-8">
+              <div className="mb-6">
+                <h3 className="flex items-center gap-2 font-black text-slate-900 dark:text-white uppercase tracking-tighter text-lg md:text-xl italic">
+                  <CreditCard className="w-5 h-5 text-[#1a6b3a]" />
+                  Acceptable Valid IDs
+                </h3>
+                <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-1">
+                  Primary & Secondary Identification Documents
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8 text-sm font-medium text-slate-700 dark:text-slate-300">
+                <div className="flex flex-col gap-2">
+                  <h4 className="text-xs font-black text-slate-500 uppercase tracking-widest border-b border-slate-200 dark:border-white/10 pb-2 mb-2">Primary IDs</h4>
+                  <div className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-emerald-500" /> Philippine Identification (PhilID) / ePhilID</div>
+                  <div className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-emerald-500" /> Passport</div>
+                  <div className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-emerald-500" /> Driver's License</div>
+                  <div className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-emerald-500" /> PRC ID</div>
+                  <div className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-emerald-500" /> UMID / SSS ID</div>
+                  <div className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-emerald-500" /> Voter's ID</div>
+                </div>
+                <div className="flex flex-col gap-2 mt-4 md:mt-0">
+                  <h4 className="text-xs font-black text-slate-500 uppercase tracking-widest border-b border-slate-200 dark:border-white/10 pb-2 mb-2">Secondary IDs</h4>
+                  <div className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-emerald-500" /> Senior Citizen ID</div>
+                  <div className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-emerald-500" /> PWD ID</div>
+                  <div className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-emerald-500" /> PhilHealth ID</div>
+                  <div className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-emerald-500" /> Postal ID</div>
+                  <div className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-emerald-500" /> TIN ID</div>
+                  <div className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-emerald-500" /> Police Clearance / NBI Clearance</div>
+                </div>
+              </div>
+            </div>
+
             <div className="mt-12 flex flex-col md:flex-row justify-between items-center gap-6">
               {existingApplications.length > 0 && (
                 <button
@@ -1595,8 +1666,8 @@ export default function BuildingPermitPage() {
                 <div className="flex justify-center p-12"><div className="w-8 h-8 border-4 border-[#1a6b3a] border-t-transparent rounded-full animate-spin"></div></div>
               ) : (
                 <>
-                  <div className="bg-white/40 dark:bg-white/5 backdrop-blur-md border border-slate-100 dark:border-white/10 rounded-2xl md:rounded-[2rem] p-6 md:p-8 relative group hover:border-[#1a6b3a]/30 transition-all duration-300">
-                    <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-[#1a6b3a] opacity-50 group-hover:opacity-100 transition-opacity rounded-l-2xl"></div>
+                  <div className="bg-white/40 dark:bg-white/5 backdrop-blur-md border border-slate-100 dark:border-white/10 rounded-2xl md:rounded-[2rem] overflow-hidden p-6 md:p-8 relative group hover:border-[#1a6b3a]/30 transition-all duration-300">
+                    <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-[#1a6b3a] opacity-50 group-hover:opacity-100 transition-opacity"></div>
                     <div className="flex items-center gap-2 mb-6">
                       <Book className="w-5 h-5 text-[#1a6b3a]" />
                       <h3 className="font-black text-slate-900 dark:text-white uppercase tracking-tighter text-lg md:text-xl italic">Your Profile (from Digital Data Gathering)</h3>
@@ -1646,8 +1717,8 @@ export default function BuildingPermitPage() {
                   </div>
 
                   {/* Purpose / Additional Info */}
-                  <div className="bg-white/40 dark:bg-white/5 backdrop-blur-md border border-slate-100 dark:border-white/10 rounded-2xl md:rounded-[2rem] p-6 md:p-8 mt-6 relative group hover:border-[#1a6b3a]/30 transition-all duration-300">
-                    <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-[#1a6b3a] opacity-50 group-hover:opacity-100 transition-opacity rounded-l-2xl"></div>
+                  <div className="bg-white/40 dark:bg-white/5 backdrop-blur-md border border-slate-100 dark:border-white/10 rounded-2xl md:rounded-[2rem] overflow-hidden p-6 md:p-8 mt-6 relative group hover:border-[#1a6b3a]/30 transition-all duration-300">
+                    <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-[#1a6b3a] opacity-50 group-hover:opacity-100 transition-opacity"></div>
                     <div className="flex items-center gap-2 mb-6">
                       <Book className="w-5 h-5 text-[#1a6b3a]" />
                       <h3 className="font-black text-slate-900 dark:text-white uppercase tracking-tighter text-lg md:text-xl italic">Additional Information</h3>
@@ -2080,6 +2151,27 @@ export default function BuildingPermitPage() {
                         </div>
                       </div>
 
+                      {/* Total Floors */}
+                      <div>
+                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
+                          Total Floor(s) <span className="text-red-500 text-lg">*</span>
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          placeholder="e.g. 2"
+                          className={cn("w-full bg-white dark:bg-black/20 border rounded-xl p-4 text-sm focus:ring-2 focus:ring-[#1a6b3a]/20 outline-none", (showValidationErrors && (!formData.totalFloors || Number(formData.totalFloors) <= 0)) ? "border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)] animate-pulse" : "border-slate-200 dark:border-white/10")}
+                          value={formData.totalFloors}
+                          onChange={e => {
+                            const val = e.target.value;
+                            if (val === "" || Number(val) > 0) {
+                              setFormData({ ...formData, totalFloors: val });
+                            }
+                          }}
+                          disabled={!isEditable}
+                        />
+                      </div>
+
                       {/* Estimated Cost */}
                       <div>
                         <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
@@ -2106,16 +2198,49 @@ export default function BuildingPermitPage() {
                       {/* Location of Construction */}
                       <div>
                         <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
-                          e. Location of Construction (No. Street, Barangay, City / Municipality) <span className="text-red-500 text-lg">*</span>
+                          e. Location of Construction <span className="text-red-500 text-lg">*</span>
                         </label>
-                        <input
-                          type="text"
-                          placeholder="No. Street, Barangay, City / Municipality"
-                          className={cn("w-full bg-white dark:bg-black/20 border rounded-xl p-4 text-sm focus:ring-2 focus:ring-[#1a6b3a]/20 outline-none", (showValidationErrors && !formData.locationOfConstruction) ? "border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)] animate-pulse" : "border-slate-200 dark:border-white/10")}
-                          value={formData.locationOfConstruction}
-                          onChange={e => setFormData({ ...formData, locationOfConstruction: e.target.value })}
-                          disabled={!isEditable}
-                        />
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="space-y-1">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">HOUSE/LOT NO.</span>
+                            <input
+                              type="text"
+                              placeholder="e.g. 123"
+                              className="w-full bg-white dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-xl p-4 text-sm focus:ring-2 focus:ring-[#1a6b3a]/20 outline-none"
+                              value={formData.locHouseNo}
+                              onChange={e => setFormData({ ...formData, locHouseNo: e.target.value })}
+                              disabled={!isEditable}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">STREET</span>
+                            <input
+                              type="text"
+                              placeholder="e.g. Bonifacio St."
+                              className="w-full bg-white dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-xl p-4 text-sm focus:ring-2 focus:ring-[#1a6b3a]/20 outline-none"
+                              value={formData.locStreet}
+                              onChange={e => setFormData({ ...formData, locStreet: e.target.value })}
+                              disabled={!isEditable}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">BARANGAY</span>
+                            <Select
+                              value={formData.locBarangay}
+                              onValueChange={value => setFormData({ ...formData, locBarangay: value })}
+                              disabled={!isEditable}
+                            >
+                              <SelectTrigger className="w-full h-auto bg-white dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-xl p-4 text-sm focus:ring-2 focus:ring-[#1a6b3a]/20 outline-none cursor-pointer">
+                                <SelectValue placeholder="Select Barangay" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {barangayNames.map((brgy) => (
+                                  <SelectItem key={brgy} value={brgy}>{brgy}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
                       </div>
 
                       <div>
@@ -2681,14 +2806,28 @@ export default function BuildingPermitPage() {
                 <div className="rounded-2xl border border-slate-200 bg-white p-5">
                   <p className="text-[9px] font-black italic uppercase tracking-widest text-[#1a6b3a]">Endorsed Fees Summary</p>
                   <div className="mt-3 space-y-3 text-xs font-bold text-slate-500">
-                    <div className="flex justify-between gap-4">
-                      <span>Building Permit Fee</span>
-                      <span>₱{Number(selectedApplication.fiscalSnapshot?.baseAmount ?? selectedApplication.totalAmount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                    </div>
-                    <div className="flex justify-between gap-4">
-                      <span>Other Applicable Municipal Charges</span>
-                      <span>₱0.00</span>
-                    </div>
+                    {(() => {
+                      const rawFiscal = selectedApplication.fiscalSnapshot;
+                      const snap = (typeof rawFiscal === "string" ? JSON.parse(rawFiscal) : rawFiscal) as any || {};
+                      const lineItems: { label: string; amount: number }[] = (snap.lineItems || []).filter((i: any) => Number(i.amount) > 0);
+
+                      if (lineItems.length > 0) {
+                        return lineItems.map((item, idx) => (
+                          <div key={idx} className="flex justify-between gap-4">
+                            <span>{item.label}</span>
+                            <span>₱{Number(item.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                          </div>
+                        ));
+                      }
+
+                      // Fallback: show Building Permit Fee from baseAmount
+                      return (
+                        <div className="flex justify-between gap-4">
+                          <span>Building Permit Fee</span>
+                          <span>₱{Number(snap.baseAmount ?? selectedApplication.totalAmount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                        </div>
+                      );
+                    })()}
                     {Number(selectedApplication.fiscalSnapshot?.deliveryFee || 0) > 0 && (
                       <div className="flex justify-between gap-4">
                         <span>Delivery Service</span>
@@ -2765,26 +2904,64 @@ export default function BuildingPermitPage() {
                 );
               })()}
 
-              {selectedApplication.status === "UNPAID" && (
-                <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 rounded-2xl p-6 space-y-4">
-                  <h4 className="font-black uppercase tracking-widest text-xs flex items-center gap-2 text-amber-800 dark:text-amber-300">
-                    <AlertCircle className="w-4 h-4" /> Pending Payment
-                  </h4>
-                  <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Please pay the total amount at the Municipal Hall or via GCash, then upload your payment receipt below.</p>
-                  
-                  <div className="p-4 bg-white dark:bg-black/35 rounded-xl border border-slate-200 dark:border-white/5 w-fit">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Assessment Amount</p>
-                    <p className="font-black text-2xl text-[#1a6b3a] mt-1">₱{parseFloat(selectedApplication.totalAmount || "0").toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                  </div>
+              {selectedApplication.status === "UNPAID" && (() => {
+                const payRef = selectedApplication.paymentReference;
+                const gcashRef = selectedApplication.additionalData?.gcashReferenceNo;
 
-                  <button
-                    onClick={() => setIsPaymentModalOpen(true)}
-                    className="px-6 py-3 bg-[#1a6b3a] hover:bg-[#1a6b3a]/90 text-white rounded-full font-black uppercase tracking-widest text-xs flex items-center gap-2 shadow-md"
-                  >
-                    <CreditCard className="w-4 h-4" /> Proceed to Payment
-                  </button>
-                </div>
-              )}
+                if (payRef) {
+                  // Already paid — show reference details
+                  return (
+                    <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900 rounded-2xl p-6 space-y-4">
+                      <h4 className="font-black uppercase tracking-widest text-xs flex items-center gap-2 text-emerald-800 dark:text-emerald-300">
+                        <Check className="w-4 h-4" /> Payment Submitted — Pending Verification
+                      </h4>
+                      <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                        Your payment has been submitted and is currently being verified by the Treasury Office. No further action is needed at this time.
+                      </p>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="p-4 bg-white dark:bg-black/35 rounded-xl border border-slate-200 dark:border-white/5">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Assessment Amount</p>
+                          <p className="font-black text-2xl text-[#1a6b3a] mt-1">₱{parseFloat(selectedApplication.totalAmount || "0").toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                        </div>
+                        <div className="p-4 bg-white dark:bg-black/35 rounded-xl border border-slate-200 dark:border-white/5">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Payment Reference No.</p>
+                          <p className="font-black text-sm text-slate-800 dark:text-white mt-1 break-all">{gcashRef || payRef}</p>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => setIsPaymentModalOpen(true)}
+                        className="px-6 py-3 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-full font-black uppercase tracking-widest text-xs flex items-center gap-2 shadow-sm"
+                      >
+                        <Receipt className="w-4 h-4" /> View Payment Details
+                      </button>
+                    </div>
+                  );
+                }
+
+                // Not yet paid — show proceed to payment
+                return (
+                  <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 rounded-2xl p-6 space-y-4">
+                    <h4 className="font-black uppercase tracking-widest text-xs flex items-center gap-2 text-amber-800 dark:text-amber-300">
+                      <AlertCircle className="w-4 h-4" /> Pending Payment
+                    </h4>
+                    <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Please pay the total amount at the Municipal Hall or via GCash, then upload your payment receipt below.</p>
+                    
+                    <div className="p-4 bg-white dark:bg-black/35 rounded-xl border border-slate-200 dark:border-white/5 w-fit">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Assessment Amount</p>
+                      <p className="font-black text-2xl text-[#1a6b3a] mt-1">₱{parseFloat(selectedApplication.totalAmount || "0").toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                    </div>
+
+                    <button
+                      onClick={() => setIsPaymentModalOpen(true)}
+                      className="px-6 py-3 bg-[#1a6b3a] hover:bg-[#1a6b3a]/90 text-white rounded-full font-black uppercase tracking-widest text-xs flex items-center gap-2 shadow-md"
+                    >
+                      <CreditCard className="w-4 h-4" /> Proceed to Payment
+                    </button>
+                  </div>
+                );
+              })()}
 
               {/* Clearances verification block (BFP and zoning) */}
               {["PAID", "FOR_PROCESSING", ...RELEASE_PHASE_STATUSES].includes(selectedApplication.status) && (
