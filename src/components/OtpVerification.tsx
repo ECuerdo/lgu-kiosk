@@ -22,8 +22,8 @@ export default function OtpVerification({ email, onSuccess, onCancel }: OtpVerif
 
     setOtp([...otp.map((d, idx) => (idx === index ? element.value : d))]);
 
-    if (element.nextSibling && element.value !== "") {
-      (element.nextSibling as HTMLInputElement).focus();
+    if (element.value !== "" && index < 5) {
+      inputs.current[index + 1]?.focus();
     }
   };
 
@@ -65,6 +65,13 @@ export default function OtpVerification({ email, onSuccess, onCancel }: OtpVerif
       verifyOtp();
     }
   }, [otp, verifyOtp]);
+
+  useEffect(() => {
+    // Auto focus the first input when the component mounts
+    setTimeout(() => {
+      inputs.current[0]?.focus();
+    }, 100);
+  }, []);
 
   useEffect(() => {
     if (resendCooldown <= 0) return;

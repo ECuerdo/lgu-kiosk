@@ -34,7 +34,8 @@ export async function submitBuildingPermit(formData: FormData, userId: string) {
       return { success: false, error: "Building Permit transaction type not found in database." };
     }
 
-    // Check if there is already an active transaction for this user
+    // Check if there is already an active transaction for this user (Commented out to allow multiple applications)
+    /*
     const activeTransaction = await prisma.transaction.findFirst({
       where: {
         userId: userId,
@@ -49,6 +50,7 @@ export async function submitBuildingPermit(formData: FormData, userId: string) {
     if (activeTransaction) {
       return { success: false, error: "You already have an active building permit application in progress." };
     }
+    */
 
     // Extract basic form data
     const descriptionOfWork = formData.get("descriptionOfWork") as string;
@@ -610,5 +612,18 @@ export async function saveZoningClearanceProofAction(id: string, url: string, us
   } catch (error) {
     console.error("Save zoning clearance proof error:", error);
     return { success: false, error: "Failed to save zoning clearance proof" };
+  }
+}
+
+export async function getBarangayNames() {
+  try {
+    const barangays = await prisma.barangayInfo.findMany({
+      select: { name: true },
+      orderBy: { name: "asc" },
+    });
+    return { success: true, data: barangays.map((b) => b.name) };
+  } catch (error) {
+    console.error("Get barangay names error:", error);
+    return { success: false, data: [] as string[] };
   }
 }
