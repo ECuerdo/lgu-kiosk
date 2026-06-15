@@ -78,7 +78,7 @@ export default function GlobalKeyboard() {
       }
     };
 
-    const handleFocusOut = (_e: FocusEvent) => {
+    const handleFocusOut = () => {
       setTimeout(() => {
         if (isInteracting.current) return;
         const active = document.activeElement;
