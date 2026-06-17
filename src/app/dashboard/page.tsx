@@ -12,7 +12,6 @@ import {
   Megaphone, 
   LogOut,
   Clock,
-  MapPin,
   ShieldCheck,
   Building2,
   Home,
@@ -44,25 +43,11 @@ const MUNICIPAL_SERVICES = (lang: "en" | "fil" | "pang" | "ilo"): Service[] => [
     icon: <Building2 className="w-10 h-10" /> 
   },
   { 
-    id: "p2", 
-    category: "Permits", 
-    title: lang === "en" ? "Locational Clearance" : (lang === "fil" ? "Pahintulot sa Lokasyon" : (lang === "pang" ? "Locational Clearance" : "Locational Clearance")), 
-    desc: lang === "en" ? "Zoning and land use verification" : (lang === "fil" ? "Beripikasyon sa paggamit ng lupa at zoning" : (lang === "pang" ? "Pan-tsek na zoning tan usar na dalin" : "Pangtsek ti zoning ken panagusar ti daga")), 
-    icon: <MapPin className="w-10 h-10" /> 
-  },
-  { 
     id: "p3", 
     category: "Permits", 
     title: lang === "en" ? "Building Permit" : (lang === "fil" ? "Pahintulot sa Gusali" : (lang === "pang" ? "Permiso na Algeban" : "Permiso ti Pannakabangon ti Pasdek")), 
     desc: lang === "en" ? "Apply for new construction and building clearances" : (lang === "fil" ? "Mag-apply para sa bagong konstruksyon at mga clearance sa gusali" : (lang === "pang" ? "Man-apply na algeban tan saray clearance na abong" : "Ag-apply para iti baro a pannakabangon ken clearances ti pasdek")), 
     icon: <Building2 className="w-10 h-10" /> 
-  },
-  { 
-    id: "t1", 
-    category: "Taxes", 
-    title: lang === "en" ? "Real Property Tax" : (lang === "fil" ? "Buwis sa Ari-arian" : (lang === "pang" ? "Buwis na Ari-arian" : "Buis ti Sanikua")), 
-    desc: lang === "en" ? "View assessment and pay RPT (Amilyar)" : (lang === "fil" ? "Tingnan ang pagtatasa at magbayad ng Amilyar" : (lang === "pang" ? "Nengnengen so assessment tan manbayar na Amilyar" : "Kitaen ti assessment ken agbayad ti Amilyar")), 
-    icon: <CreditCard className="w-10 h-10" /> 
   },
   { 
     id: "t2", 
@@ -77,27 +62,6 @@ const MUNICIPAL_SERVICES = (lang: "en" | "fil" | "pang" | "ilo"): Service[] => [
     title: lang === "en" ? "Birth Certificate" : (lang === "fil" ? "Sertipiko ng Kapanganakan" : (lang === "pang" ? "Sertipiko na Niyanak" : "Sertipiko ti Pannakayanak")), 
     desc: lang === "en" ? "NSO/PSA certified true copy requests" : (lang === "fil" ? "Mga kahilingan para sa sertipikadong kopya ng NSO o PSA" : (lang === "pang" ? "Pangasingger na certified true copy na NSO odino PSA" : "Dawaten ti certified true copy ti NSO wenno PSA")), 
     icon: <Users className="w-10 h-10" /> 
-  },
-  { 
-    id: "c2", 
-    category: "Records", 
-    title: lang === "en" ? "Marriage License" : (lang === "fil" ? "Lisensya sa Kasal" : (lang === "pang" ? "Lisensya na Kasal" : "Lisensya ti Kasar")), 
-    desc: lang === "en" ? "Process requirements for civil marriage" : (lang === "fil" ? "Asikasuhin ang mga kinakailangan para sa sibil na kasal" : (lang === "pang" ? "Pan-proseso na saray kakaukolan para ed kasal" : "Pannakaproseso dagiti kasapulan para iti sibil a kasar")), 
-    icon: <HandHelping className="w-10 h-10" /> 
-  },
-  { 
-    id: "h1", 
-    category: "Health", 
-    title: lang === "en" ? "Health Certificate" : (lang === "fil" ? "Sertipiko sa Kalusugan" : (lang === "pang" ? "Sertipiko na Salun-at" : "Sertipiko ti Salun-at")), 
-    desc: lang === "en" ? "For employment or sanitary permits" : (lang === "fil" ? "Para sa trabaho o mga permit sa kalinisan" : (lang === "pang" ? "Para ed trabaho odino permit ed sanitary" : "Para iti trabaho wenno permit ti sanitary")), 
-    icon: <HeartPulse className="w-10 h-10" /> 
-  },
-  { 
-    id: "h2", 
-    category: "Health", 
-    title: lang === "en" ? "Sanitary Permit" : (lang === "fil" ? "Pahintulot sa Kalinisan" : (lang === "pang" ? "Permiso na Sanitary" : "Permiso ti Sanitary")), 
-    desc: lang === "en" ? "Food and establishment inspections" : (lang === "fil" ? "Mga inspeksyon sa pagkain at establisyimento" : (lang === "pang" ? "Inspeksyon na naakan tan establisimento" : "Inspeksion ti taraon ken establisimento")), 
-    icon: <ShieldCheck className="w-10 h-10" /> 
   },
 ];
 
