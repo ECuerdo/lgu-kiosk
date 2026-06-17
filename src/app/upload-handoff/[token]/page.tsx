@@ -16,6 +16,18 @@ const PERMITS = [
   "Scaffolding Permit", "Mechanical Permit",
 ];
 
+const BUSINESS_PERMIT_LABELS: Record<string, string> = {
+  ownerIdFile: "Owner's Valid ID",
+  ctcFile: "Community Tax Certificate (CTC/Cedula)",
+  dtiSecFile: "DTI / SEC / COA Registration",
+  birCorFile: "BIR Certificate of Registration (COR)",
+  previousPermitFile: "Previous Business Permit",
+  brgyClearanceFile: "Barangay Clearance",
+  locationPhotoFile: "Location Photo of Business",
+  sanitaryPermitFile: "Sanitary Permit",
+  fireSafetyFile: "Fire Safety Inspection Certificate",
+};
+
 type UploadedFile = { slot: string; fileName: string; url: string };
 
 export default function UploadHandoffPage() {
@@ -63,11 +75,13 @@ export default function UploadHandoffPage() {
           .filter((_, index) => index !== 5),
         ...PERMITS.map((label, index) => ({ slot: `permit_${index}`, label, group: "Permits" })),
       ]
+    : sessionSlot.startsWith("bp_")
+      ? [{ slot: sessionSlot, label: BUSINESS_PERMIT_LABELS[sessionSlot.replace("bp_", "")] || sessionSlot.replace("bp_", "").replace(/([A-Z])/g, " $1").trim(), group: "Business Permit Document" }]
     : sessionSlot === "bfp"
       ? [{ slot: "bfp", label: "Fire Safety / BFP Clearance", group: "Clearance Document" }]
       : sessionSlot === "zoning"
         ? [{ slot: "zoning", label: "Zoning / Locational Clearance", group: "Clearance Document" }]
-        : [{ slot: "tct", label: "Certified True Copy of TCT", group: "TCT Document" }];
+        : [{ slot: sessionSlot || "unknown", label: "Secure Document Upload", group: "Document" }];
 
   return (
     <main className="h-dvh overflow-y-auto bg-[#071c12] px-4 py-8 text-slate-900">

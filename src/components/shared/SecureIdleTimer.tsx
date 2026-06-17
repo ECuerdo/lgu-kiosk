@@ -1,93 +1,119 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Clock3, LogOut } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
+import { AlertCircle } from "lucide-react";
+import { toast } from "sonner";
 
-const IDLE_TIMEOUT_SECONDS = 60;
-const WARNING_SECONDS = 15;
+interface SecureIdleTimerProps {
+    timeoutSeconds?: number; // Default: 120s (2 minutes)
+    warningSeconds?: number; // Default: 90s (1.5 minutes)
+    themeColor?: string;     // Default: "var(--primary-theme)"
+}
+
 const AUTO_LOGOUT_ENABLED =
-  process.env.NEXT_PUBLIC_ENABLE_SERVICE_AUTO_LOGOUT?.toLowerCase() === "true";
+    process.env.NEXT_PUBLIC_ENABLE_SERVICE_AUTO_LOGOUT?.toLowerCase() === "true";
 
-export default function SecureIdleTimer() {
-  const router = useRouter();
-  const [secondsLeft, setSecondsLeft] = useState(IDLE_TIMEOUT_SECONDS);
-  const deadlineRef = useRef(0);
+export default function SecureIdleTimer({
+    timeoutSeconds = 120,
+    warningSeconds = 90,
+    themeColor = "var(--primary-theme)"
+}: SecureIdleTimerProps) {
+    const [idleTime, setIdleTime] = useState(0);
+    const [showIdleModal, setShowIdleModal] = useState(false);
+    const router = useRouter();
 
-  const resetTimer = useCallback(() => {
-    deadlineRef.current = Date.now() + IDLE_TIMEOUT_SECONDS * 1000;
-    setSecondsLeft(IDLE_TIMEOUT_SECONDS);
-  }, []);
+    useEffect(() => {
+        if (!AUTO_LOGOUT_ENABLED) return;
 
-  const logout = useCallback(() => {
-    sessionStorage.removeItem("active_resident");
-    window.speechSynthesis?.cancel();
-    router.replace("/");
-  }, [router]);
+        const interval = setInterval(() => {
+            setIdleTime(prev => {
+                const nextTime = prev + 1;
+                if (nextTime === warningSeconds) {
+                    setShowIdleModal(true);
+                }
+                if (nextTime >= timeoutSeconds) {
+                    clearInterval(interval);
+                    sessionStorage.removeItem("active_resident");
+                    setTimeout(() => {
+                        router.replace("/");
+                    }, 0);
+                    toast.warning(`Securely signed out due to ${Math.floor(timeoutSeconds / 60)} minutes of inactivity.`);
+                }
+                return nextTime;
+            });
+        }, 1000);
 
-  useEffect(() => {
-    if (!AUTO_LOGOUT_ENABLED) return;
+        const resetTimer = () => {
+            setIdleTime(0);
+            setShowIdleModal(false);
+        };
 
-    deadlineRef.current = Date.now() + IDLE_TIMEOUT_SECONDS * 1000;
+        window.addEventListener("mousemove", resetTimer);
+        window.addEventListener("keydown", resetTimer);
+        window.addEventListener("scroll", resetTimer);
+        window.addEventListener("click", resetTimer);
 
-    const activityEvents: (keyof WindowEventMap)[] = [
-      "pointerdown",
-      "keydown",
-      "touchstart",
-      "wheel",
-      "scroll",
-    ];
-    activityEvents.forEach(event => window.addEventListener(event, resetTimer, { passive: true }));
+        return () => {
+            clearInterval(interval);
+            window.removeEventListener("mousemove", resetTimer);
+            window.removeEventListener("keydown", resetTimer);
+            window.removeEventListener("scroll", resetTimer);
+            window.removeEventListener("click", resetTimer);
+        };
+    }, [router, timeoutSeconds, warningSeconds]);
 
-    const countdown = window.setInterval(() => {
-      const remaining = Math.max(0, Math.ceil((deadlineRef.current - Date.now()) / 1000));
-      setSecondsLeft(remaining);
-      if (remaining === 0) logout();
-    }, 500);
+    if (!AUTO_LOGOUT_ENABLED) {
+        return null;
+    }
 
-    return () => {
-      window.clearInterval(countdown);
-      activityEvents.forEach(event => window.removeEventListener(event, resetTimer));
-    };
-  }, [logout, resetTimer]);
-
-  if (!AUTO_LOGOUT_ENABLED) return null;
-  if (secondsLeft > WARNING_SECONDS) return null;
-
-  return (
-    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/70 p-6 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-[2rem] border border-amber-200 bg-white p-8 text-center shadow-2xl">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 text-amber-600">
-          <Clock3 className="h-8 w-8" />
-        </div>
-        <p className="mt-5 text-[10px] font-black uppercase tracking-[0.25em] text-amber-600">
-          Session Timeout
-        </p>
-        <h2 className="mt-2 text-2xl font-black uppercase text-slate-900">
-          Are you still there?
-        </h2>
-        <p className="mt-3 text-sm font-medium text-slate-500">
-          For your security, this service will automatically log out in{" "}
-          <span className="font-black text-red-600">{secondsLeft} second{secondsLeft === 1 ? "" : "s"}</span>.
-        </p>
-        <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-          <button
-            type="button"
-            onClick={logout}
-            className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-5 py-3 text-xs font-black uppercase tracking-wider text-red-600"
-          >
-            <LogOut className="h-4 w-4" />
-            Log Out
-          </button>
-          <button
-            type="button"
-            onClick={resetTimer}
-            className="flex-1 rounded-xl bg-[#1a6b3a] px-5 py-3 text-xs font-black uppercase tracking-wider text-white shadow-lg"
-          >
-            Continue Session
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+    return (
+        <AnimatePresence>
+            {showIdleModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-slate-950/70 backdrop-blur-md"
+                    />
+                    <motion.div
+                        initial={{ scale: 0.95, opacity: 0, y: 15 }}
+                        animate={{ scale: 1, opacity: 1, y: 0 }}
+                        exit={{ scale: 0.95, opacity: 0, y: 15 }}
+                        transition={{ type: "spring", duration: 0.5 }}
+                        className="bg-white dark:bg-[#0c0d12] border border-slate-100 dark:border-white/10 rounded-[2.5rem] p-6 sm:p-8 max-w-sm sm:max-w-md w-full text-center space-y-6 shadow-2xl relative overflow-hidden z-10"
+                    >
+                        <div 
+                            className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-24 blur-[60px] rounded-full opacity-20 pointer-events-none"
+                            style={{ backgroundColor: themeColor }}
+                        />
+                        <div 
+                            className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto border-2 animate-bounce shrink-0"
+                            style={{ 
+                                backgroundColor: `color-mix(in srgb, ${themeColor} 10%, transparent)`, 
+                                borderColor: themeColor, 
+                                color: themeColor 
+                            }}
+                        >
+                            <AlertCircle className="w-7 h-7" />
+                        </div>
+                        <div className="space-y-2">
+                            <h3 className="text-lg sm:text-xl font-black uppercase italic tracking-tighter text-slate-900 dark:text-white">
+                                Inactivity Warning
+                            </h3>
+                            <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
+                                Are you still there? You will be securely signed out in{" "}
+                                <span className="font-extrabold italic" style={{ color: themeColor }}>
+                                    {timeoutSeconds - idleTime}s
+                                </span>{" "}
+                                due to municipal safety compliance.
+                            </p>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
+        </AnimatePresence>
+    );
 }

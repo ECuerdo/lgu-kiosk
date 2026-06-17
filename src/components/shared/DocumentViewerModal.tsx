@@ -1,7 +1,7 @@
 "use client";
-/* eslint-disable @next/next/no-img-element */
 
 import React, { useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { X, Eye, FileText, Download, ZoomIn, ZoomOut, RotateCw, RotateCcw, RefreshCw, Move, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -26,7 +26,7 @@ function isImageFile(url: string) {
     const ext = getFileExtension(lower);
     if (imageExtensions.includes(ext)) return true;
     if (documentExtensions.includes(ext)) return false;
-    return true; 
+    return true;
 }
 
 function getFileExtension(value: string) {
@@ -48,7 +48,8 @@ export default function DocumentViewerModal({
     documents,
     initialIndex
 }: DocumentViewerModalProps) {
-    
+
+    // Lock document.body background scrolling when modal is open
     useEffect(() => {
         if (isOpen) {
             document.body.style.overflow = "hidden";
@@ -62,21 +63,26 @@ export default function DocumentViewerModal({
 
     const [fetchedType, setFetchedType] = React.useState<string | null>(null);
     const [currentIndex, setCurrentIndex] = React.useState(0);
+    const [pdfDataUrl, setPdfDataUrl] = React.useState<string | null>(null);
+
     const docxContainerRef = React.useRef<HTMLDivElement>(null);
     const [docxRendering, setDocxRendering] = React.useState(false);
     const [docxError, setDocxError] = React.useState<string | null>(null);
 
+    // Image Manipulation States
     const [scale, setScale] = React.useState(1);
     const [rotation, setRotation] = React.useState(0);
     const [position, setPosition] = React.useState({ x: 0, y: 0 });
     const [isDragging, setIsDragging] = React.useState(false);
     const [dragStart, setDragStart] = React.useState({ x: 0, y: 0 });
 
+    // Reset States on open/close and sync indexes
     useEffect(() => {
         if (isOpen) {
             setScale(1);
             setRotation(0);
             setPosition({ x: 0, y: 0 });
+            setPdfDataUrl(null);
 
             if (documents && documents.length > 0) {
                 if (typeof initialIndex === "number" && initialIndex >= 0 && initialIndex < documents.length) {
@@ -89,7 +95,8 @@ export default function DocumentViewerModal({
                 setCurrentIndex(0);
             }
         }
-    }, [isOpen, initialIndex, documents, fileUrl]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isOpen]);
 
     const currentDoc = React.useMemo(() => {
         if (documents && documents.length > 0 && currentIndex >= 0 && currentIndex < documents.length) {
@@ -99,13 +106,14 @@ export default function DocumentViewerModal({
     }, [documents, currentIndex]);
 
     const activeUrl = React.useMemo(() => {
-        if (fileUrl && /^https?:\/\//i.test(fileUrl)) {
-            return fileUrl;
-        }
+        // Prefer local File blob URL when available (avoids iframe embedding issues with remote storage)
         if (file) {
             return URL.createObjectURL(file);
         }
-        return currentDoc ? currentDoc.url : fileUrl;
+        if (currentDoc) {
+            return currentDoc.url || null;
+        }
+        return fileUrl;
     }, [file, currentDoc, fileUrl]);
 
     const activeTitle = currentDoc ? currentDoc.label : title;
@@ -119,7 +127,8 @@ export default function DocumentViewerModal({
     const isLocalDocx = React.useMemo(() => {
         if (fileExtension !== "docx") return false;
         if (file) return true;
-        return !!activeUrl && (activeUrl.startsWith("blob:") || activeUrl.startsWith("data:"));
+        if (activeUrl && (activeUrl.startsWith("blob:") || activeUrl.startsWith("data:"))) return true;
+        return false;
     }, [fileExtension, file, activeUrl]);
 
     useEffect(() => {
@@ -127,13 +136,13 @@ export default function DocumentViewerModal({
             fetch(activeUrl)
                 .then(res => res.blob())
                 .then(blob => setFetchedType(blob.type))
-                .catch(() => {});
+                .catch(() => { });
         } else {
             setFetchedType(null);
         }
     }, [activeUrl]);
 
-    useEffect(() => {
+    React.useEffect(() => {
         if (!isOpen || !isLocalDocx || !docxContainerRef.current) return;
 
         let active = true;
@@ -153,7 +162,8 @@ export default function DocumentViewerModal({
                 }
 
                 if (!active) return;
-                const docxPreviewModule = await import("docx-preview");
+
+                const docxPreviewModule = await import(/* webpackIgnore: true */ "docx-preview");
                 if (docxContainerRef.current && active) {
                     docxContainerRef.current.innerHTML = "";
                     await docxPreviewModule.renderAsync(docxBlob, docxContainerRef.current, undefined, {
@@ -161,20 +171,26 @@ export default function DocumentViewerModal({
                         inWrapper: false,
                         ignoreWidth: true,
                         ignoreHeight: true,
+                        ignoreFonts: false,
                         breakPages: true,
+                        debug: false,
+                        experimental: true,
                     });
                 }
-            } catch (error) {
-                console.error("Failed to render DOCX:", error);
+            } catch (err: unknown) {
+                console.error("Failed to render DOCX:", err);
                 if (active) {
-                    setDocxError(error instanceof Error ? error.message : "Failed to render DOCX document.");
+                    setDocxError(err instanceof Error ? err.message : "Failed to render docx document");
                 }
             } finally {
-                if (active) setDocxRendering(false);
+                if (active) {
+                    setDocxRendering(false);
+                }
             }
         }
 
-        void renderDocx();
+        renderDocx();
+
         return () => {
             active = false;
         };
@@ -198,6 +214,54 @@ export default function DocumentViewerModal({
         return false;
     }, [file, activeUrl, fetchedType, activeTitle]);
 
+    // Convert local/blob PDFs to Base64 data URLs to bypass Chrome's block on blob URLs inside PDF iframes.
+    // Remote PDFs are kept as remote URLs because they embed directly.
+    React.useEffect(() => {
+        if (!isOpen || !isPdf) {
+            setPdfDataUrl(null);
+            return;
+        }
+
+        let active = true;
+
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                if (active && typeof reader.result === "string") {
+                    setPdfDataUrl(reader.result);
+                }
+            };
+            reader.readAsDataURL(file);
+            return () => {
+                active = false;
+            };
+        }
+
+        if (activeUrl && activeUrl.startsWith("blob:")) {
+            fetch(activeUrl)
+                .then(res => res.blob())
+                .then(blob => {
+                    if (active) {
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                            if (active && typeof reader.result === "string") {
+                                setPdfDataUrl(reader.result);
+                            }
+                        };
+                        reader.readAsDataURL(blob);
+                    }
+                })
+                .catch(err => {
+                    console.error("Failed to read blob for PDF viewer:", err);
+                });
+            return () => {
+                active = false;
+            };
+        }
+
+        setPdfDataUrl(null);
+    }, [isOpen, isPdf, file, activeUrl]);
+
     const isDocument = React.useMemo(() => {
         if (isPdf) return true;
         if (file) {
@@ -219,6 +283,7 @@ export default function DocumentViewerModal({
         return `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(activeUrl)}`;
     }, [activeUrl, fileExtension, isPdf]);
 
+    // Interactive Handlers
     const handleWheel = (e: React.WheelEvent) => {
         if (!isImage) return;
         e.preventDefault();
@@ -260,11 +325,11 @@ export default function DocumentViewerModal({
             const url = window.URL.createObjectURL(blob);
             const link = document.createElement("a");
             link.href = url;
-            
+
             const cleanTitle = activeTitle.trim().replace(/[^a-zA-Z0-9\-_]/g, "_") || "document";
             const ext = fileExtension || (blob.type.includes("pdf") ? "pdf" : blob.type.split("/")[1] || "bin");
             link.download = `${cleanTitle}.${ext}`;
-            
+
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -275,296 +340,322 @@ export default function DocumentViewerModal({
         }
     };
 
-    if (!isOpen || !activeUrl) return null;
-
     return (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 md:p-6 bg-slate-950/80 backdrop-blur-md">
-            {/* Modal Window Container */}
-            <div className="relative w-full max-w-4xl bg-white dark:bg-[#0c0f16] border border-slate-200 dark:border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col z-10 h-[85vh]">
-                {/* Ambient Glow */}
-                <div 
-                    className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-36 blur-[80px] rounded-full opacity-10 pointer-events-none"
-                    style={{ backgroundColor: themeColor }}
-                />
+        <AnimatePresence>
+            {isOpen && activeUrl && (
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 md:p-6 overflow-y-auto pointer-events-auto">
+                    {/* Backdrop Overlay */}
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={onClose}
+                        className="fixed inset-0 bg-slate-950/80 backdrop-blur-md"
+                    />
 
-                {/* Modal Header */}
-                <div className="p-4 sm:p-6 border-b border-slate-100 dark:border-white/5 flex items-center justify-between relative z-10 shrink-0">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-slate-50 dark:bg-white/5 flex items-center justify-center border border-slate-100 dark:border-white/5 shrink-0">
-                            {isDocument ? (
-                                <FileText className="w-5 h-5 text-primary" style={{ color: themeColor }} />
+                    {/* Modal Window Container */}
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95, y: 15 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95, y: 15 }}
+                        transition={{ type: "spring", duration: 0.5 }}
+                        className="relative w-full max-w-4xl bg-white dark:bg-[#0c0f16] border border-slate-200 dark:border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col z-10 h-[85vh]"
+                    >
+                        {/* Ambient Glow */}
+                        <div
+                            className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-36 blur-[80px] rounded-full opacity-10 pointer-events-none"
+                            style={{ backgroundColor: themeColor }}
+                        />
+
+                        {/* Modal Header */}
+                        <div className="p-4 sm:p-6 border-b border-slate-100 dark:border-white/5 flex items-center justify-between relative z-10 shrink-0">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-slate-50 dark:bg-white/5 flex items-center justify-center border border-slate-100 dark:border-white/5 shrink-0">
+                                    {isDocument ? (
+                                        <FileText className="w-5 h-5 text-primary" style={{ color: themeColor }} />
+                                    ) : (
+                                        <Eye className="w-5 h-5 text-primary" style={{ color: themeColor }} />
+                                    )}
+                                </div>
+                                <div>
+                                    <span className="text-[8px] font-black uppercase tracking-[0.2em] text-slate-400 italic block leading-none">Document Visualizer</span>
+                                    <h3 className="text-sm sm:text-base font-black uppercase italic tracking-tighter text-slate-900 dark:text-white leading-tight">
+                                        {activeTitle}
+                                    </h3>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                                {/* Visualizer Controls - Only for Images */}
+                                {isImage && (
+                                    <div className="hidden sm:flex items-center gap-1 bg-slate-50 dark:bg-white/5 rounded-xl p-1 border border-slate-100 dark:border-white/5 mr-2">
+                                        <Button
+                                            onClick={() => setScale(prev => Math.min(prev + 0.25, 8))}
+                                            variant="ghost"
+                                            size="icon"
+                                            className="w-7 h-7 rounded-lg text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
+                                            title="Zoom In"
+                                        >
+                                            <ZoomIn className="w-4.5 h-4.5" />
+                                        </Button>
+                                        <Button
+                                            onClick={() => setScale(prev => Math.max(prev - 0.25, 0.4))}
+                                            variant="ghost"
+                                            size="icon"
+                                            className="w-7 h-7 rounded-lg text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
+                                            title="Zoom Out"
+                                        >
+                                            <ZoomOut className="w-4.5 h-4.5" />
+                                        </Button>
+                                        <Button
+                                            onClick={() => setRotation(prev => prev - 90)}
+                                            variant="ghost"
+                                            size="icon"
+                                            className="w-7 h-7 rounded-lg text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
+                                            title="Rotate Counter-Clockwise"
+                                        >
+                                            <RotateCcw className="w-4.5 h-4.5" />
+                                        </Button>
+                                        <Button
+                                            onClick={() => setRotation(prev => prev + 90)}
+                                            variant="ghost"
+                                            size="icon"
+                                            className="w-7 h-7 rounded-lg text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
+                                            title="Rotate Clockwise"
+                                        >
+                                            <RotateCw className="w-4.5 h-4.5" />
+                                        </Button>
+                                        <Button
+                                            onClick={handleReset}
+                                            variant="ghost"
+                                            size="icon"
+                                            className="w-7 h-7 rounded-lg text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
+                                            title="Reset Changes"
+                                        >
+                                            <RefreshCw className="w-4.5 h-4.5" />
+                                        </Button>
+                                    </div>
+                                )}
+
+                                <Button
+                                    onClick={handleDownload}
+                                    variant="ghost"
+                                    size="icon"
+                                    className="w-8 h-8 rounded-full bg-slate-50 hover:bg-slate-100 dark:bg-white/5 dark:hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-primary transition-all shrink-0"
+                                    title="Download document"
+                                >
+                                    <Download className="w-4 h-4" />
+                                </Button>
+                                <button
+                                    onClick={onClose}
+                                    className="w-8 h-8 rounded-full bg-slate-50 hover:bg-slate-100 dark:bg-white/5 dark:hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-red-500 transition-colors"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Content Body */}
+                        <div
+                            className="flex-grow bg-slate-100/50 dark:bg-black/40 flex items-center justify-center overflow-hidden relative select-none"
+                            onWheel={handleWheel}
+                        >
+                            {/* Floating Previous Navigation Button */}
+                            {documents && documents.length > 1 && currentIndex > 0 && (
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setCurrentIndex(prev => prev - 1);
+                                        handleReset();
+                                    }}
+                                    className="absolute left-4 z-30 w-12 h-12 rounded-full bg-slate-900/80 hover:bg-slate-900/90 text-white backdrop-blur-md flex items-center justify-center border border-white/10 hover:scale-105 transition-all shadow-xl active:scale-95"
+                                >
+                                    <ChevronLeft className="w-6 h-6" />
+                                </button>
+                            )}
+
+                            {/* Floating Next Navigation Button */}
+                            {documents && documents.length > 1 && currentIndex < documents.length - 1 && (
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setCurrentIndex(prev => prev + 1);
+                                        handleReset();
+                                    }}
+                                    className="absolute right-4 z-30 w-12 h-12 rounded-full bg-slate-900/80 hover:bg-slate-900/90 text-white backdrop-blur-md flex items-center justify-center border border-white/10 hover:scale-105 transition-all shadow-xl active:scale-95"
+                                >
+                                    <ChevronRight className="w-6 h-6" />
+                                </button>
+                            )}
+
+                            {isPdf ? (
+                                <iframe
+                                    src={`${pdfDataUrl || activeUrl}#toolbar=0&navpanes=0`}
+                                    className="w-full h-full rounded-2xl border-0 bg-white"
+                                    title="PDF Document Viewer"
+                                />
+                            ) : isLocalDocx ? (
+                                <div className="w-full h-full flex flex-col bg-slate-50 dark:bg-slate-900 rounded-2xl overflow-hidden">
+                                    {docxRendering && (
+                                        <div className="flex-grow flex flex-col items-center justify-center p-8 text-slate-500">
+                                            <Loader2 className="w-8 h-8 animate-spin text-emerald-500 mb-2" />
+                                            <p className="text-[10px] font-black uppercase tracking-widest italic text-slate-400">Rendering document content...</p>
+                                        </div>
+                                    )}
+                                    {docxError && (
+                                        <div className="flex-grow flex flex-col items-center justify-center p-8 text-center">
+                                            <p className="text-sm text-red-500 font-bold mb-2">Failed to render preview</p>
+                                            <p className="text-xs text-slate-400 max-w-sm mb-4">{docxError}</p>
+                                            <Button onClick={handleDownload} style={{ backgroundColor: themeColor }}>
+                                                <Download className="w-4 h-4 mr-2" /> Download File
+                                            </Button>
+                                        </div>
+                                    )}
+                                    <div
+                                        ref={docxContainerRef}
+                                        className={cn(
+                                            "flex-grow overflow-auto p-4 md:p-8 bg-white text-black text-left border-0",
+                                            docxError && "hidden"
+                                        )}
+                                        style={{ color: "black", background: "white" }}
+                                    />
+                                </div>
+                            ) : isDocument ? (
+                                officeViewerUrl ? (
+                                    <iframe
+                                        src={officeViewerUrl}
+                                        className="w-full h-full rounded-2xl border-0 bg-white"
+                                        title="Office Document Viewer"
+                                    />
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center p-8">
+                                        <div className="w-full max-w-md rounded-3xl border border-white/10 bg-white/[0.04] p-8 text-center shadow-2xl">
+                                            <div className="mx-auto w-20 h-20 rounded-3xl bg-white/10 border border-white/10 flex items-center justify-center">
+                                                <FileText className="w-10 h-10" style={{ color: themeColor }} />
+                                            </div>
+                                            <p className="mt-6 text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">
+                                                {fileExtension.toUpperCase() || "Document"} File
+                                            </p>
+                                            <h4 className="mt-2 text-xl font-black italic uppercase tracking-tight text-white">
+                                                {activeTitle}
+                                            </h4>
+                                            <p className="mt-3 text-sm text-slate-400 leading-relaxed">
+                                                This file type cannot be previewed directly in the browser. Open it in a new tab to view or download the submitted document.
+                                            </p>
+                                            <Button
+                                                onClick={handleDownload}
+                                                className="mt-6 h-11 rounded-xl px-6 text-xs font-black uppercase tracking-wider text-white"
+                                                style={{ backgroundColor: themeColor }}
+                                            >
+                                                <Download className="w-4 h-4 mr-2" />
+                                                Download Document
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )
                             ) : (
-                                <Eye className="w-5 h-5 text-primary" style={{ color: themeColor }} />
+                                <div
+                                    className="w-full h-full flex items-center justify-center relative active:cursor-grabbing overflow-hidden cursor-grab"
+                                    onPointerDown={handlePointerDown}
+                                    onPointerMove={handlePointerMove}
+                                    onPointerUp={handlePointerUp}
+                                    onPointerLeave={handlePointerUp}
+                                    style={{ touchAction: "none" }}
+                                >
+                                    {/* Action instructions overlay */}
+                                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-slate-900/80 text-white backdrop-blur-md px-4 py-2 rounded-full text-[9px] font-black uppercase tracking-widest pointer-events-none z-20 flex items-center gap-2 opacity-60 hover:opacity-100 transition-opacity">
+                                        <Move className="w-3.5 h-3.5 text-primary" />
+                                        <span>Drag to Pan • Scroll to Zoom</span>
+                                    </div>
+
+                                    <motion.div
+                                        className="relative flex items-center justify-center pointer-events-none"
+                                        style={{
+                                            x: position.x,
+                                            y: position.y,
+                                            scale,
+                                            rotate: rotation,
+                                        }}
+                                        transition={{ type: "spring", stiffness: 400, damping: 40 }}
+                                    >
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <img
+                                            src={activeUrl}
+                                            alt={activeTitle}
+                                            className="max-w-[85vw] max-h-[60vh] object-contain rounded-2xl shadow-2xl select-none"
+                                            draggable={false}
+                                        />
+                                    </motion.div>
+                                </div>
                             )}
                         </div>
-                        <div>
-                            <span className="text-[8px] font-black uppercase tracking-[0.2em] text-slate-400 italic block leading-none">Document Visualizer</span>
-                            <h3 className="text-sm sm:text-base font-black uppercase italic tracking-tighter text-slate-900 dark:text-white leading-tight">
-                                {activeTitle}
-                            </h3>
-                        </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                        {isImage && (
-                            <div className="hidden sm:flex items-center gap-1 bg-slate-50 dark:bg-white/5 rounded-xl p-1 border border-slate-100 dark:border-white/5 mr-2">
-                                <Button
-                                    onClick={() => setScale(prev => Math.min(prev + 0.25, 8))}
-                                    variant="ghost"
-                                    size="icon"
-                                    className="w-7 h-7 rounded-lg text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
-                                    title="Zoom In"
-                                >
-                                    <ZoomIn className="w-4 h-4" />
-                                </Button>
-                                <Button
-                                    onClick={() => setScale(prev => Math.max(prev - 0.25, 0.4))}
-                                    variant="ghost"
-                                    size="icon"
-                                    className="w-7 h-7 rounded-lg text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
-                                    title="Zoom Out"
-                                >
-                                    <ZoomOut className="w-4 h-4" />
-                                </Button>
-                                <Button
-                                    onClick={() => setRotation(prev => prev - 90)}
-                                    variant="ghost"
-                                    size="icon"
-                                    className="w-7 h-7 rounded-lg text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
-                                    title="Rotate Counter-Clockwise"
-                                >
-                                    <RotateCcw className="w-4 h-4" />
-                                </Button>
-                                <Button
-                                    onClick={() => setRotation(prev => prev + 90)}
-                                    variant="ghost"
-                                    size="icon"
-                                    className="w-7 h-7 rounded-lg text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
-                                    title="Rotate Clockwise"
-                                >
-                                    <RotateCw className="w-4 h-4" />
-                                </Button>
-                                <Button
-                                    onClick={handleReset}
-                                    variant="ghost"
-                                    size="icon"
-                                    className="w-7 h-7 rounded-lg text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
-                                    title="Reset Changes"
-                                >
-                                    <RefreshCw className="w-4 h-4" />
-                                </Button>
+
+                        {/* Modal Footer / Document Indicators */}
+                        {documents && documents.length > 1 && (
+                            <div className="p-4 bg-slate-50 dark:bg-slate-950/80 border-t border-slate-100 dark:border-white/5 relative z-10 shrink-0 flex flex-col gap-2 overflow-x-auto">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 italic">
+                                        Requirement Index ({currentIndex + 1} of {documents.length})
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-3 overflow-x-auto py-2 scrollbar-none">
+                                    {documents.map((doc, idx) => {
+                                        const isActive = idx === currentIndex;
+                                        const hasDoc = !!doc.url;
+                                        const isImg = hasDoc && isImageFile(doc.url!);
+
+                                        return (
+                                            <button
+                                                key={idx}
+                                                disabled={!hasDoc}
+                                                onClick={() => {
+                                                    setCurrentIndex(idx);
+                                                    handleReset();
+                                                }}
+                                                className={`relative w-24 h-16 rounded-xl overflow-hidden shrink-0 transition-all active:scale-95 border-2 ${isActive
+                                                    ? "scale-105 shadow-md"
+                                                    : hasDoc
+                                                        ? "border-transparent opacity-60 hover:opacity-100 hover:scale-102"
+                                                        : "opacity-20 cursor-not-allowed border-transparent"
+                                                    }`}
+                                                style={isActive ? { borderColor: themeColor, boxShadow: `0 0 12px ${themeColor}40` } : undefined}
+                                                title={doc.label}
+                                            >
+                                                {hasDoc ? (
+                                                    isImg ? (
+                                                        /* eslint-disable-next-line @next/next/no-img-element */
+                                                        <img
+                                                            src={doc.url!}
+                                                            alt={doc.label}
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                    ) : (
+                                                        <div className="w-full h-full bg-slate-200 dark:bg-white/5 flex flex-col items-center justify-center gap-1 p-1">
+                                                            <FileText className="w-5 h-5 text-slate-400" />
+                                                            <span className="text-[7px] font-black uppercase text-slate-500 truncate max-w-full">
+                                                                {getFileExtension(doc.url!).toUpperCase() || "DOC"}
+                                                            </span>
+                                                        </div>
+                                                    )
+                                                ) : (
+                                                    <div className="w-full h-full bg-slate-300 dark:bg-slate-900 flex items-center justify-center">
+                                                        <span className="text-[8px] font-black uppercase text-slate-400">Empty</span>
+                                                    </div>
+                                                )}
+
+                                                {/* Text Overlay for Labels */}
+                                                <div className="absolute inset-x-0 bottom-0 bg-slate-950/70 backdrop-blur-[1px] py-0.5 px-1 text-center text-white text-[7px] font-black uppercase tracking-wider truncate">
+                                                    {doc.label}
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
                             </div>
                         )}
-
-                        <Button
-                            onClick={handleDownload}
-                            variant="ghost"
-                            size="icon"
-                            className="w-8 h-8 rounded-full bg-slate-50 hover:bg-slate-100 dark:bg-white/5 dark:hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-primary transition-all shrink-0"
-                            title="Download document"
-                        >
-                            <Download className="w-4 h-4" />
-                        </Button>
-                        <button
-                            onClick={onClose}
-                            className="w-8 h-8 rounded-full bg-slate-50 hover:bg-slate-100 dark:bg-white/5 dark:hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-red-500 transition-colors"
-                        >
-                            <X className="w-4 h-4" />
-                        </button>
-                    </div>
+                    </motion.div>
                 </div>
-
-                {/* Content Body */}
-                <div 
-                    className="flex-grow bg-slate-100/50 dark:bg-black/40 flex items-center justify-center overflow-hidden relative select-none"
-                    onWheel={handleWheel}
-                >
-                    {documents && documents.length > 1 && currentIndex > 0 && (
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                setCurrentIndex(prev => prev - 1);
-                                handleReset();
-                            }}
-                            className="absolute left-4 z-30 w-12 h-12 rounded-full bg-slate-900/80 hover:bg-slate-900/90 text-white backdrop-blur-md flex items-center justify-center border border-white/10 hover:scale-105 transition-all shadow-xl active:scale-95"
-                        >
-                            <ChevronLeft className="w-6 h-6" />
-                        </button>
-                    )}
-
-                    {documents && documents.length > 1 && currentIndex < documents.length - 1 && (
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                setCurrentIndex(prev => prev + 1);
-                                handleReset();
-                            }}
-                            className="absolute right-4 z-30 w-12 h-12 rounded-full bg-slate-900/80 hover:bg-slate-900/90 text-white backdrop-blur-md flex items-center justify-center border border-white/10 hover:scale-105 transition-all shadow-xl active:scale-95"
-                        >
-                            <ChevronRight className="w-6 h-6" />
-                        </button>
-                    )}
-
-                    {isPdf ? (
-                        <iframe
-                            src={`${activeUrl}#toolbar=0&navpanes=0`}
-                            className="w-full h-full rounded-2xl border-0 bg-white"
-                            title="PDF Document Viewer"
-                        />
-                    ) : isLocalDocx ? (
-                        <div className="flex h-full w-full flex-col overflow-hidden rounded-2xl bg-slate-50">
-                            {docxRendering && (
-                                <div className="flex flex-grow flex-col items-center justify-center p-8 text-slate-500">
-                                    <Loader2 className="mb-2 h-8 w-8 animate-spin text-emerald-500" />
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                                        Rendering document content...
-                                    </p>
-                                </div>
-                            )}
-                            {docxError && (
-                                <div className="flex flex-grow flex-col items-center justify-center p-8 text-center">
-                                    <p className="mb-2 text-sm font-bold text-red-500">Failed to render preview</p>
-                                    <p className="mb-4 max-w-sm text-xs text-slate-400">{docxError}</p>
-                                    <Button onClick={handleDownload} style={{ backgroundColor: themeColor }}>
-                                        <Download className="mr-2 h-4 w-4" /> Download File
-                                    </Button>
-                                </div>
-                            )}
-                            <div
-                                ref={docxContainerRef}
-                                className={cn(
-                                    "flex-grow overflow-auto border-0 bg-white p-4 text-left text-black md:p-8",
-                                    docxError && "hidden"
-                                )}
-                            />
-                        </div>
-                    ) : isDocument ? (
-                        officeViewerUrl ? (
-                            <iframe
-                                src={officeViewerUrl}
-                                className="w-full h-full rounded-2xl border-0 bg-white"
-                                title="Office Document Viewer"
-                            />
-                        ) : (
-                            <div className="w-full h-full flex items-center justify-center p-8">
-                                <div className="w-full max-w-md rounded-3xl border border-white/10 bg-white/[0.04] p-8 text-center shadow-2xl">
-                                    <div className="mx-auto w-20 h-20 rounded-3xl bg-white/10 border border-white/10 flex items-center justify-center">
-                                        <FileText className="w-10 h-10" style={{ color: themeColor }} />
-                                    </div>
-                                    <p className="mt-6 text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">
-                                        {fileExtension.toUpperCase() || "Document"} File
-                                    </p>
-                                    <h4 className="mt-2 text-xl font-black italic uppercase tracking-tight text-white">
-                                        {activeTitle}
-                                    </h4>
-                                    <p className="mt-3 text-sm text-slate-400 leading-relaxed">
-                                        This file type cannot be previewed directly in the browser. Open it in a new tab to view or download the submitted document.
-                                    </p>
-                                    <Button
-                                        onClick={handleDownload}
-                                        className="mt-6 h-11 rounded-xl px-6 text-xs font-black uppercase tracking-wider text-white"
-                                        style={{ backgroundColor: themeColor }}
-                                    >
-                                        <Download className="w-4 h-4 mr-2" />
-                                        Download Document
-                                    </Button>
-                                </div>
-                            </div>
-                        )
-                    ) : (
-                        <div 
-                            className="w-full h-full flex items-center justify-center relative active:cursor-grabbing overflow-hidden cursor-grab"
-                            onPointerDown={handlePointerDown}
-                            onPointerMove={handlePointerMove}
-                            onPointerUp={handlePointerUp}
-                            onPointerLeave={handlePointerUp}
-                            style={{ touchAction: "none" }}
-                        >
-                            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-slate-900/80 text-white backdrop-blur-md px-4 py-2 rounded-full text-[9px] font-black uppercase tracking-widest pointer-events-none z-20 flex items-center gap-2 opacity-60 hover:opacity-100 transition-opacity">
-                                <Move className="w-3.5 h-3.5" />
-                                <span>Drag to Pan • Scroll to Zoom</span>
-                            </div>
-         
-                            <div
-                                className="relative flex items-center justify-center pointer-events-none"
-                                style={{
-                                    transform: `translate(${position.x}px, ${position.y}px) scale(${scale}) rotate(${rotation}deg)`
-                                }}
-                            >
-                                <img
-                                    src={activeUrl}
-                                    alt={activeTitle}
-                                    className="max-w-[85vw] max-h-[60vh] object-contain rounded-2xl shadow-2xl select-none"
-                                    draggable={false}
-                                />
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                {/* Modal Footer / Document Indicators */}
-                {documents && documents.length > 1 && (
-                    <div className="p-4 bg-slate-50 dark:bg-slate-950/80 border-t border-slate-100 dark:border-white/5 relative z-10 shrink-0 flex flex-col gap-2 overflow-x-auto">
-                        <div className="flex items-center justify-between">
-                            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 italic">
-                                Requirement Index ({currentIndex + 1} of {documents.length})
-                            </span>
-                        </div>
-                        <div className="flex items-center gap-3 overflow-x-auto py-2 scrollbar-none">
-                            {documents.map((doc, idx) => {
-                                const isActive = idx === currentIndex;
-                                const hasDoc = !!doc.url;
-                                const isImg = hasDoc && isImageFile(doc.url!);
-                                
-                                return (
-                                    <button
-                                        key={idx}
-                                        disabled={!hasDoc}
-                                        onClick={() => {
-                                            setCurrentIndex(idx);
-                                            handleReset();
-                                        }}
-                                        className={`relative w-24 h-16 rounded-xl overflow-hidden shrink-0 transition-all active:scale-95 border-2 ${
-                                            isActive
-                                                ? "scale-105 shadow-md"
-                                                : hasDoc
-                                                ? "border-transparent opacity-60 hover:opacity-100 hover:scale-102"
-                                                : "opacity-20 cursor-not-allowed border-transparent"
-                                        }`}
-                                        style={isActive ? { borderColor: themeColor, boxShadow: `0 0 12px ${themeColor}40` } : undefined}
-                                        title={doc.label}
-                                    >
-                                        {hasDoc ? (
-                                            isImg ? (
-                                                <img 
-                                                    src={doc.url!} 
-                                                    alt={doc.label} 
-                                                    className="w-full h-full object-cover" 
-                                                />
-                                            ) : (
-                                                <div className="w-full h-full bg-slate-200 dark:bg-white/5 flex flex-col items-center justify-center gap-1 p-1">
-                                                    <FileText className="w-5 h-5 text-slate-400" />
-                                                    <span className="text-[7px] font-black uppercase text-slate-500 truncate max-w-full">
-                                                        {getFileExtension(doc.url!).toUpperCase() || "DOC"}
-                                                    </span>
-                                                </div>
-                                            )
-                                        ) : (
-                                            <div className="w-full h-full bg-slate-300 dark:bg-slate-900 flex items-center justify-center">
-                                                <span className="text-[8px] font-black uppercase text-slate-400">Empty</span>
-                                            </div>
-                                        )}
-                                        
-                                        <div className="absolute inset-x-0 bottom-0 bg-slate-950/70 backdrop-blur-[1px] py-0.5 px-1 text-center text-white text-[7px] font-black uppercase tracking-wider truncate">
-                                            {doc.label}
-                                        </div>
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </div>
-                )}
-            </div>
-        </div>
+            )}
+        </AnimatePresence>
     );
 }
