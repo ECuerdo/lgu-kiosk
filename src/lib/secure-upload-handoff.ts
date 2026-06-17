@@ -60,12 +60,16 @@ export function verifyHandoffToken(token: string): HandoffPayload {
 }
 
 export function getHandoffStoragePrefix(payload: HandoffPayload) {
-  return `building-permits/${payload.userId}/handoff/${payload.nonce}`;
+  const namespace = payload.slot.startsWith("bp_") ? "business-permits" : "building-permits";
+  return `${namespace}/${payload.userId}/handoff/${payload.nonce}`;
 }
 
 export function isAllowedHandoffSlot(sessionSlot: string, uploadSlot: string) {
   if (sessionSlot === "documents") {
     return (/^req_[0-9]$/.test(uploadSlot) && uploadSlot !== "req_5") || /^permit_[0-6]$/.test(uploadSlot);
+  }
+  if (sessionSlot.startsWith("bp_")) {
+    return sessionSlot === uploadSlot;
   }
   return sessionSlot === uploadSlot;
 }
@@ -90,6 +94,11 @@ export function inspectFileSignature(buffer: Buffer) {
 }
 
 export async function scanWithClamAv(buffer: Buffer) {
+  const enabled = process.env.NEXT_PUBLIC_ENABLE_CLAMAV_SCAN?.toLowerCase() === "true";
+  if (!enabled) {
+    return;
+  }
+
   const host = process.env.CLAMAV_HOST;
   const port = Number(process.env.CLAMAV_PORT || "3310");
   if (!host) {

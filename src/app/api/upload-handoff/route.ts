@@ -6,7 +6,8 @@ export const runtime = "nodejs";
 export async function POST(request: NextRequest) {
   try {
     const { userId, slot } = await request.json();
-    if (!userId || !["tct", "documents", "bfp", "zoning"].includes(slot)) {
+    const allowed = ["tct", "documents", "bfp", "zoning"];
+    if (!userId || !(allowed.includes(slot) || String(slot).startsWith("bp_"))) {
       return NextResponse.json({ error: "Invalid upload request." }, { status: 400 });
     }
 

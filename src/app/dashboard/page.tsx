@@ -316,6 +316,7 @@ function DashboardContent() {
       utterance.rate = 0.95; // Slightly slower for clear, professional pacing
       utterance.pitch = 1.05; // Slightly warmer pitch
       utterance.volume = 1.0;  // Full clarity volume
+
       
       window.speechSynthesis.speak(utterance);
     }
@@ -346,6 +347,8 @@ function DashboardContent() {
     }
     if (service.id === "p3") {
       router.push("/modules/building-permit");
+    } else if (service.id === "p1") {
+      router.push("/modules/business-permit");
     }
   };
 
