@@ -4,6 +4,7 @@ import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
 import GlobalKeyboard from "@/components/shared/GlobalKeyboard";
 import KioskMaintenanceGuard from "@/components/shared/KioskMaintenanceGuard";
+import ThemeProvider from "@/components/shared/ThemeProvider";
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
@@ -22,13 +23,15 @@ export default function RootLayout({
     process.env.NEXT_PUBLIC_HIDE_KIOSK_CURSOR?.toLowerCase() === "true";
 
   return (
-    <html lang="en" className={cn("font-sans", geist.variable)}>
+    <html lang="en" suppressHydrationWarning className={cn("font-sans", geist.variable)}>
       <head>
       </head>
       <body className={cn(hideKioskCursor && "hide-kiosk-cursor")}>
-        <KioskMaintenanceGuard />
-        {children}
-        <GlobalKeyboard />
+        <ThemeProvider>
+          <KioskMaintenanceGuard />
+          {children}
+          <GlobalKeyboard />
+        </ThemeProvider>
       </body>
     </html>
   );
