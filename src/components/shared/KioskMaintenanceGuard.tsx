@@ -69,18 +69,18 @@ export default function KioskMaintenanceGuard() {
           <motion.div
             initial={{ opacity: 0, scale: 0.96, y: 12 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            className="w-full max-w-lg rounded-[2.5rem] border border-[#1a6b3a]/25 bg-white p-8 text-center shadow-2xl dark:bg-[#0b0f0d]"
+            className="w-full max-w-2xl rounded-[3rem] border border-[#1a6b3a]/25 bg-white p-10 text-center shadow-2xl dark:bg-[#0b0f0d] sm:p-12"
           >
-            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-3xl bg-[#1a6b3a]/10 text-[#1a6b3a]">
-              <ShieldAlert className="h-8 w-8" />
+            <div className="mx-auto mb-7 flex h-20 w-20 items-center justify-center rounded-[2rem] bg-[#1a6b3a]/10 text-[#1a6b3a] sm:h-24 sm:w-24">
+              <ShieldAlert className="h-10 w-10 sm:h-12 sm:w-12" />
             </div>
-            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-[#1a6b3a]">
+            <p className="text-[12px] font-black uppercase tracking-[0.45em] text-[#1a6b3a] sm:text-sm">
               Kiosk Maintenance Mode
             </p>
-            <h2 className="mt-3 text-3xl font-black uppercase italic tracking-tighter text-slate-900 dark:text-white">
+            <h2 className="mt-4 text-4xl font-black uppercase italic tracking-tighter text-slate-900 dark:text-white sm:text-6xl">
               Temporarily Unavailable
             </h2>
-            <p className="mt-4 text-sm font-medium leading-relaxed text-slate-600 dark:text-slate-300">
+            <p className="mx-auto mt-6 max-w-xl text-lg font-medium leading-relaxed text-slate-600 dark:text-slate-300 sm:text-2xl sm:leading-relaxed">
               The kiosk is currently under maintenance. Please wait while the system is being updated.
               This screen cannot be dismissed until maintenance mode is turned off.
             </p>
