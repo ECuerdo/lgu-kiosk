@@ -3,6 +3,7 @@ import "./globals.css";
 import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
 import GlobalKeyboard from "@/components/shared/GlobalKeyboard";
+import KioskMaintenanceGuard from "@/components/shared/KioskMaintenanceGuard";
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
@@ -25,6 +26,7 @@ export default function RootLayout({
       <head>
       </head>
       <body className={cn(hideKioskCursor && "hide-kiosk-cursor")}>
+        <KioskMaintenanceGuard />
         {children}
         <GlobalKeyboard />
       </body>
