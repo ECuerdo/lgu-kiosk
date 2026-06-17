@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ShieldAlert } from "lucide-react";
 
@@ -10,45 +10,55 @@ export default function KioskMaintenanceGuard() {
   const [isMaintenance, setIsMaintenance] = useState(false);
   const [loading, setLoading] = useState(true);
   const lastStateRef = useRef<boolean | null>(null);
+  const reloadQueuedRef = useRef(false);
+
+  const checkMaintenance = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/system-settings/kiosk_maintenance_mode?t=${Date.now()}`, {
+        cache: "no-store",
+      });
+      const result = await response.json();
+      const nextValue = String(result.value || "").toLowerCase() === "true";
+
+      if (lastStateRef.current === true && nextValue === false && !reloadQueuedRef.current) {
+        reloadQueuedRef.current = true;
+        window.location.reload();
+        return;
+      }
+
+      lastStateRef.current = nextValue;
+      setIsMaintenance(nextValue);
+      setLoading(false);
+    } catch (error) {
+      console.error("Maintenance mode check failed:", error);
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    let active = true;
-    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    const initialCheckId = window.setTimeout(() => {
+      void checkMaintenance();
+    }, 0);
+    const intervalId = window.setInterval(() => {
+      void checkMaintenance();
+    }, POLL_MS);
 
-    const checkMaintenance = async () => {
-      try {
-        const response = await fetch("/api/system-settings/kiosk_maintenance_mode", {
-          cache: "no-store",
-        });
-        const result = await response.json();
-        if (!active) return;
-
-        const nextValue = String(result.value || "").toLowerCase() === "true";
-        if (lastStateRef.current === true && nextValue === false) {
-          window.location.reload();
-          return;
-        }
-
-        lastStateRef.current = nextValue;
-        setIsMaintenance(nextValue);
-        setLoading(false);
-      } catch (error) {
-        console.error("Maintenance mode check failed:", error);
-        if (active) setLoading(false);
-      } finally {
-        if (active) {
-          timeoutId = setTimeout(checkMaintenance, POLL_MS);
-        }
-      }
+    const handleWake = () => {
+      void checkMaintenance();
     };
 
-    void checkMaintenance();
+    window.addEventListener("focus", handleWake);
+    window.addEventListener("pageshow", handleWake);
+    document.addEventListener("visibilitychange", handleWake);
 
     return () => {
-      active = false;
-      if (timeoutId) clearTimeout(timeoutId);
+      window.clearTimeout(initialCheckId);
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", handleWake);
+      window.removeEventListener("pageshow", handleWake);
+      document.removeEventListener("visibilitychange", handleWake);
     };
-  }, []);
+  }, [checkMaintenance]);
 
   if (loading) return null;
 
