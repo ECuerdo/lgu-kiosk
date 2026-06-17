@@ -80,9 +80,17 @@ export async function getUserTransactions() {
     }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export async function getSystemSettingAction(_key: string) {
-    return { success: true, data: "var(--primary)" };
+export async function getSystemSettingAction(key: string) {
+    try {
+        const setting = await prisma.systemSetting.findUnique({
+            where: { key },
+            select: { value: true },
+        });
+        return { success: true, data: setting?.value ?? null };
+    } catch (error) {
+        console.error("Failed to fetch system setting:", error);
+        return { success: false, error: "Failed to fetch system setting" };
+    }
 }
 
 export async function submitBusinessPermitTransaction(formData: FormData) {

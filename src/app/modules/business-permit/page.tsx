@@ -9,7 +9,6 @@ import {
     ChevronRight,
     Loader2,
     Check,
-    Home,
     Upload,
     Sparkles,
     TrendingUp,
@@ -22,6 +21,7 @@ import {
     Eye,
     AlertCircle
 } from "lucide-react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,7 +38,6 @@ import PrivacyTermsModal from "@/components/shared/PrivacyTermsModal";
 import SecureIdleTimer from "@/components/shared/SecureIdleTimer";
 import DocumentViewerModal from "@/components/shared/DocumentViewerModal";
 import { supabase } from "@/lib/supabase";
-import { compressImage } from "@/lib/image-compression";
 
 // --- TYPES ---
 type Step = "PATHWAY" | "USER_IDENTITY" | "PROFILE" | "CHECKLIST" | "SUBMIT";
@@ -251,7 +250,7 @@ function FilePreview({ file, onClick }: { file: File; onClick?: () => void }) {
 }
 export default function BusinessPermitWizardPage() {
     const router = useRouter();
-    const { hydrateDraft, hydrateDraftFiles, persistDraft, persistDraftFile, clearDraft } = useDraft<FormState>("emapandan_bp_draft");
+    const { hydrateDraft, hydrateDraftFiles, persistDraft, clearDraft } = useDraft<FormState>("emapandan_bp_draft");
     const contactInputRef = useRef<HTMLInputElement>(null);
 
     const [currentStep, setCurrentStep] = useState<Step>("PATHWAY");
@@ -945,72 +944,6 @@ export default function BusinessPermitWizardPage() {
         }
     };
 
-
-    const handleRemoveFile = async (field: keyof FormState) => {
-        setFormData(prev => ({ ...prev, [field]: null }));
-        await persistDraftFile(field as string, null as any);
-
-        // Also clear from revisionTx if it exists so the UI preview disappears
-        if (revisionTx) {
-            const urlField = `${(field as string).replace("File", "Url")}`;
-            if (revisionTx.additionalData && revisionTx.additionalData[urlField]) {
-                const updatedAdditional = { ...revisionTx.additionalData };
-                delete updatedAdditional[urlField];
-                setRevisionTx((prev: any) => ({
-                    ...prev,
-                    additionalData: updatedAdditional
-                }));
-            }
-        }
-    };
-
-    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, field: keyof FormState) => {
-        if (e.target.files && e.target.files[0]) {
-            const file = e.target.files[0];
-
-            // Validate file type (image, pdf, doc, docx)
-            const allowedTypes = [
-                "image/jpeg", "image/png", "image/gif", "image/webp", "image/heic", "image/heif",
-                "application/pdf",
-                "application/msword",
-                "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            ];
-
-            const fileExtension = file.name.split('.').pop()?.toLowerCase() || "";
-            const allowedExtensions = ["pdf", "jpg", "jpeg", "png", "gif", "webp", "heic", "heif", "doc", "docx"];
-
-            if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExtension)) {
-                toast.error("Invalid file type! Only images (PNG, JPG, WEBP), PDFs, and Word documents (DOC/DOCX) are allowed.");
-                e.target.value = ""; // clear file input
-                return;
-            }
-
-            // Validate file size (5MB limit)
-            const maxSizeBytes = 5 * 1024 * 1024; // 5MB
-            if (file.size > maxSizeBytes) {
-                toast.error("File size too large! The maximum file size limit is 5MB.");
-                e.target.value = ""; // clear file input
-                return;
-            }
-
-            let fileToProcess = file;
-            if (file.type.startsWith("image/")) {
-                try {
-                    fileToProcess = await compressImage(file);
-                    
-                    const compressedSizeKb = (fileToProcess.size / 1024).toFixed(1);
-                    console.log(`[ImageCompression] Original: ${(file.size / 1024).toFixed(1)} KB, Compressed: ${compressedSizeKb} KB`);
-                } catch (err) {
-                    console.error("Compression error:", err);
-                    toast.dismiss("image-compress-toast");
-                    // Fallback to original file
-                }
-            }
-
-            setFormData(prev => ({ ...prev, [field]: fileToProcess }));
-            await persistDraftFile(field as string, fileToProcess);
-        }
-    };
 
     // --- UPLOAD FILE CLIENT-SIDE HELPER ---
     const uploadFileClientSide = async (file: File | null, fieldName: string) => {
@@ -2442,7 +2375,7 @@ export default function BusinessPermitWizardPage() {
                                         {handoffField.replace(/([A-Z])/g, " $1").replace("File", "").trim()}
                                     </p>
                                 </div>
-                                <img src={handoffQrCode} alt="Business Permit upload QR code" className="mx-auto h-64 w-64 rounded-3xl border border-slate-200 bg-white p-3 dark:border-white/10" />
+                                <Image src={handoffQrCode} alt="Business Permit upload QR code" width={256} height={256} className="mx-auto rounded-3xl border border-slate-200 bg-white p-3 dark:border-white/10" unoptimized />
                                 <p className="text-[11px] font-bold uppercase tracking-widest text-slate-500">
                                     Scan with your phone to upload the file securely.
                                 </p>
