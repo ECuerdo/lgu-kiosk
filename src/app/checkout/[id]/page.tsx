@@ -197,9 +197,14 @@ export default function CheckoutPage() {
         });
       } else if (paymentStatus === "cancelled") {
         showToast("Payment checkout cancelled.", "warning");
+        if (transaction && transaction.type?.code?.startsWith("CEDULA")) {
+          setTimeout(() => {
+            router.push("/modules/cedula");
+          }, 1500);
+        }
       }
     }
-  }, [searchParams, userId, id, transaction, handleBackRedirect]);
+  }, [searchParams, userId, id, transaction, handleBackRedirect, router]);
 
 
 
@@ -261,6 +266,7 @@ export default function CheckoutPage() {
           transactionId: transaction.id,
           reference: `${transaction.type?.name || "Municipal Fee"} CheckOut`,
           redirectPath: `/checkout/${transaction.id}`,
+          cancelPath: transaction.type?.code?.startsWith("CEDULA") ? "/modules/cedula" : `/checkout/${transaction.id}`,
         }),
       });
 
