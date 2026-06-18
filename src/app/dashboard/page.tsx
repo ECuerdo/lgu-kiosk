@@ -3,13 +3,7 @@
 import React, { useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Image from "next/image";
-import {
-  FileText,
-  CreditCard,
-  Users,
-  HeartPulse,
-  HandHelping,
-  Megaphone,
+
 import LGULogo from "@/components/shared/LGULogo";
 import {
   FileText,
@@ -441,8 +435,8 @@ function DashboardContent() {
               key={cat}
               onClick={() => setActiveCategory(cat)}
               className={`w-full group flex flex-col items-center justify-center py-5 px-2 rounded-2xl transition-all duration-300 ${activeCategory === cat
-                  ? "bg-[#1a6b3a] text-white shadow-lg shadow-emerald-900/30 scale-105"
-                  : "text-slate-500 hover:bg-slate-800 hover:text-slate-300"
+                ? "bg-[#1a6b3a] text-white shadow-lg shadow-emerald-900/30 scale-105"
+                : "text-slate-500 hover:bg-slate-800 hover:text-slate-300"
                 }`}
             >
               <div className="mb-2 transition-transform duration-300 group-hover:scale-110">
@@ -504,8 +498,8 @@ function DashboardContent() {
             <Button
               onClick={toggleVoice}
               className={`font-bold rounded-2xl flex items-center gap-2.5 px-4 py-5 shadow-lg active:scale-95 transition-all shrink-0 ${isVoiceEnabled
-                  ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-950/20"
-                  : "bg-slate-200 hover:bg-slate-300 text-slate-700 shadow-slate-300/20"
+                ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-950/20"
+                : "bg-slate-200 hover:bg-slate-300 text-slate-700 shadow-slate-300/20"
                 }`}
             >
               <Volume2 className={`w-5 h-5 ${isVoiceEnabled ? "text-emerald-200 animate-bounce" : "text-slate-500"}`} />
