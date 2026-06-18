@@ -1108,7 +1108,7 @@ export default function BusinessPermitWizardPage() {
             if (res.success) {
                 clearDraft(); // Purge draft upon successful submission
                 toast.success("Business Permit application submitted successfully!", { id: "bp-upload-toast" });
-                router.push("/user/services/requests");
+                router.push("/dashboard");
             } else {
                 toast.error(res.error || "Submission failed. Please check inputs.", { id: "bp-upload-toast" });
             }

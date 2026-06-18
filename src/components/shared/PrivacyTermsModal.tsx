@@ -309,7 +309,10 @@ export default function PrivacyTermsModal({ isOpen, onClose, onAccept, onDecline
                                 </Button>
                                 <Button
                                     type="button"
-                                    onClick={onAccept}
+                                    onClick={() => {
+                                        onAccept();
+                                        onClose();
+                                    }}
                                     disabled={!hasReadPrivacy || !hasReadTerms}
                                     className={cn(
                                         "h-9 sm:h-10 px-4 sm:px-6 text-white rounded-full text-[8px] sm:text-[9px] font-black uppercase tracking-widest italic transition-all active:scale-95 shadow-md",
