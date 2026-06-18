@@ -23,6 +23,12 @@ import {
   CheckoutDetails,
   DeliveryAddress
 } from "../actions";
+import dynamic from "next/dynamic";
+
+const LocationPicker = dynamic(
+  () => import("@/components/shared/LocationPicker"),
+  { ssr: false }
+);
 
 const emptyAddress: DeliveryAddress = {
   barangay: "",
@@ -47,6 +53,10 @@ interface TransactionData {
   type: TransactionTypeInfo;
   fulfillmentType?: "PICK_UP" | "DELIVERY" | "E_COPY" | null;
   deliveryAddress?: unknown;
+  deliveryLat?: number | null;
+  deliveryLng?: number | null;
+  residentLat?: number | null;
+  residentLng?: number | null;
   fiscalSnapshot?: unknown;
   status: string;
 }
@@ -60,13 +70,15 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const [transaction, setTransaction] = useState<TransactionData | null>(null);
-  const [barangays, setBarangays] = useState<string[]>([]);
+  const [barangays, setBarangays] = useState<{ name: string; deliveryFee: number }[]>([]);
 
   // Form States
   const [fulfillment, setFulfillment] = useState<"PICK_UP" | "DELIVERY">("PICK_UP");
-  const [paymentMethod, setPaymentMethod] = useState<"gcash" | "qrph" | "dob">("gcash");
+  const [paymentMethod, setPaymentMethod] = useState<"gcash" | "qrph">("gcash");
   const [address, setAddress] = useState<DeliveryAddress>(emptyAddress);
   const [isBrgyDropdownOpen, setIsBrgyDropdownOpen] = useState(false);
+  const [coordinates, setCoordinates] = useState<{ lat: number; lng: number } | null>(null);
+  const [selectedBrgyFee, setSelectedBrgyFee] = useState<number>(0);
 
   // Status/Flow States
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -120,6 +132,17 @@ export default function CheckoutPage() {
             ...(txRes.data.deliveryAddress as Partial<DeliveryAddress>)
           });
         }
+        if (txRes.data.deliveryLat && txRes.data.deliveryLng) {
+          setCoordinates({
+            lat: txRes.data.deliveryLat,
+            lng: txRes.data.deliveryLng
+          });
+        } else if (txRes.data.residentLat && txRes.data.residentLng) {
+          setCoordinates({
+            lat: txRes.data.residentLat,
+            lng: txRes.data.residentLng
+          });
+        }
         if (txRes.data.status === "PAID") {
           showToast("This transaction is already PAID.", "success");
           setTimeout(() => handleBackRedirect(txRes.data), 1500);
@@ -131,6 +154,16 @@ export default function CheckoutPage() {
 
       if (brgyRes.success && brgyRes.data) {
         setBarangays(brgyRes.data);
+        // Find fee if address already has barangay
+        if (txRes.success && txRes.data && txRes.data.deliveryAddress) {
+          const savedAddr = txRes.data.deliveryAddress as Partial<DeliveryAddress>;
+          if (savedAddr.barangay) {
+            const found = brgyRes.data.find(b => b.name === savedAddr.barangay);
+            if (found) {
+              setSelectedBrgyFee(found.deliveryFee);
+            }
+          }
+        }
       }
       setLoading(false);
     }).catch(err => {
@@ -170,8 +203,7 @@ export default function CheckoutPage() {
 
 
 
-  const deliveryFee = 50; // Standard base delivery fee
-  const appliedDeliveryFee = fulfillment === "DELIVERY" ? deliveryFee : 0;
+  const appliedDeliveryFee = fulfillment === "DELIVERY" ? selectedBrgyFee : 0;
   const baseAmount = transaction ? transaction.totalAmount : 0;
   const totalAmount = baseAmount + appliedDeliveryFee;
 
@@ -181,6 +213,14 @@ export default function CheckoutPage() {
 
   const updateAddressField = (field: keyof DeliveryAddress, value: string) => {
     setAddress(prev => ({ ...prev, [field]: value }));
+    if (field === "barangay") {
+      const found = barangays.find(b => b.name === value);
+      if (found) {
+        setSelectedBrgyFee(found.deliveryFee);
+      } else {
+        setSelectedBrgyFee(0);
+      }
+    }
   };
 
   const handleCheckout = async () => {
@@ -200,14 +240,13 @@ export default function CheckoutPage() {
         paymentMethod,
         deliveryAddress: address,
         deliveryFee: appliedDeliveryFee,
-        totalAmount
+        totalAmount,
+        deliveryLat: coordinates?.lat || null,
+        deliveryLng: coordinates?.lng || null,
       };
 
       // 1. Save checkout choices
-      const saveRes = await saveCheckoutDetails(transaction.id, userId, {
-        ...details,
-        fulfillmentType: fulfillment as "PICK_UP" | "DELIVERY"
-      });
+      const saveRes = await saveCheckoutDetails(transaction.id, userId, details);
       if (!saveRes.success) {
         throw new Error(saveRes.error || "Failed to persist checkout choices.");
       }
@@ -363,7 +402,7 @@ export default function CheckoutPage() {
                       Logistics Delivery Service
                     </span>
                     <span className="text-lg font-black italic text-emerald-400">
-                      ₱{deliveryFee.toFixed(2)}
+                      ₱{appliedDeliveryFee.toFixed(2)}
                     </span>
                   </div>
                 )}
@@ -459,20 +498,20 @@ export default function CheckoutPage() {
                           <div className="p-1.5 space-y-0.5">
                             {barangays.map((b) => (
                               <button
-                                key={b}
+                                key={b.name}
                                 type="button"
                                 onClick={() => {
-                                  updateAddressField("barangay", b);
+                                  updateAddressField("barangay", b.name);
                                   setIsBrgyDropdownOpen(false);
                                 }}
                                 className={cn(
                                   "w-full text-left px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer block",
-                                  address.barangay === b
+                                  address.barangay === b.name
                                     ? "bg-[#1a6b3a] text-white"
                                     : "text-slate-300 hover:bg-white/5 hover:text-white"
                                 )}
                               >
-                                {b}
+                                {b.name}
                               </button>
                             ))}
                           </div>
@@ -536,6 +575,22 @@ export default function CheckoutPage() {
                     placeholder="e.g. Near Barangay Hall"
                   />
                 </div>
+
+                <div className="col-span-2 sm:col-span-3 space-y-2 pt-2">
+                  <label className="text-[9px] font-black uppercase tracking-widest text-slate-500 flex items-center gap-1.5">
+                    Pin Location <span className="text-emerald-500 font-bold">* Required</span>
+                  </label>
+                  <LocationPicker
+                    value={coordinates}
+                    onSelect={(lat, lng) => setCoordinates({ lat, lng })}
+                    title="Pin your Delivery Location"
+                  />
+                  {coordinates && (
+                    <p className="text-[10px] text-slate-500 font-mono mt-1">
+                      Pinned: {coordinates.lat.toFixed(6)}, {coordinates.lng.toFixed(6)}
+                    </p>
+                  )}
+                </div>
               </div>
             )}
 
@@ -548,7 +603,7 @@ export default function CheckoutPage() {
                 <h3 className="text-lg font-black italic uppercase tracking-tight">Payment Method</h3>
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
                   onClick={() => setPaymentMethod("gcash")}
@@ -577,21 +632,6 @@ export default function CheckoutPage() {
                   <QrCode className={cn("h-6 w-6", paymentMethod === "qrph" && "text-[#1a6b3a]")} />
                   <span className="text-[9px] font-black uppercase tracking-wider">QRPH Scan</span>
                   {paymentMethod === "qrph" && <span className="absolute right-2 top-2 flex h-4 w-4 items-center justify-center rounded-full bg-[#1a6b3a] border border-white"><Check size={8} className="text-white" /></span>}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod("dob")}
-                  className={cn(
-                    "relative flex min-h-24 flex-col items-center justify-center gap-2 rounded-2xl border-2 p-3 text-center transition active:scale-95 cursor-pointer",
-                    paymentMethod === "dob" 
-                      ? "border-emerald-400 bg-white text-slate-950" 
-                      : "border-white/5 bg-white/5 text-slate-400 hover:border-emerald-500/30"
-                  )}
-                >
-                  <Building2 className={cn("h-6 w-6", paymentMethod === "dob" && "text-[#1a6b3a]")} />
-                  <span className="text-[9px] font-black uppercase tracking-wider">Direct Bank</span>
-                  {paymentMethod === "dob" && <span className="absolute right-2 top-2 flex h-4 w-4 items-center justify-center rounded-full bg-[#1a6b3a] border border-white"><Check size={8} className="text-white" /></span>}
                 </button>
               </div>
 

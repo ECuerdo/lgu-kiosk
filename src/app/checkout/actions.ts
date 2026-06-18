@@ -17,10 +17,12 @@ export interface DeliveryAddress {
 
 export interface CheckoutDetails {
   fulfillmentType: "PICK_UP" | "DELIVERY" | "E_COPY";
-  paymentMethod: "gcash" | "qrph" | "dob";
+  paymentMethod: "gcash" | "qrph";
   deliveryAddress: DeliveryAddress;
   deliveryFee: number;
   totalAmount: number;
+  deliveryLat?: number | null;
+  deliveryLng?: number | null;
 }
 
 export async function getTransactionForCheckout(id: string, userId: string) {
@@ -38,7 +40,20 @@ export async function getTransactionForCheckout(id: string, userId: string) {
       return { success: false, error: "Transaction not found" };
     }
 
-    return { success: true, data: transaction };
+    // Load Resident profile location
+    const resident = await prisma.resident.findFirst({
+      where: { userId },
+      select: { latitude: true, longitude: true },
+    });
+
+    return { 
+      success: true, 
+      data: {
+        ...transaction,
+        residentLat: resident?.latitude || null,
+        residentLng: resident?.longitude || null,
+      } 
+    };
   } catch (error) {
     console.error("Get transaction error:", error);
     return { success: false, error: "Failed to fetch transaction details" };
@@ -62,7 +77,7 @@ export async function saveCheckoutDetails(
     }
 
     const additionalData = (transaction.additionalData as Record<string, unknown>) || {};
-    const paymentType = details.paymentMethod === "dob" ? "BANK_TRANSFER" : "E_PAYMENT";
+    const paymentType = "E_PAYMENT";
     const nextStatus = "UNPAID";
 
     // Set delivery address properly, cast to unknown first then to Json type to satisfy linter
@@ -77,6 +92,8 @@ export async function saveCheckoutDetails(
         paymentType,
         status: nextStatus,
         deliveryAddress: deliveryAddressVal,
+        deliveryLat: details.fulfillmentType === "DELIVERY" ? details.deliveryLat : null,
+        deliveryLng: details.fulfillmentType === "DELIVERY" ? details.deliveryLng : null,
         deliveryLandmark: details.fulfillmentType === "DELIVERY" ? details.deliveryAddress?.landmark : null,
         totalAmount: details.totalAmount,
         fiscalSnapshot: {
@@ -192,12 +209,12 @@ export async function reconcilePayment(transactionId: string, userId: string) {
 export async function getBarangayNames() {
   try {
     const barangays = await prisma.barangayInfo.findMany({
-      select: { name: true },
+      select: { name: true, deliveryFee: true },
       orderBy: { name: "asc" },
     });
-    return { success: true, data: barangays.map((b) => b.name) };
+    return { success: true, data: barangays };
   } catch (error) {
     console.error("Get barangay names error:", error);
-    return { success: false, data: [] as string[] };
+    return { success: false, data: [] as { name: string; deliveryFee: number }[] };
   }
 }
