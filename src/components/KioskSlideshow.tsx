@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef, Fragment } from "react";
-import Image from "next/image";
+import LGULogo from "./shared/LGULogo";
 
 // ────────── Types ──────────
 type Slide = {
@@ -74,33 +74,10 @@ const slides: Slide[] = [
     id: 3,
     type: "announce",
     data: {
-      heading: "Community Announcements",
-      items: [
-        {
-          title: "Free Medical Mission – March 20, 2026",
-          desc: "Free check-up, medicines, and dental services at the Municipal Plaza.",
-          date: "March 20, 2026",
-          delay: 0,
-        },
-        {
-          title: "Business Permit Renewal Extended",
-          desc: "Deadline extended to April 15. Avoid surcharges by renewing early.",
-          date: "Until April 15, 2026",
-          delay: 100,
-        },
-        {
-          title: "Livelihood Training Program",
-          desc: "Free skills training for residents aged 18–45. Enroll at the PESO office.",
-          date: "Ongoing – March 2026",
-          delay: 200,
-        },
-        {
-          title: "Road Repair – Magsaysay Ave.",
-          desc: "Expect road closure along Magsaysay Ave. from 8AM–5PM on weekdays.",
-          date: "March 18–28, 2026",
-          delay: 300,
-        },
-      ],
+      heading: "Mapandan Announcements",
+      items: [],
+      emptyStateTitle: "No announcements available",
+      emptyStateDesc: "Please check back later for official updates from the municipality.",
     },
   },
   {
@@ -506,7 +483,7 @@ export default function KioskSlideshow() {
       <header className="kiosk-header">
         <div className="logo-area">
           <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center p-1 shadow-md">
-            <Image src="/logo.png" alt="Mapandan Logo" width={48} height={48} className="object-contain" />
+            <LGULogo size={48} className="object-contain" />
           </div>
           <div className="logo-text">
             <h1>Municipality of Mapandan</h1>

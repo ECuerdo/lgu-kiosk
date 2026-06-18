@@ -1,6 +1,35 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+type FacialRecognitionPayload =
+  | string
+  | {
+      mode?: "reference_image" | "embedding" | "liveness";
+      referenceImageUrl?: string;
+      selfieUrl?: string;
+      embedding?: number[];
+      model?: string;
+      verifiedAt?: string;
+    };
+
+function parseFacialRecognition(value: unknown) {
+  if (!value) return null;
+
+  if (typeof value === "string") {
+    try {
+      return JSON.parse(value) as FacialRecognitionPayload;
+    } catch {
+      return { referenceImageUrl: value } as FacialRecognitionPayload;
+    }
+  }
+
+  if (typeof value === "object") {
+    return value as FacialRecognitionPayload;
+  }
+
+  return null;
+}
+
 export async function GET(req: NextRequest) {
   const cardId = req.nextUrl.searchParams.get("card");
 
@@ -37,6 +66,20 @@ export async function GET(req: NextRequest) {
       .filter(Boolean)
       .join(" ");
 
+    const facialRecognition = parseFacialRecognition(resident.facialRecognition);
+    const facialRecognitionObject =
+      facialRecognition && typeof facialRecognition === "object" && !Array.isArray(facialRecognition)
+        ? facialRecognition
+        : null;
+    const faceReferenceUrl =
+      (facialRecognitionObject
+        ? facialRecognitionObject.referenceImageUrl || facialRecognitionObject.selfieUrl
+        : null) ||
+      resident.livenessUrl ||
+      resident.imageUrl ||
+      resident.idFrontUrl ||
+      null;
+
     return NextResponse.json({
       resident: {
         id: resident.id,
@@ -47,6 +90,9 @@ export async function GET(req: NextRequest) {
         barangay: resident.barangay,
         email: resident.email,
         hasFaceAuth: !!resident.facialRecognition,
+        faceAuthSource: facialRecognitionObject?.mode || (faceReferenceUrl ? "reference_image" : null),
+        faceReferenceUrl,
+        facialRecognition,
       },
     });
   } catch (err) {

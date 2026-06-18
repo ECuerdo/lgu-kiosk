@@ -2,7 +2,7 @@
 
 import React, { useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import Image from "next/image";
+import LGULogo from "@/components/shared/LGULogo";
 import { 
   FileText, 
   CreditCard, 
@@ -413,13 +413,7 @@ function DashboardContent() {
       <aside className="w-24 md:w-28 bg-[#0F172A] flex flex-col items-center py-8 shadow-2xl relative z-30">
         <div className="mb-10">
             <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center p-2 shadow-lg shadow-black/20">
-                <Image 
-                    src="/logo.png" 
-                    alt="Mapandan Logo" 
-                    width={48} 
-                    height={48} 
-                    className="object-contain"
-                />
+                <LGULogo size={48} className="object-contain" />
             </div>
         </div>
 
