@@ -5,7 +5,6 @@ import React, { useState, useEffect, useRef } from "react";
 import QRCode from "qrcode";
 import PrivacyTermsModal from "@/components/shared/PrivacyTermsModal";
 import PrivacyConsentCard from "@/components/shared/PrivacyConsentCard";
-import PaymentModal, { CheckoutDetails } from "@/components/shared/PaymentModal";
 import SecureQrUploadModal from "@/components/shared/SecureQrUploadModal";
 import {
   CheckCircle2,
@@ -30,7 +29,6 @@ import {
   getExistingCedulaTransactions,
   submitCedulaTransaction,
   submitStudentCedulaTransaction,
-  saveCedulaCheckoutDetails,
   getTransactionTypes,
   cancelTransaction
 } from "./actions";
@@ -63,7 +61,6 @@ export default function CedulaPage() {
   const [selectedApplication, setSelectedApplication] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
   // QR Handoff states
   const [handoffToken, setHandoffToken] = useState("");
@@ -478,37 +475,7 @@ export default function CedulaPage() {
     }
   };
 
-  const handleSaveCheckout = async (details: CheckoutDetails) => {
-    if (!selectedApplication || !residentData) return false;
-    const userId = residentData.userId || residentData.id;
-    setIsSubmitting(true);
-    try {
-      const res = await saveCedulaCheckoutDetails(selectedApplication.id, userId, {
-        fulfillmentType: details.fulfillmentType,
-        paymentMethod: details.paymentMethod,
-        deliveryAddress: details.deliveryAddress,
-        deliveryFee: details.deliveryFee,
-        totalAmount: details.totalAmount
-      });
-      if (res.success) {
-        // Refresh
-        const updatedApps = await getExistingCedulaTransactions(userId);
-        if (updatedApps.success && updatedApps.data) {
-          setExistingApplications(updatedApps.data);
-          const activeApp = updatedApps.data.find((app: any) => app.id === selectedApplication.id);
-          if (activeApp) setSelectedApplication(activeApp);
-        }
-        return true;
-      }
-      toast.error(res.error || "Failed to finalize checkout.");
-      return false;
-    } catch {
-      toast.error("Checkout process failed.");
-      return false;
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+
 
   const handlePrintDocument = async (documentUrl: string, title: string) => {
     try {
@@ -712,13 +679,20 @@ export default function CedulaPage() {
                         return (
                           <div
                             key={app.id}
-                            className="p-6 rounded-3xl border border-slate-200/60 dark:border-white/5 bg-slate-50/50 dark:bg-white/5 hover:border-[#1a6b3a]/30 transition-all flex flex-col sm:flex-row items-center justify-between gap-4"
+                            onClick={() => {
+                              if (app.status === "EVALUATED" || app.status === "UNPAID") {
+                                router.push(`/checkout/${app.id}`);
+                              } else {
+                                router.push(`/modules/cedula/${app.id}`);
+                              }
+                            }}
+                            className="p-6 rounded-3xl border border-slate-200/60 dark:border-white/5 bg-slate-50/50 dark:bg-white/5 hover:border-[#1a6b3a]/30 transition-all flex flex-col sm:flex-row items-center justify-between gap-4 cursor-pointer"
                           >
                             <div className="flex items-center gap-4 w-full sm:w-auto">
                               <div className="w-12 h-12 rounded-2xl bg-[#1a6b3a]/10 text-[#1a6b3a] flex items-center justify-center shrink-0">
                                 <FileText size={24} />
                               </div>
-                              <div className="space-y-1">
+                              <div className="space-y-1 text-left">
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <h4 className="text-sm font-black text-slate-800 dark:text-slate-100 uppercase tracking-wide">
                                     {app.type?.name || "Cedula Certificate"}
@@ -744,33 +718,13 @@ export default function CedulaPage() {
                               </div>
 
                               <div className="flex items-center gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    router.push(`/modules/cedula/${app.id}`);
-                                  }}
-                                  className="px-4 py-2 bg-[#1a6b3a] hover:bg-emerald-700 text-white font-black text-[9px] uppercase tracking-wider rounded-xl transition-all active:scale-95 cursor-pointer"
-                                >
-                                  Details
-                                </button>
-                                
-                                {(app.status === "UNPAID" || app.status === "EVALUATED") && !app.isCancelled && (
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setSelectedApplication(app);
-                                      setIsPaymentModalOpen(true);
-                                    }}
-                                    className="px-4 py-2 bg-[#1a6b3a]/10 hover:bg-[#1a6b3a]/25 text-[#1a6b3a] font-black text-[9px] uppercase tracking-wider rounded-xl transition-all active:scale-95 cursor-pointer"
-                                  >
-                                    Pay Online
-                                  </button>
-                                )}
-
                                 {app.status === "FOR_CLAIM" && app.eCopyUrl && (
                                   <button
                                     type="button"
-                                    onClick={() => handlePrintDocument(app.eCopyUrl, "Cedula Document")}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handlePrintDocument(app.eCopyUrl, "Cedula Document");
+                                    }}
                                     className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[9px] uppercase tracking-wider rounded-xl transition-all active:scale-95 cursor-pointer flex items-center gap-1"
                                   >
                                     <Printer size={12} />
@@ -1488,7 +1442,7 @@ export default function CedulaPage() {
 
                     {(selectedApplication.status === "UNPAID" || selectedApplication.status === "EVALUATED") && (
                       <button
-                        onClick={() => setIsPaymentModalOpen(true)}
+                        onClick={() => router.push(`/checkout/${selectedApplication.id}`)}
                         className="px-8 py-4 bg-[#1a6b3a] hover:bg-emerald-700 text-white rounded-2xl font-bold uppercase tracking-widest shadow-lg shadow-emerald-950/20 cursor-pointer"
                       >
                         Pay Online
@@ -1573,38 +1527,7 @@ export default function CedulaPage() {
       {/* Privacy modal */}
       <PrivacyTermsModal isOpen={isPrivacyModalOpen} onClose={() => setIsPrivacyModalOpen(false)} onAccept={() => setPrivacyAccepted(true)} themeColor="#1a6b3a" />
 
-      {/* Payment Modal */}
-      {selectedApplication && (
-        <PaymentModal
-          open={isPaymentModalOpen}
-          onOpenChange={setIsPaymentModalOpen}
-          transactionId={selectedApplication.id}
-          amount={
-            Number(selectedApplication?.fiscalSnapshot?.baseAmount) ||
-            Math.max(
-              0,
-              Number(selectedApplication?.totalAmount || 0) -
-                Number(selectedApplication?.fiscalSnapshot?.deliveryFee || 0),
-            )
-          }
-          deliveryFee={selectedApplication.fiscalSnapshot?.deliveryFee || 0}
-          initialFulfillment={selectedApplication?.fulfillmentType === "DELIVERY" ? "DELIVERY" : "PICK_UP"}
-          initialAddress={{
-            ...(selectedApplication?.deliveryAddress || {}),
-            barangay: selectedApplication?.deliveryAddress?.barangay || residentData?.barangay || "",
-            houseNumber: selectedApplication?.deliveryAddress?.houseNumber || residentData?.houseNumber || "",
-            street: selectedApplication?.deliveryAddress?.street || residentData?.street || "",
-            sitio: selectedApplication?.deliveryAddress?.sitio || residentData?.sitio || "",
-            purok: selectedApplication?.deliveryAddress?.purok || residentData?.purok || "",
-            municipality: selectedApplication?.deliveryAddress?.municipality || residentData?.municipality || "Mapandan",
-            province: selectedApplication?.deliveryAddress?.province || residentData?.province || "Pangasinan",
-            landmark: selectedApplication?.deliveryAddress?.landmark || selectedApplication?.deliveryLandmark || "",
-          }}
-          onBeforeCheckout={handleSaveCheckout}
-          referenceName="Cedula Tax Payment"
-          redirectPath="/modules/cedula"
-        />
-      )}
+
 
       {/* Viewer Modal */}
       <DocumentViewerModal isOpen={viewerOpen} onClose={() => setViewerOpen(false)} file={null} fileUrl={viewerUrl} title={viewerTitle} />

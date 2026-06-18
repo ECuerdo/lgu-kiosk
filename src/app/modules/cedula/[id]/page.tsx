@@ -9,6 +9,8 @@ import {
   AlertCircle
 } from "lucide-react";
 import Link from "next/link";
+import { getCedulaTransactionById, cancelTransaction, saveCedulaCheckoutDetails, reconcileCedulaPayment } from "../actions";
+import PaymentModal, { CheckoutDetails } from "@/components/shared/PaymentModal";
 import DocumentViewerModal from "@/components/shared/DocumentViewerModal";
 import { cn } from "@/lib/utils";
 
@@ -31,7 +33,7 @@ export default function CedulaTrackerPage() {
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const [activeSubTab, setActiveSubTab] = useState<"overview" | "records" | "logistics">("overview");
-  const [activeSubTab, setActiveSubTab] = useState<"overview" | "records" | "logistics">("overview");
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Document Preview States
@@ -95,7 +97,44 @@ export default function CedulaTrackerPage() {
     }
   };
 
+  const handleSaveCheckout = async (details: CheckoutDetails) => {
+    if (!userId || !request) return false;
+    try {
+      const res = await saveCedulaCheckoutDetails(request.id, userId, {
+        fulfillmentType: details.fulfillmentType,
+        paymentMethod: details.paymentMethod,
+        deliveryAddress: details.deliveryAddress,
+        deliveryFee: details.deliveryFee,
+        totalAmount: details.totalAmount
+      });
+      if (res.success) {
+        await fetchRequest(userId);
+        return true;
+      }
+      showToast(res.error || "Failed to finalize checkout.", "error");
+      return false;
+    } catch {
+      showToast("Checkout process failed.", "error");
+      return false;
+    }
+  };
 
+  const handleVerifyPayment = async () => {
+    if (!userId || !request) return false;
+    try {
+      const res = await reconcileCedulaPayment(request.id, userId);
+      if (res.success && res.paid) {
+        showToast("Payment verified successfully!", "success");
+        await fetchRequest(userId);
+        return true;
+      }
+      showToast(res.error || "Payment verification pending or failed.", "warning");
+      return false;
+    } catch {
+      showToast("Verification failed.", "error");
+      return false;
+    }
+  };
 
   const handlePrintDocument = async (documentUrl: string, title: string) => {
     try {
@@ -565,7 +604,7 @@ export default function CedulaTrackerPage() {
 
               {(request.status === "UNPAID" || request.status === "EVALUATED") && !isCancelled && (
                 <button
-                  onClick={() => router.push(`/checkout/${request.id}`)}
+                  onClick={() => setIsPaymentModalOpen(true)}
                   className="w-full py-4 bg-[#1a6b3a] hover:bg-emerald-700 text-white rounded-2xl font-bold uppercase tracking-widest text-xs shadow-lg shadow-emerald-950/20 cursor-pointer transition-all active:scale-95"
                 >
                   Pay Online
@@ -577,7 +616,23 @@ export default function CedulaTrackerPage() {
 
       </div>
 
-
+      {/* Reusable Payment Modal */}
+      {isPaymentModalOpen && (
+        <PaymentModal
+          open={isPaymentModalOpen}
+          onOpenChange={(open) => {
+            setIsPaymentModalOpen(open);
+            if (!open) {
+              handleVerifyPayment();
+            }
+          }}
+          transactionId={request.id}
+          amount={request.totalAmount}
+          onBeforeCheckout={handleSaveCheckout}
+          referenceName="Cedula Tax Payment"
+          redirectPath={`/modules/cedula/${request.id}`}
+        />
+      )}
 
       {/* Viewer Modal */}
       <DocumentViewerModal isOpen={viewerOpen} onClose={() => setViewerOpen(false)} file={null} fileUrl={viewerUrl} title={viewerTitle} />
