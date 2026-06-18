@@ -10,10 +10,7 @@ type Announcement = {
 };
 
 const DEFAULT_NOTICES = [
-  "NOTICE: Office hours are Monday to Friday, 8:00 AM - 5:00 PM",
-  "For inquiries, call the Mapandan Municipal Hall Hotline: (075) 555-0000",
-  "Visit www.mapandan.gov.ph for available online services",
-  "Please prepare complete and valid documents before starting a service application",
+  "No official announcements available at the moment.",
 ];
 
 export default function ServiceMarquee() {
