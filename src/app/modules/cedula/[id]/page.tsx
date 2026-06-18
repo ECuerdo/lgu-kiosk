@@ -3,7 +3,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { 
-  ArrowLeft, 
   Sparkles, 
   Printer,
   AlertCircle
@@ -210,25 +209,14 @@ export default function CedulaTrackerPage() {
       )}
 
       {/* Breadcrumb Navigation */}
-      <div className="flex flex-col gap-4">
-        <nav className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500">
-          <Link href="/dashboard" className="hover:text-white transition-colors">Home</Link>
-          <span>&gt;</span>
-          <Link href="/modules/cedula" className="hover:text-white transition-colors">Requests</Link>
-          <span>&gt;</span>
-          <span className="text-[#1a6b3a]">Tracker</span>
+      <div className="flex flex-col gap-2">
+        <nav className="flex items-center gap-3 text-xs md:text-sm font-black uppercase tracking-widest text-slate-500 select-none">
+          <Link href="/dashboard" className="hover:text-white transition-colors py-2 px-3.5 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10">Home</Link>
+          <span className="text-slate-600 font-bold">&gt;</span>
+          <Link href="/modules/cedula" className="hover:text-white transition-colors py-2 px-3.5 bg-[#1a6b3a]/10 border border-[#1a6b3a]/10 hover:bg-[#1a6b3a]/25 text-[#1a6b3a] rounded-xl">Requests</Link>
+          <span className="text-slate-600 font-bold">&gt;</span>
+          <span className="py-2 px-3.5 text-slate-400 font-bold">Tracker</span>
         </nav>
-
-        {/* Back navigation */}
-        <div className="flex items-center">
-          <Link 
-            href="/modules/cedula" 
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-white font-black text-xs uppercase tracking-widest transition-all"
-          >
-            <ArrowLeft size={16} />
-            Back to List
-          </Link>
-        </div>
       </div>
 
       {/* Tracker Hub Header */}
