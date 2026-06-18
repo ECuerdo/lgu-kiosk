@@ -528,8 +528,6 @@ export async function cancelTransaction(id: string, userId: string) {
       data: { isCancelled: true }
     });
 
-    revalidatePath("/user/services/requests");
-    revalidatePath(`/user/services/requests/${id}`);
     return { success: true };
   } catch (error) {
     console.error("Cancel transaction error:", error);

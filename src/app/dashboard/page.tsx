@@ -313,6 +313,8 @@ function DashboardContent() {
       router.push("/modules/building-permit");
     } else if (service.id === "p1") {
       router.push("/modules/business-permit");
+    } else if (service.id === "t2") {
+      router.push("/modules/cedula");
     }
   };
 

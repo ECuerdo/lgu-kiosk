@@ -28,6 +28,11 @@ const BUSINESS_PERMIT_LABELS: Record<string, string> = {
   fireSafetyFile: "Fire Safety Inspection Certificate",
 };
 
+const CEDULA_LABELS: Record<string, string> = {
+  idFile: "Government-Issued Valid ID",
+  proofFile: "Proof of Income (e.g., Payslip, ITR, Barangay Certificate)",
+};
+
 type UploadedFile = { slot: string; fileName: string; url: string };
 
 export default function UploadHandoffPage() {
@@ -77,11 +82,13 @@ export default function UploadHandoffPage() {
       ]
     : sessionSlot.startsWith("bp_")
       ? [{ slot: sessionSlot, label: BUSINESS_PERMIT_LABELS[sessionSlot.replace("bp_", "")] || sessionSlot.replace("bp_", "").replace(/([A-Z])/g, " $1").trim(), group: "Business Permit Document" }]
-    : sessionSlot === "bfp"
-      ? [{ slot: "bfp", label: "Fire Safety / BFP Clearance", group: "Clearance Document" }]
-      : sessionSlot === "zoning"
-        ? [{ slot: "zoning", label: "Zoning / Locational Clearance", group: "Clearance Document" }]
-        : [{ slot: sessionSlot || "unknown", label: "Secure Document Upload", group: "Document" }];
+      : sessionSlot === "idFile" || sessionSlot === "proofFile"
+        ? [{ slot: sessionSlot, label: CEDULA_LABELS[sessionSlot] || "Secure Document Upload", group: "Cedula Application Document" }]
+        : sessionSlot === "bfp"
+          ? [{ slot: "bfp", label: "Fire Safety / BFP Clearance", group: "Clearance Document" }]
+          : sessionSlot === "zoning"
+            ? [{ slot: "zoning", label: "Zoning / Locational Clearance", group: "Clearance Document" }]
+            : [{ slot: sessionSlot || "unknown", label: "Secure Document Upload", group: "Document" }];
 
   return (
     <main className="h-dvh overflow-y-auto bg-[#071c12] px-4 py-8 text-slate-900">

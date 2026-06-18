@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 
 export async function POST(request: Request) {
   try {
-    const { amount, type = "gcash", reference, transactionId } = await request.json();
+    const { amount, type = "gcash", reference, transactionId, redirectPath } = await request.json();
     const secret = process.env.PAYMONGO_SECRET_KEY;
     if (!secret) return NextResponse.json({ error: "PAYMONGO_SECRET_KEY not configured" }, { status: 500 });
 
@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     }
 
     const origin = new URL(request.url).origin;
-    const redirectUrl = `${origin}/modules/building-permit`;
+    const redirectUrl = `${origin}${redirectPath || "/modules/building-permit"}`;
     const paymentMethodTypes =
       type === "qrph" ? ["qrph"] :
       type === "dob" ? ["dob", "dob_ubp"] :
