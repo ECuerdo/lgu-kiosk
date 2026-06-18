@@ -524,6 +524,14 @@ export default function CedulaTrackerPage() {
                       {request.fulfillmentType || "PICK_UP (Treasury Counter)"}
                     </p>
                   </div>
+                  {request.paymentReference && (
+                    <div className="space-y-1">
+                      <p className="text-[10px] uppercase font-black text-slate-500 tracking-wider">Payment Reference No.</p>
+                      <p className="text-sm font-mono font-bold text-emerald-400">
+                        {request.paymentReference}
+                      </p>
+                    </div>
+                  )}
                   {request.fulfillmentType === "DELIVERY" && (
                     <>
                       <div className="space-y-1 col-span-2">
