@@ -588,7 +588,7 @@ export default function CheckoutPage() {
                   </label>
                   <LocationPicker
                     value={coordinates}
-                    onSelect={(lat, lng) => setCoordinates({ lat, lng })}
+                    onSelect={(lat: number, lng: number) => setCoordinates({ lat, lng })}
                     title="Pin your Delivery Location"
                   />
                   {coordinates && (
