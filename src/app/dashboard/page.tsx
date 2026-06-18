@@ -4,7 +4,7 @@ import React, { useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Image from "next/image";
 
-import LGULogo from "@/components/shared/LGULogo";
+
 import {
   FileText,
   CreditCard,

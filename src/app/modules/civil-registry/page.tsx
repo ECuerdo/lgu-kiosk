@@ -1,21 +1,16 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Baby,
   Heart,
   Skull,
-  Scroll,
-  PenTool,
   Sparkles,
   FileText,
-  ChevronRight,
   ArrowLeft,
   Info,
   X,
-  AlertCircle,
   Clock,
   BookOpen,
   Upload,
@@ -463,16 +458,16 @@ const TRANSLATIONS = {
 
 export default function CivilRegistryHubPage() {
   const router = useRouter();
-  const [lang, setLang] = useState<"en" | "fil" | "pang" | "ilo">("en");
-  const [selectedService, setSelectedService] = useState<RegistryService | null>(null);
-
-  // Load persisted language from dashboard if available
-  useEffect(() => {
-    const savedLang = sessionStorage.getItem("kiosk_lang") as any;
-    if (savedLang && ["en", "fil", "pang", "ilo"].includes(savedLang)) {
-      setLang(savedLang);
+  const [lang] = useState<"en" | "fil" | "pang" | "ilo">(() => {
+    if (typeof window !== "undefined") {
+      const saved = sessionStorage.getItem("kiosk_lang");
+      if (saved && ["en", "fil", "pang", "ilo"].includes(saved)) {
+        return saved as "en" | "fil" | "pang" | "ilo";
+      }
     }
-  }, []);
+    return "en";
+  });
+  const [selectedService, setSelectedService] = useState<RegistryService | null>(null);
 
   const handleServiceClick = (service: RegistryService) => {
     if (service.status === "ACTIVE" && service.path) {
@@ -620,7 +615,7 @@ export default function CivilRegistryHubPage() {
                         <div className="mb-6">
                           <div className="w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-slate-200/50 dark:bg-[#0c0d12] border border-slate-300/30 dark:border-white/5 flex items-center justify-center">
                             {/* Render icon with scaled dimensions dynamically */}
-                            {React.cloneElement(service.icon as React.ReactElement<any>, { className: "w-8 h-8 md:w-10 md:h-10 text-emerald-500" })}
+                            {React.cloneElement(service.icon as React.ReactElement<{ className?: string }>, { className: "w-8 h-8 md:w-10 md:h-10 text-emerald-500" })}
                           </div>
                         </div>
 

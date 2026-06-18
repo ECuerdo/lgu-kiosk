@@ -8,6 +8,7 @@ import { supabaseAdmin } from "@/lib/supabase-admin";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function getAuthUserId(): Promise<string | null> {
     try {
         const cookieStore = await cookies();

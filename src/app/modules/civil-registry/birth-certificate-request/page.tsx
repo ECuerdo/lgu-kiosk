@@ -6,49 +6,32 @@ import QRCode from "qrcode";
 import PrivacyTermsModal from "@/components/shared/PrivacyTermsModal";
 import PaymentModal, { CheckoutDetails } from "@/components/shared/PaymentModal";
 import {
-  Book,
   CheckCircle,
   ClipboardList,
   FileSignature,
-  FileText,
-  Home,
   CreditCard,
   Landmark,
-  MapPin,
-  PenTool,
-  Ruler,
-  Scroll,
   ShieldCheck,
   UploadCloud,
   User,
   Users,
-  Wallet,
-  Zap,
   AlertCircle,
-  CalendarDays,
   Clock,
   FileWarning,
-  Building2,
   CheckCircle2,
   Upload,
-  Hourglass,
-  Receipt,
   Printer,
   Check,
-  UserCheck,
-  Handshake,
   QrCode,
   ChevronRight,
   ChevronLeft,
-  Calendar,
   Search,
-  Volume2
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Checkbox } from "@/components/ui/checkbox";
+
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -67,10 +50,8 @@ import {
   submitBirthCertificateRequest,
   saveTransactionSignature,
   getExistingBirthRequests,
-  cancelTransaction,
   saveBirthCertificateCheckoutDetails,
   reconcileBirthCertificatePayment,
-  getBarangayNames,
   getSecureUploadUrlAction
 } from "./actions";
 
@@ -98,12 +79,7 @@ const RELATION_OPTIONS = [
 
 
 
-const DOC_TYPE_OPTIONS = [
-  "Birth Certificate",
-  "Copy",
-  "Certified True Copy",
-  "Authenticated Copy"
-];
+
 
 // --- UPLOAD FILE SECURELY VIA SIGNED UPLOAD URL ---
 async function uploadFileClientSide(file: File, fieldName: string, userId: string): Promise<string> {
@@ -146,7 +122,7 @@ export default function BirthCertificatePage() {
   const router = useRouter();
   const pageScrollRef = useRef<HTMLDivElement>(null);
   const [currentStep, setCurrentStep] = useState<Step>("EXISTING");
-  const [hasReadGuide, setHasReadGuide] = useState(false);
+  const [, setHasReadGuide] = useState(false);
   const [existingRequests, setExistingRequests] = useState<any[]>([]);
   const [selectedApplication, setSelectedApplication] = useState<any>(null);
   const [residentData, setResidentData] = useState<any>(null);
@@ -160,7 +136,7 @@ export default function BirthCertificatePage() {
   const [idHandoffFileName, setIdHandoffFileName] = useState("");
   const [handoffToken, setHandoffToken] = useState("");
   const [handoffQrCode, setHandoffQrCode] = useState("");
-  const [handoffExpiresAt, setHandoffExpiresAt] = useState(0);
+  const [, setHandoffExpiresAt] = useState(0);
   const [isHandoffOpen, setIsHandoffOpen] = useState(false);
   const [isCreatingHandoff, setIsCreatingHandoff] = useState(false);
 
@@ -585,7 +561,7 @@ export default function BirthCertificatePage() {
         <div className="mx-auto max-w-7xl mb-10">
           <div className="grid grid-cols-8 gap-1 md:gap-4 relative px-1 md:px-2">
             {STEPS.map((step, idx) => {
-              const currentStepIdx = STEPS.findIndex(s => s.id === currentStep);
+
               const isActive = currentStep === step.id;
               const isCompleted = idx <= maxStepIdx;
               const Icon = step.icon;
