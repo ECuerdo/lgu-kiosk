@@ -210,12 +210,12 @@ export default function CedulaTrackerPage() {
 
       {/* Breadcrumb Navigation */}
       <div className="flex flex-col gap-2">
-        <nav className="flex items-center gap-3 text-xs md:text-sm font-black uppercase tracking-widest text-slate-500 select-none">
-          <Link href="/dashboard" className="hover:text-white transition-colors py-2 px-3.5 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10">Home</Link>
-          <span className="text-slate-600 font-bold">&gt;</span>
-          <Link href="/modules/cedula" className="hover:text-white transition-colors py-2 px-3.5 bg-[#1a6b3a]/10 border border-[#1a6b3a]/10 hover:bg-[#1a6b3a]/25 text-[#1a6b3a] rounded-xl">Requests</Link>
-          <span className="text-slate-600 font-bold">&gt;</span>
-          <span className="py-2 px-3.5 text-slate-400 font-bold">Tracker</span>
+        <nav className="flex items-center gap-4 text-xs font-black uppercase tracking-widest text-slate-500 select-none">
+          <Link href="/dashboard" className="hover:text-white transition-colors duration-200">Home</Link>
+          <span className="text-slate-700 font-bold">/</span>
+          <Link href="/modules/cedula" className="hover:text-white transition-colors duration-200">Requests</Link>
+          <span className="text-slate-700 font-bold">/</span>
+          <span className="py-2 px-4 bg-[#1a6b3a] text-white font-black rounded-full shadow-lg shadow-emerald-950/40">Tracker</span>
         </nav>
       </div>
 
