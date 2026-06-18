@@ -10,6 +10,14 @@ import {
   HeartPulse,
   HandHelping,
   Megaphone,
+import LGULogo from "@/components/shared/LGULogo";
+import {
+  FileText,
+  CreditCard,
+  Users,
+  HeartPulse,
+  HandHelping,
+  Megaphone,
   LogOut,
   Clock,
   ShieldCheck,
@@ -315,6 +323,8 @@ function DashboardContent() {
       router.push("/modules/business-permit");
     } else if (service.id === "c1") {
       router.push("/modules/civil-registry");
+    } else if (service.id === "t2") {
+      router.push("/modules/cedula");
     }
   };
 

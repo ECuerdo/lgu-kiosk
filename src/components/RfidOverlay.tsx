@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import Image from "next/image";
+import LGULogo from "./shared/LGULogo";
 import FaceVerification from "./FaceVerification";
 import OtpVerification from "./OtpVerification";
 import { useRouter } from "next/navigation";
@@ -11,6 +11,9 @@ type Resident = {
   fullName: string;
   firstName: string;
   photoUrl?: string;
+  faceReferenceUrl?: string | null;
+  faceAuthSource?: string | null;
+  facialRecognition?: unknown;
   barangay?: string;
   email?: string;
   hasFaceAuth: boolean;
@@ -147,7 +150,7 @@ export default function RfidOverlay() {
 
         <div className="flex flex-col items-center text-center">
           <div className="mb-8 w-20 h-20 bg-white rounded-full flex items-center justify-center p-2 shadow-xl">
-             <Image src="/logo.png" alt="Logo" width={64} height={64} className="object-contain" />
+             <LGULogo size={64} className="object-contain" />
           </div>
           {step === "VERIFYING" && (
             <div className="flex flex-col items-center py-12">
@@ -169,7 +172,15 @@ export default function RfidOverlay() {
             </div>
           )}
 
-          {step === "FACE_VERIFY" && <FaceVerification onSuccess={onVerified} onCancel={close} />}
+          {step === "FACE_VERIFY" && resident && (
+            <FaceVerification
+              residentName={resident.fullName}
+              referenceImageUrl={resident.faceReferenceUrl || resident.photoUrl || null}
+              authSource={resident.faceAuthSource || null}
+              onSuccess={onVerified}
+              onCancel={close}
+            />
+          )}
 
           {step === "OTP_VERIFY" && resident?.email && (
             <OtpVerification email={resident.email} onSuccess={onVerified} onCancel={close} />

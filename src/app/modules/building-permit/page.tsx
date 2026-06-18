@@ -3464,6 +3464,8 @@ export default function BuildingPermitPage() {
           landmark: selectedApplication?.deliveryAddress?.landmark || selectedApplication?.deliveryLandmark || "",
         }}
         onBeforeCheckout={handleSaveCheckoutDetails}
+        referenceName="Building Permit Payment"
+        redirectPath="/modules/building-permit"
       />
 
       {/* Cancel Application Confirmation */}
