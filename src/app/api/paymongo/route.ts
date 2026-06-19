@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 
 export async function POST(request: Request) {
   try {
-    const { amount, type = "gcash", reference, transactionId, redirectPath } = await request.json();
+    const { amount, type = "gcash", reference, transactionId, redirectPath, cancelPath } = await request.json();
     const secret = process.env.PAYMONGO_SECRET_KEY;
     if (!secret) return NextResponse.json({ error: "PAYMONGO_SECRET_KEY not configured" }, { status: 500 });
 
@@ -14,6 +14,7 @@ export async function POST(request: Request) {
 
     const origin = new URL(request.url).origin;
     const redirectUrl = `${origin}${redirectPath || "/modules/building-permit"}`;
+    const cancelUrl = `${origin}${cancelPath || redirectPath || "/modules/building-permit"}`;
     const paymentMethodTypes =
       type === "qrph" ? ["qrph"] :
       type === "dob" ? ["dob", "dob_ubp"] :
@@ -33,7 +34,7 @@ export async function POST(request: Request) {
             payment_method_types: paymentMethodTypes,
             line_items: [{ amount: amountCents, currency: "PHP", name: reference || "Municipal Transaction Payment", quantity: 1 }],
             success_url: `${redirectUrl}?payment=success&transactionId=${encodeURIComponent(transactionId || "")}`,
-            cancel_url: `${redirectUrl}?payment=cancelled&transactionId=${encodeURIComponent(transactionId || "")}`,
+            cancel_url: `${cancelUrl}?payment=cancelled&transactionId=${encodeURIComponent(transactionId || "")}`,
             metadata: { transactionId, paymentMethod: type },
           },
         },
