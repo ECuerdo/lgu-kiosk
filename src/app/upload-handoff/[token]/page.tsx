@@ -41,18 +41,25 @@ export default function UploadHandoffPage() {
   const [uploaded, setUploaded] = useState<Record<string, UploadedFile>>({});
   const [uploadingSlot, setUploadingSlot] = useState("");
   const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(true);
 
   const endpoint = `/api/upload-handoff/${encodeURIComponent(params.token)}`;
 
   async function refresh() {
-    const response = await fetch(endpoint, { cache: "no-store" });
-    const result = await response.json();
-    if (!response.ok) {
-      setMessage(result.error || "This upload session is unavailable.");
-      return;
+    try {
+      const response = await fetch(endpoint, { cache: "no-store" });
+      const result = await response.json();
+      if (!response.ok) {
+        setMessage(result.error || "This upload session is unavailable.");
+        return;
+      }
+      setSessionSlot(result.sessionSlot);
+      setUploaded(Object.fromEntries((result.files || []).map((file: UploadedFile) => [file.slot, file])));
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
-    setSessionSlot(result.sessionSlot);
-    setUploaded(Object.fromEntries((result.files || []).map((file: UploadedFile) => [file.slot, file])));
   }
 
   useEffect(() => {
@@ -82,7 +89,12 @@ export default function UploadHandoffPage() {
       ]
     : sessionSlot.startsWith("bp_")
       ? [{ slot: sessionSlot, label: BUSINESS_PERMIT_LABELS[sessionSlot.replace("bp_", "")] || sessionSlot.replace("bp_", "").replace(/([A-Z])/g, " $1").trim(), group: "Business Permit Document" }]
-      : sessionSlot === "idFile" || sessionSlot === "proofFile"
+      : sessionSlot === "birth_id"
+        ? [
+            { slot: "idFront", label: "Valid ID Front Photo", group: "Valid ID Copy (Front & Back)" },
+            { slot: "idBack", label: "Valid ID Back Photo", group: "Valid ID Copy (Front & Back)" }
+          ]
+        : sessionSlot === "idFile" || sessionSlot === "proofFile"
         ? [{ slot: sessionSlot, label: CEDULA_LABELS[sessionSlot] || "Secure Document Upload", group: "Cedula Application Document" }]
         : sessionSlot === "bfp"
           ? [{ slot: "bfp", label: "Fire Safety / BFP Clearance", group: "Clearance Document" }]
@@ -103,42 +115,49 @@ export default function UploadHandoffPage() {
 
         {message && <p className="mb-4 rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700">{message}</p>}
 
-        <div className="space-y-3">
-          {slots.map((item, index) => {
-            const file = uploaded[item.slot];
-            const showGroup = index === 0 || slots[index - 1]?.group !== item.group;
-            return (
-              <div key={item.slot}>
-                {showGroup && <h2 className="mb-2 mt-5 text-xs font-black uppercase tracking-widest text-theme-primary">{item.group}</h2>}
-                <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-slate-200 p-4">
-                  <div className={file ? "text-emerald-500" : "text-slate-400"}>
-                    {file ? <CheckCircle2 className="h-6 w-6" /> : <FileUp className="h-6 w-6" />}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-bold">{item.label}</p>
-                    <p className="truncate text-xs text-slate-400">
-                      {uploadingSlot === item.slot ? "Scanning..." : file?.fileName || "Tap to choose file"}
-                    </p>
-                  </div>
-                  <span className="rounded-full bg-theme-primary px-3 py-2 text-[10px] font-black uppercase text-white">
-                    {file ? "Re-upload" : "Upload"}
-                  </span>
-                  <input
-                    type="file"
-                    className="hidden"
-                    disabled={!!uploadingSlot}
-                    accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
-                    onChange={(event) => {
-                      const selected = event.target.files?.[0];
-                      if (selected) void upload(item.slot, selected);
-                      event.target.value = "";
-                    }}
-                  />
-                </label>
-              </div>
-            );
-          })}
-        </div>
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-12 gap-4">
+            <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-theme-primary" />
+            <p className="text-sm font-bold text-slate-500">Loading upload session...</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {slots.map((item, index) => {
+              const file = uploaded[item.slot];
+              const showGroup = index === 0 || slots[index - 1]?.group !== item.group;
+              return (
+                <div key={item.slot}>
+                  {showGroup && <h2 className="mb-2 mt-5 text-xs font-black uppercase tracking-widest text-theme-primary">{item.group}</h2>}
+                  <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-slate-200 p-4">
+                    <div className={file ? "text-emerald-500" : "text-slate-400"}>
+                      {file ? <CheckCircle2 className="h-6 w-6" /> : <FileUp className="h-6 w-6" />}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold">{item.label}</p>
+                      <p className="truncate text-xs text-slate-400">
+                        {uploadingSlot === item.slot ? "Scanning..." : file?.fileName || "Tap to choose file"}
+                      </p>
+                    </div>
+                    <span className="rounded-full bg-theme-primary px-3 py-2 text-[10px] font-black uppercase text-white">
+                      {file ? "Re-upload" : "Upload"}
+                    </span>
+                    <input
+                      type="file"
+                      className="hidden"
+                      disabled={!!uploadingSlot}
+                      accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                      onChange={(event) => {
+                        const selected = event.target.files?.[0];
+                        if (selected) void upload(item.slot, selected);
+                        event.target.value = "";
+                      }}
+                    />
+                  </label>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </main>
   );
