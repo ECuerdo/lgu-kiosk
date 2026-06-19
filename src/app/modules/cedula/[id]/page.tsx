@@ -3,7 +3,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { 
-  ArrowLeft, 
   Sparkles, 
   Printer,
   AlertCircle
@@ -210,25 +209,14 @@ export default function CedulaTrackerPage() {
       )}
 
       {/* Breadcrumb Navigation */}
-      <div className="flex flex-col gap-4">
-        <nav className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500">
-          <Link href="/dashboard" className="hover:text-white transition-colors">Home</Link>
-          <span>&gt;</span>
-          <Link href="/modules/cedula" className="hover:text-white transition-colors">Requests</Link>
-          <span>&gt;</span>
-          <span className="text-[#1a6b3a]">Tracker</span>
+      <div className="flex flex-col gap-2">
+        <nav className="flex items-center gap-4 text-xs font-black uppercase tracking-widest text-slate-500 select-none">
+          <Link href="/dashboard" className="hover:text-white transition-colors duration-200">Home</Link>
+          <span className="text-slate-700 font-bold">/</span>
+          <Link href="/modules/cedula" className="hover:text-white transition-colors duration-200">Requests</Link>
+          <span className="text-slate-700 font-bold">/</span>
+          <span className="py-2 px-4 bg-[#1a6b3a] text-white font-black rounded-full shadow-lg shadow-emerald-950/40">Tracker</span>
         </nav>
-
-        {/* Back navigation */}
-        <div className="flex items-center">
-          <Link 
-            href="/modules/cedula" 
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-white font-black text-xs uppercase tracking-widest transition-all"
-          >
-            <ArrowLeft size={16} />
-            Back to List
-          </Link>
-        </div>
       </div>
 
       {/* Tracker Hub Header */}
@@ -288,12 +276,12 @@ export default function CedulaTrackerPage() {
 
       {/* Main Grid Content */}
       <div className={cn(
-        activeSubTab === "overview" ? "grid grid-cols-1 lg:grid-cols-3 gap-8" : "w-full"
+        (activeSubTab === "overview" || activeSubTab === "logistics") ? "grid grid-cols-1 lg:grid-cols-3 gap-8" : "w-full"
       )}>
         
-        {/* Left main area (spanning 2 columns on overview, full width otherwise) */}
+        {/* Left main area (spanning 2 columns on overview/logistics, full width otherwise) */}
         <div className={cn(
-          activeSubTab === "overview" ? "lg:col-span-2 space-y-6" : "w-full space-y-6"
+          (activeSubTab === "overview" || activeSubTab === "logistics") ? "lg:col-span-2 space-y-6" : "w-full space-y-6"
         )}>
           
           {/* TAB CONTENT: OVERVIEW */}
@@ -524,6 +512,14 @@ export default function CedulaTrackerPage() {
                       {request.fulfillmentType || "PICK_UP (Treasury Counter)"}
                     </p>
                   </div>
+                  {request.paymentReference && (
+                    <div className="space-y-1">
+                      <p className="text-[10px] uppercase font-black text-slate-500 tracking-wider">Payment Reference No.</p>
+                      <p className="text-sm font-mono font-bold text-emerald-400">
+                        {request.paymentReference}
+                      </p>
+                    </div>
+                  )}
                   {request.fulfillmentType === "DELIVERY" && (
                     <>
                       <div className="space-y-1 col-span-2">
@@ -611,6 +607,107 @@ export default function CedulaTrackerPage() {
                 </button>
               )}
             </div>
+          </div>
+        )}
+
+        {/* Right Sidebar: Payment Reference & OR Details (Only shown in LOGISTICS tab) */}
+        {activeSubTab === "logistics" && (
+          <div className="space-y-6">
+            {/* Reference Copy Card */}
+            {request.paymentReference && (
+              <div className="bg-[#11131a] rounded-[2.5rem] border border-white/5 p-8 shadow-2xl relative text-left space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-950/40 text-[#1a6b3a] flex items-center justify-center font-bold text-sm">
+                    #
+                  </div>
+                  <div>
+                    <span className="block text-[8px] font-black uppercase text-[#1a6b3a] tracking-widest">PAYMENT REFERENCE</span>
+                    <span className="block text-sm font-black italic uppercase text-slate-200">REFERENCE NUMBER</span>
+                  </div>
+                </div>
+                
+                <div className="flex items-center justify-between bg-black/30 border border-white/5 rounded-2xl p-4 gap-3">
+                  <span className="font-mono text-xs text-slate-300 select-text break-all">
+                    {request.paymentReference}
+                  </span>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(request.paymentReference || "");
+                      showToast("Reference number copied to clipboard!", "success");
+                    }}
+                    className="p-2 hover:bg-white/10 rounded-xl transition-all cursor-pointer text-slate-400 hover:text-white"
+                    title="Copy Reference"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10a2 2 0 00-2 2v3" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Official Receipt Preview/Download Card */}
+            {(request.status === "FOR_PROCESSING" || request.orUrl) && (
+              <div className="bg-[#11131a] rounded-[2.5rem] border border-white/5 p-8 shadow-2xl relative text-left space-y-6 overflow-hidden">
+                <div className="absolute right-4 top-4 opacity-[0.05] pointer-events-none">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-24 h-24 text-[#1a6b3a]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  </svg>
+                </div>
+                
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-950/40 text-[#1a6b3a] flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <span className="block text-[8px] font-black uppercase text-[#1a6b3a] tracking-widest">FINANCIAL RECORD SECURED</span>
+                    <span className="block text-sm font-black italic uppercase text-slate-200">OFFICIAL RECEIPT (OR)</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 pt-2">
+                  <a
+                    href={request.orUrl || "#"}
+                    download={`OR_${request.id}.pdf`}
+                    onClick={(e) => {
+                      if (!request.orUrl) {
+                        e.preventDefault();
+                        showToast("Official Receipt PDF file is currently being generated by the treasury staff.", "info");
+                      }
+                    }}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex py-3 bg-[#1a6b3a] hover:bg-emerald-700 text-white rounded-xl font-bold uppercase tracking-wider text-[10px] items-center justify-center gap-1.5 transition-all shadow-md shadow-emerald-950/20 active:scale-95 cursor-pointer"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Download
+                  </a>
+
+                  <button
+                    onClick={() => {
+                      if (request.orUrl) {
+                        setViewerUrl(request.orUrl);
+                        setViewerTitle("Official Receipt (OR) Preview");
+                        setViewerOpen(true);
+                      } else {
+                        showToast("Official Receipt preview is not available yet.", "warning");
+                      }
+                    }}
+                    className="flex py-3 border border-white/10 hover:bg-white/5 hover:border-white/20 text-slate-300 rounded-xl font-bold uppercase tracking-wider text-[10px] items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                    Preview
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
