@@ -261,16 +261,6 @@ export default function BirthRegistrationPage() {
     const [isHandoffOpen, setIsHandoffOpen] = useState(false);
     const [isCreatingHandoff, setIsCreatingHandoff] = useState(false);
 
-    const getNormalizedPlaceOfEvent = (val: string) => {
-        if (!val) return "";
-        const upperVal = val.toUpperCase();
-        const found = barangaysList.find(b => upperVal.includes(b.toUpperCase()));
-        if (found) {
-            return `${found.toUpperCase()}, MAPANDAN, PANGASINAN`;
-        }
-        return val;
-    };
-
     // QR Handoff Polling
     useEffect(() => {
         if (!handoffToken) return;

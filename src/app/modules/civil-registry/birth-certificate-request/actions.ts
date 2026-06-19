@@ -130,7 +130,7 @@ export async function submitBirthCertificateRequest(formData: FormData, userId: 
     await processFile("newIdFileBack", "ids");
 
     // Get current resident data for snapshot
-    let resident = await prisma.resident.findFirst({
+    const resident = await prisma.resident.findFirst({
       where: { userId: userId }
     });
 
