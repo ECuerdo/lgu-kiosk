@@ -46,13 +46,13 @@ export async function getTransactionForCheckout(id: string, userId: string) {
       select: { latitude: true, longitude: true },
     });
 
-    return { 
-      success: true, 
+    return {
+      success: true,
       data: {
         ...transaction,
         residentLat: resident?.latitude || null,
         residentLng: resident?.longitude || null,
-      } 
+      }
     };
   } catch (error) {
     console.error("Get transaction error:", error);
@@ -81,8 +81,8 @@ export async function saveCheckoutDetails(
     const nextStatus = "UNPAID";
 
     // Set delivery address properly, cast to unknown first then to Json type to satisfy linter
-    const deliveryAddressVal = details.fulfillmentType === "DELIVERY" 
-      ? (details.deliveryAddress as unknown as Prisma.InputJsonValue) 
+    const deliveryAddressVal = details.fulfillmentType === "DELIVERY"
+      ? (details.deliveryAddress as unknown as Prisma.InputJsonValue)
       : Prisma.JsonNull;
 
     await prisma.transaction.update({
@@ -189,7 +189,6 @@ export async function reconcilePayment(transactionId: string, userId: string) {
       },
     });
 
-    // Revalidate paths depending on transaction type
     if (transaction.type.code.startsWith("CEDULA")) {
       revalidatePath("/modules/cedula");
       revalidatePath(`/modules/cedula/${transactionId}`);

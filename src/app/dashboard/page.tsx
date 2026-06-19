@@ -406,7 +406,7 @@ function DashboardContent() {
               <button
                 type="button"
                 onClick={() => setTimeLeft(60)}
-                className="flex-1 rounded-xl bg-[#1a6b3a] px-5 py-3 text-xs font-black uppercase tracking-wider text-white shadow-lg"
+                className="flex-1 rounded-xl bg-theme-primary px-5 py-3 text-xs font-black uppercase tracking-wider text-white shadow-lg"
               >
                 Continue Session
               </button>
@@ -435,7 +435,7 @@ function DashboardContent() {
               key={cat}
               onClick={() => setActiveCategory(cat)}
               className={`w-full group flex flex-col items-center justify-center py-5 px-2 rounded-2xl transition-all duration-300 ${activeCategory === cat
-                ? "bg-[#1a6b3a] text-white shadow-lg shadow-emerald-900/30 scale-105"
+                ? "bg-theme-primary text-white shadow-lg shadow-theme-primary/30 scale-105"
                 : "text-slate-500 hover:bg-slate-800 hover:text-slate-300"
                 }`}
             >
@@ -476,15 +476,15 @@ function DashboardContent() {
         <header className="h-[140px] bg-white border-b border-slate-200 flex items-center justify-between px-16 shadow-sm z-20 shrink-0">
           <div className="flex items-center gap-6">
             <div className="hidden lg:block">
-              <div className="w-1.5 h-16 bg-[#1a6b3a] rounded-full"></div>
+              <div className="w-1.5 h-16 bg-theme-primary rounded-full"></div>
             </div>
             <div>
               <div className="flex items-center gap-3 mb-2">
-                <Badge className="bg-[#1a6b3a] border-none text-white font-black text-[9px] tracking-widest uppercase py-1 px-3">
+                <Badge className="bg-theme-primary border-none text-white font-black text-[9px] tracking-widest uppercase py-1 px-3">
                   {TRANSLATIONS[lang].verifiedSession}
                 </Badge>
                 <div className="flex items-center gap-1.5 text-slate-400 text-[10px] font-black uppercase tracking-[0.2em]">
-                  <Clock size={14} className="text-[#4caf7d]" />
+                  <Clock size={14} className="text-theme-secondary" />
                   <span>Kiosk Map-01</span>
                 </div>
               </div>
@@ -498,7 +498,7 @@ function DashboardContent() {
             <Button
               onClick={toggleVoice}
               className={`font-bold rounded-2xl flex items-center gap-2.5 px-4 py-5 shadow-lg active:scale-95 transition-all shrink-0 ${isVoiceEnabled
-                ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-950/20"
+                ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-theme-primary/20"
                 : "bg-slate-200 hover:bg-slate-300 text-slate-700 shadow-slate-300/20"
                 }`}
             >
@@ -519,7 +519,7 @@ function DashboardContent() {
                 <span className="text-lg font-black text-slate-800">
                   {resident ? resident.fullName : TRANSLATIONS[lang].localCitizen}
                 </span>
-                <Badge variant="outline" className="text-[#1a6b3a] border-[#4caf7d] uppercase font-black text-[9px]">{TRANSLATIONS[lang].portal}</Badge>
+                <Badge variant="outline" className="text-theme-primary border-theme-secondary uppercase font-black text-[9px]">{TRANSLATIONS[lang].portal}</Badge>
               </div>
             </div>
             <div className="w-16 h-16 rounded-[2rem] bg-slate-50 border border-slate-200 flex items-center justify-center overflow-hidden shadow-inner relative">
@@ -543,7 +543,7 @@ function DashboardContent() {
           {/* STICKY SUB-HEADER */}
           <div className="sticky top-0 bg-[#F1F5F9]/80 backdrop-blur-xl px-16 py-8 z-10 border-b border-white/40 flex items-baseline justify-between shadow-sm">
             <div className="flex items-center gap-4">
-              <div className="bg-[#1a6b3a] text-white p-2 rounded-xl">
+              <div className="bg-theme-primary text-white p-2 rounded-xl">
                 {activeCategory === "All" ? <Search size={24} /> : <FileText size={24} />}
               </div>
               <div>
@@ -557,13 +557,13 @@ function DashboardContent() {
             </div>
             <div className="flex items-center gap-4">
               <div className={`flex items-center gap-2 px-4 py-2 rounded-full border ${timeLeft < 20 ? "bg-red-50 border-red-100 text-red-600 shadow-sm shadow-red-100" : "bg-white/60 border-slate-200 text-slate-500"} transition-all duration-300`}>
-                <Clock size={14} className={timeLeft < 10 ? "animate-pulse text-red-500" : "text-[#4caf7d]"} />
+                <Clock size={14} className={timeLeft < 10 ? "animate-pulse text-red-500" : "text-theme-secondary"} />
                 <span className="text-[10px] font-black uppercase tracking-widest leading-none">
                   {TRANSLATIONS[lang].session}: {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
                 </span>
               </div>
               <div className="text-[10px] font-black text-slate-500 bg-white/60 px-4 py-2 rounded-full border border-slate-200 uppercase tracking-widest shadow-sm">
-                {TRANSLATIONS[lang].total}: <span className="text-[#1a6b3a]">{filteredServices.length}</span> {TRANSLATIONS[lang].servicesCount}
+                {TRANSLATIONS[lang].total}: <span className="text-theme-primary">{filteredServices.length}</span> {TRANSLATIONS[lang].servicesCount}
               </div>
             </div>
           </div>
@@ -574,22 +574,22 @@ function DashboardContent() {
               <div
                 key={service.id}
                 onClick={() => handleServiceClick(service)}
-                className="group flex flex-col min-h-[300px] bg-white rounded-3xl border border-slate-200/60 shadow-xl shadow-slate-200/50 hover:shadow-2xl hover:shadow-emerald-900/10 hover:border-[#4caf7d]/50 hover:scale-[1.01] transition-all duration-500 cursor-pointer overflow-hidden p-10 relative"
+                className="group flex flex-col min-h-[300px] bg-white rounded-3xl border border-slate-200/60 shadow-xl shadow-slate-200/50 hover:shadow-2xl hover:shadow-theme-primary/10 hover:border-theme-secondary/50 hover:scale-[1.01] transition-all duration-500 cursor-pointer overflow-hidden p-10 relative"
               >
                 {/* Top Section */}
                 <div className="flex items-start justify-between mb-8">
-                  <div className="w-20 h-20 rounded-2xl bg-slate-50 group-hover:bg-[#1a6b3a] flex items-center justify-center text-slate-400 group-hover:text-white transition-all duration-500 shadow-inner">
+                  <div className="w-20 h-20 rounded-2xl bg-slate-50 group-hover:bg-theme-primary flex items-center justify-center text-slate-400 group-hover:text-white transition-all duration-500 shadow-inner">
                     {service.icon}
                   </div>
                   <div className="text-right">
-                    <span className="bg-[#1a6b3a]/10 text-[#1a6b3a] text-[9px] font-black px-4 py-2 rounded-full uppercase tracking-widest opacity-80 group-hover:opacity-100 transition-opacity">
+                    <span className="bg-theme-primary/10 text-theme-primary text-[9px] font-black px-4 py-2 rounded-full uppercase tracking-widest opacity-80 group-hover:opacity-100 transition-opacity">
                       {service.category}
                     </span>
                   </div>
                 </div>
 
                 <div className="flex-1 flex flex-col justify-center">
-                  <h3 className="text-3xl font-black text-slate-900 tracking-tighter mb-3 group-hover:text-[#1a6b3a] transition-colors leading-tight">
+                  <h3 className="text-3xl font-black text-slate-900 tracking-tighter mb-3 group-hover:text-theme-primary transition-colors leading-tight">
                     {service.title}
                   </h3>
                   <p className="text-base text-slate-400 font-bold leading-relaxed group-hover:text-slate-600 transition-colors">
@@ -598,11 +598,11 @@ function DashboardContent() {
                 </div>
 
                 <div className="mt-8 flex items-center justify-between pt-8 border-t border-slate-50">
-                  <div className="flex items-center gap-2 text-[#1a6b3a] font-black text-xs uppercase tracking-[0.2em] transform translate-x-[-10px] transition-all duration-500 opacity-0 group-hover:opacity-100 group-hover:translate-x-0">
+                  <div className="flex items-center gap-2 text-theme-primary font-black text-xs uppercase tracking-[0.2em] transform translate-x-[-10px] transition-all duration-500 opacity-0 group-hover:opacity-100 group-hover:translate-x-0">
                     {TRANSLATIONS[lang].startApp}
                     <ChevronRight size={18} />
                   </div>
-                  <div className="h-14 w-14 bg-slate-50 group-hover:bg-[#1a6b3a] rounded-full flex items-center justify-center transition-all duration-500 shadow-inner group-hover:shadow-lg group-hover:shadow-emerald-900/30">
+                  <div className="h-14 w-14 bg-slate-50 group-hover:bg-theme-primary rounded-full flex items-center justify-center transition-all duration-500 shadow-inner group-hover:shadow-lg group-hover:shadow-theme-primary/30">
                     <ChevronRight className="w-6 h-6 text-slate-300 group-hover:text-white transition-colors" />
                   </div>
                 </div>
@@ -617,35 +617,35 @@ function DashboardContent() {
 
         <footer className="h-16 bg-white border-t border-slate-200 px-16 flex items-center justify-between z-20 shrink-0">
           <div className="flex items-center gap-12 text-[11px] font-black text-slate-400 uppercase tracking-widest h-full">
-            <div className="flex items-center gap-3 text-[#1a6b3a]">
+            <div className="flex items-center gap-3 text-theme-primary">
               <span className="relative flex h-3 w-3">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-[#1a6b3a]"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-theme-primary"></span>
               </span>
               {TRANSLATIONS[lang].systemOnline}
             </div>
             <div className="flex gap-6 h-full items-center">
               <button
                 onClick={() => setLang("en")}
-                className={`font-black uppercase tracking-widest h-full transition-colors ${lang === "en" ? "text-[#1a6b3a] border-b-2 border-[#1a6b3a]" : "text-slate-400 hover:text-slate-600"}`}
+                className={`font-black uppercase tracking-widest h-full transition-colors ${lang === "en" ? "text-theme-primary border-b-2 border-theme-primary" : "text-slate-400 hover:text-slate-600"}`}
               >
                 English Mode
               </button>
               <button
                 onClick={() => setLang("fil")}
-                className={`font-black uppercase tracking-widest h-full transition-colors ${lang === "fil" ? "text-[#1a6b3a] border-b-2 border-[#1a6b3a]" : "text-slate-400 hover:text-slate-600"}`}
+                className={`font-black uppercase tracking-widest h-full transition-colors ${lang === "fil" ? "text-theme-primary border-b-2 border-theme-primary" : "text-slate-400 hover:text-slate-600"}`}
               >
                 Filipino Mode
               </button>
               <button
                 onClick={() => setLang("pang")}
-                className={`font-black uppercase tracking-widest h-full transition-colors ${lang === "pang" ? "text-[#1a6b3a] border-b-2 border-[#1a6b3a]" : "text-slate-400 hover:text-slate-600"}`}
+                className={`font-black uppercase tracking-widest h-full transition-colors ${lang === "pang" ? "text-theme-primary border-b-2 border-theme-primary" : "text-slate-400 hover:text-slate-600"}`}
               >
                 Pangasinan Mode
               </button>
               <button
                 onClick={() => setLang("ilo")}
-                className={`font-black uppercase tracking-widest h-full transition-colors ${lang === "ilo" ? "text-[#1a6b3a] border-b-2 border-[#1a6b3a]" : "text-slate-400 hover:text-slate-600"}`}
+                className={`font-black uppercase tracking-widest h-full transition-colors ${lang === "ilo" ? "text-theme-primary border-b-2 border-theme-primary" : "text-slate-400 hover:text-slate-600"}`}
               >
                 Ilocano Mode
               </button>
@@ -664,9 +664,9 @@ export default function DashboardPage() {
   return (
     <Suspense fallback={
       <div className="h-screen w-screen flex flex-col items-center justify-center bg-white gap-6">
-        <div className="w-24 h-24 border-8 border-slate-100 border-t-[#1a6b3a] rounded-full animate-spin"></div>
+        <div className="w-24 h-24 border-8 border-slate-100 border-t-theme-primary rounded-full animate-spin"></div>
         <div className="text-center">
-          <p className="text-[#1a6b3a] font-black text-xs uppercase tracking-[0.4em] animate-pulse">Initializing Interface</p>
+          <p className="text-theme-primary font-black text-xs uppercase tracking-[0.4em] animate-pulse">Initializing Interface</p>
           <p className="text-slate-400 text-[10px] font-bold uppercase mt-2">Please wait while we secure your connection</p>
         </div>
       </div>

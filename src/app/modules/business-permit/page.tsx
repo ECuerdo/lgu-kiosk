@@ -274,7 +274,7 @@ export default function BusinessPermitWizardPage() {
     const [revisionId, setRevisionId] = useState<string | null>(null);
     const [revisionTx, setRevisionTx] = useState<any>(null);
     const [showValidationErrors, setShowValidationErrors] = useState(false);
-    const [themeColor, setThemeColor] = useState("#1a6b3a");
+    const [themeColor, setThemeColor] = useState("var(--primary-theme)");
 
     const [previousPermits, setPreviousPermits] = useState<any[]>([]);
     const [selectedPermitIndex, setSelectedPermitIndex] = useState<number>(0);
@@ -1161,7 +1161,7 @@ export default function BusinessPermitWizardPage() {
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6 px-1 md:px-0">
                     <div className="space-y-1 md:space-y-2">
                         <h1 className="text-4xl md:text-7xl font-black text-white uppercase italic tracking-tighter leading-none select-none">
-                            BUSINESS <span className="text-[#1a6b3a] underline decoration-[6px] md:decoration-8 decoration-[#1a6b3a]/20 underline-offset-[6px] md:underline-offset-[12px]">PERMIT</span>
+                            BUSINESS <span className="text-theme-primary underline decoration-[6px] md:decoration-8 decoration-theme-primary/20 underline-offset-[6px] md:underline-offset-[12px]">PERMIT</span>
                         </h1>
                         <p className="text-[9px] md:text-[11px] font-bold text-slate-400 uppercase tracking-[0.4em] ml-1 md:ml-2 italic">Streamlined Permitting & Compliance Portal</p>
                     </div>
@@ -1192,15 +1192,15 @@ export default function BusinessPermitWizardPage() {
                         >
                             <div className={cn(
                                 "w-11 h-11 md:w-16 md:h-16 rounded-xl md:rounded-2xl flex items-center justify-center transition-all duration-500 border-2",
-                                isActive ? "bg-[#1a6b3a] text-white border-[#1a6b3a] shadow-[0_0_20px_rgba(26,107,58,0.3)] scale-105 md:scale-110" :
+                                isActive ? "bg-theme-primary text-white border-theme-primary shadow-[0_0_20px_rgba(26,107,58,0.3)] scale-105 md:scale-110" :
                                     isCompleted ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/30" :
-                                        "bg-slate-100 dark:bg-white/5 text-slate-400 border-transparent group-hover:border-[#1a6b3a]/30"
+                                        "bg-slate-100 dark:bg-white/5 text-slate-400 border-transparent group-hover:border-theme-primary/30"
                             )}>
                                 <Icon className="w-4 h-4 md:w-7 md:h-7" />
                             </div>
                             <span className={cn(
                                 "text-[7px] md:text-[10px] uppercase tracking-widest text-center italic hidden sm:block",
-                                isActive ? "text-[#1a6b3a] opacity-100 font-black" : "opacity-40 group-hover:opacity-100 transition-opacity"
+                                isActive ? "text-theme-primary opacity-100 font-black" : "opacity-40 group-hover:opacity-100 transition-opacity"
                             )}>
                                 {step.label}
                             </span>
@@ -1276,15 +1276,15 @@ export default function BusinessPermitWizardPage() {
                                                     className={cn(
                                                         "p-6 md:p-10 rounded-2xl md:rounded-[3rem] border-2 md:border-4 transition-all duration-500 text-left relative group select-none overflow-hidden h-[240px] md:h-[300px] flex flex-col justify-between",
                                                         isSelected
-                                                            ? "bg-[#1a6b3a] text-white border-[#1a6b3a] shadow-2xl shadow-emerald-500/20 scale-[1.02]"
-                                                            : "bg-[#f1f8f4] dark:bg-[#0b1c13] backdrop-blur-md border-[#1a6b3a]/15 dark:border-[#1a6b3a]/20 hover:border-[#1a6b3a]/50 hover:bg-[#e8f5e9] dark:hover:bg-[#10261a]"
+                                                            ? "bg-theme-primary text-white border-theme-primary shadow-2xl shadow-theme-primary/20 scale-[1.02]"
+                                                            : "bg-theme-light dark:bg-theme-dark/20 backdrop-blur-md border-theme-primary/15 dark:border-theme-primary/20 hover:border-theme-primary/50 hover:bg-theme-light dark:hover:bg-theme-hover/30"
                                                     )}
                                                 >
                                                     <div className={cn(
                                                         "w-14 h-14 md:w-20 md:h-20 rounded-xl md:rounded-[2rem] flex items-center justify-center transition-transform group-hover:scale-110",
-                                                        isSelected ? "bg-white/20 text-white" : "bg-[#1a6b3a]/10 text-[#1a6b3a]"
+                                                        isSelected ? "bg-white/20 text-white" : "bg-theme-primary/10 text-theme-primary"
                                                     )}>
-                                                        <Icon className={cn("w-6 h-6 md:w-10 md:h-10", isSelected ? "animate-pulse text-white" : "text-[#1a6b3a]")} />
+                                                        <Icon className={cn("w-6 h-6 md:w-10 md:h-10", isSelected ? "animate-pulse text-white" : "text-theme-primary")} />
                                                     </div>
                                                     <div className="space-y-1 md:space-y-2 relative z-10">
                                                         <h4 className="text-xl md:text-2xl font-black uppercase italic tracking-tighter">
@@ -1295,7 +1295,7 @@ export default function BusinessPermitWizardPage() {
                                                         </p>
                                                     </div>
                                                     {isSelected && (
-                                                        <motion.div layoutId="check" className="absolute top-6 right-6 md:top-8 md:right-8 w-8 h-8 md:w-10 md:h-10 bg-white rounded-full flex items-center justify-center text-[#1a6b3a] shadow-xl">
+                                                        <motion.div layoutId="check" className="absolute top-6 right-6 md:top-8 md:right-8 w-8 h-8 md:w-10 md:h-10 bg-white rounded-full flex items-center justify-center text-theme-primary shadow-xl">
                                                             <Check className="w-4 h-4 md:w-6 md:h-6 stroke-[4]" />
                                                         </motion.div>
                                                     )}
@@ -2098,7 +2098,7 @@ export default function BusinessPermitWizardPage() {
                                                                     type="button"
                                                                     onClick={() => startHandoff(item.field)}
                                                                     disabled={isCreatingHandoff}
-                                                                    className="flex-1 font-black italic uppercase tracking-widest text-[9px] sm:text-xs h-10 rounded-2xl transition-all select-none bg-[#1a6b3a] hover:bg-[#155b31] text-white shadow-md active:scale-[0.98]"
+                                                                    className="flex-1 font-black italic uppercase tracking-widest text-[9px] sm:text-xs h-10 rounded-2xl transition-all select-none bg-theme-primary hover:bg-[#155b31] text-white shadow-md active:scale-[0.98]"
                                                                 >
                                                                     {isCreatingHandoff
                                                                         ? "QR..."
@@ -2310,7 +2310,7 @@ export default function BusinessPermitWizardPage() {
                     <Button
                         onClick={currentStep === "SUBMIT" ? onSubmit : handleNext}
                         disabled={submitting || (currentStep === "SUBMIT" && !isStepValid(currentStep))}
-                        className="bg-[#1a6b3a] hover:bg-[#155b31] text-white shadow-xl shadow-emerald-500/20 text-[10px] md:text-xs rounded-xl md:rounded-2xl px-8 md:px-12 h-10 md:h-14 group transition-all duration-300 active:scale-95 font-black uppercase tracking-widest italic"
+                        className="bg-theme-primary hover:bg-[#155b31] text-white shadow-xl shadow-theme-primary/20 text-[10px] md:text-xs rounded-xl md:rounded-2xl px-8 md:px-12 h-10 md:h-14 group transition-all duration-300 active:scale-95 font-black uppercase tracking-widest italic"
                     >
                         {submitting ? (
                             <div className="flex items-center">
@@ -2332,7 +2332,7 @@ export default function BusinessPermitWizardPage() {
                 <div className="w-full max-w-5xl flex items-center justify-center gap-4">
                     <div className="h-1.5 flex-1 bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
                         <motion.div
-                            className="h-full bg-[#1a6b3a]"
+                            className="h-full bg-theme-primary"
                             initial={{ width: 0 }}
                             animate={{ width: `${((STEPS.findIndex(s => s.id === currentStep) + 1) / STEPS.length) * 100}%` }}
                         />
@@ -2364,7 +2364,7 @@ export default function BusinessPermitWizardPage() {
                                 <X className="h-4 w-4" />
                             </button>
                             <div className="space-y-4 text-center">
-                                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#1a6b3a]/10 text-[#1a6b3a]">
+                                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-theme-primary/10 text-theme-primary">
                                     <Upload className="h-5 w-5" />
                                 </div>
                                 <div>
@@ -2379,7 +2379,7 @@ export default function BusinessPermitWizardPage() {
                                 <p className="text-[11px] font-bold uppercase tracking-widest text-slate-500">
                                     Scan with your phone to upload the file securely.
                                 </p>
-                                <p className="text-[10px] font-bold uppercase tracking-widest text-[#1a6b3a]">
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-theme-primary">
                                     Expires {handoffExpiresAt > 0 ? new Date(handoffExpiresAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "soon"}
                                 </p>
                             </div>
@@ -2427,14 +2427,14 @@ export default function BusinessPermitWizardPage() {
                             className="bg-white dark:bg-[#11131a] rounded-[2rem] border border-slate-200 dark:border-white/10 shadow-2xl p-6 md:p-8 max-w-lg w-full relative z-10 space-y-6 overflow-hidden"
                         >
                             {/* Decorative background gradient */}
-                            <div className="absolute -top-24 -right-24 w-48 h-48 bg-[#1a6b3a]/10 rounded-full blur-3xl pointer-events-none" />
+                            <div className="absolute -top-24 -right-24 w-48 h-48 bg-theme-primary/10 rounded-full blur-3xl pointer-events-none" />
 
                             <div className="flex items-start gap-4">
-                                <div className="p-3 bg-[#1a6b3a]/10 rounded-2xl text-[#1a6b3a] shrink-0">
+                                <div className="p-3 bg-theme-primary/10 rounded-2xl text-theme-primary shrink-0">
                                     <Building2 className="w-6 h-6 animate-pulse" />
                                 </div>
                                 <div className="space-y-1 text-left">
-                                    <span className="text-[9px] font-black uppercase tracking-widest text-[#1a6b3a] italic">Record Detected</span>
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-theme-primary italic">Record Detected</span>
                                     <h3 className="text-xl md:text-2xl font-black uppercase italic tracking-tighter text-slate-900 dark:text-white leading-none">
                                         {previousPermits.length > 1 ? "Renew Which Business?" : "Renew Previous Business?"}
                                     </h3>
@@ -2482,8 +2482,8 @@ export default function BusinessPermitWizardPage() {
                                         </div>
                                     </div>
 
-                                    <div className="p-3 bg-[#e8f5e9] border border-[#1a6b3a]/20 rounded-xl flex items-center gap-2.5">
-                                        <p className="text-[9px] text-[#1a6b3a] font-bold uppercase tracking-wider leading-relaxed">
+                                    <div className="p-3 bg-theme-light border border-theme-primary/20 rounded-xl flex items-center gap-2.5">
+                                        <p className="text-[9px] text-theme-primary font-bold uppercase tracking-wider leading-relaxed">
                                             Selecting yes autofills details to guarantee municipal compliance.
                                         </p>
                                     </div>
@@ -2503,16 +2503,16 @@ export default function BusinessPermitWizardPage() {
                                                     className={cn(
                                                         "w-full p-4 rounded-2xl border-2 text-left transition-all duration-300 relative overflow-hidden group select-none flex flex-col gap-1.5",
                                                         isSelected
-                                                            ? "bg-[#e8f5e9] dark:bg-[#10261a] border-[#1a6b3a] shadow-md"
-                                                            : "bg-[#f1f8f4] dark:bg-[#0b1c13] border-[#1a6b3a]/15 dark:border-[#1a6b3a]/20 hover:border-[#1a6b3a]/40 hover:bg-[#e8f5e9] dark:hover:bg-[#10261a]"
+                                                            ? "bg-theme-light dark:bg-[#10261a] border-theme-primary shadow-md"
+                                                            : "bg-theme-light dark:bg-theme-dark/20 border-theme-primary/15 dark:border-theme-primary/20 hover:border-theme-primary/40 hover:bg-theme-light dark:hover:bg-theme-hover/30"
                                                     )}
                                                 >
                                                     <div className="flex justify-between items-start gap-2">
-                                                        <span className={cn("text-xs font-black uppercase italic truncate", isSelected ? "text-[#1a6b3a]" : "text-slate-800 dark:text-white")}>
+                                                        <span className={cn("text-xs font-black uppercase italic truncate", isSelected ? "text-theme-primary" : "text-slate-800 dark:text-white")}>
                                                             {addData.businessName || "N/A"}
                                                         </span>
                                                         {isSelected && (
-                                                            <div className="w-4 h-4 rounded-full bg-[#1a6b3a] flex items-center justify-center text-white shrink-0">
+                                                            <div className="w-4 h-4 rounded-full bg-theme-primary flex items-center justify-center text-white shrink-0">
                                                                 <Check className="w-2.5 h-2.5 stroke-[4]" />
                                                             </div>
                                                         )}
@@ -2524,15 +2524,15 @@ export default function BusinessPermitWizardPage() {
                                                         </div>
                                                         <div>
                                                             <span className="text-[7px] text-slate-400 block">License Permit No.</span>
-                                                            <span className="text-[#1a6b3a] font-mono truncate block">{permit.businessPermit?.permitNumber || addData.permitNumber || permit.id.slice(-8).toUpperCase()}</span>
+                                                            <span className="text-theme-primary font-mono truncate block">{permit.businessPermit?.permitNumber || addData.permitNumber || permit.id.slice(-8).toUpperCase()}</span>
                                                         </div>
                                                     </div>
                                                 </button>
                                             );
                                         })}
                                     </div>
-                                    <div className="p-3 bg-[#e8f5e9] border border-[#1a6b3a]/20 rounded-xl flex items-center gap-2.5">
-                                        <p className="text-[9px] text-[#1a6b3a] font-bold uppercase tracking-wider leading-relaxed">
+                                    <div className="p-3 bg-theme-light border border-theme-primary/20 rounded-xl flex items-center gap-2.5">
+                                        <p className="text-[9px] text-theme-primary font-bold uppercase tracking-wider leading-relaxed">
                                             Selecting yes autofills details to guarantee municipal compliance.
                                         </p>
                                     </div>
@@ -2544,13 +2544,13 @@ export default function BusinessPermitWizardPage() {
                                 <Button
                                     onClick={handleDeclinePreviousPermit}
                                     variant="outline"
-                                    className="rounded-full py-6 font-black uppercase tracking-widest text-[10px] border-[#1a6b3a]/20 text-[#1a6b3a] hover:bg-[#e8f5e9] transition-all"
+                                    className="rounded-full py-6 font-black uppercase tracking-widest text-[10px] border-theme-primary/20 text-theme-primary hover:bg-theme-light transition-all"
                                 >
                                     No, Register Different
                                 </Button>
                                 <Button
                                     onClick={handleSelectPreviousPermit}
-                                    className="rounded-full py-6 font-black uppercase tracking-widest text-[10px] text-white bg-[#1a6b3a] hover:bg-[#155b31] shadow-lg shadow-emerald-500/20 transition-all"
+                                    className="rounded-full py-6 font-black uppercase tracking-widest text-[10px] text-white bg-theme-primary hover:bg-[#155b31] shadow-lg shadow-theme-primary/20 transition-all"
                                 >
                                     Yes, Autofill Details
                                 </Button>
@@ -2617,7 +2617,7 @@ export default function BusinessPermitWizardPage() {
                                             className={cn(
                                                 "flex-1 py-2 px-3 rounded-xl text-center text-xs font-black uppercase tracking-widest transition-all select-none",
                                                 dtiGuideTab === "SOLE"
-                                                    ? "bg-[#e8f5e9] dark:bg-[#10261a] shadow-md text-[#1a6b3a]"
+                                                    ? "bg-theme-light dark:bg-[#10261a] shadow-md text-theme-primary"
                                                     : "text-slate-400 hover:text-slate-600 dark:hover:text-white"
                                             )}
                                     >
@@ -2629,7 +2629,7 @@ export default function BusinessPermitWizardPage() {
                                             className={cn(
                                                 "flex-1 py-2 px-3 rounded-xl text-center text-xs font-black uppercase tracking-widest transition-all select-none",
                                                 dtiGuideTab === "CORP"
-                                                    ? "bg-[#e8f5e9] dark:bg-[#10261a] shadow-md text-[#1a6b3a]"
+                                                    ? "bg-theme-light dark:bg-[#10261a] shadow-md text-theme-primary"
                                                     : "text-slate-400 hover:text-slate-600 dark:hover:text-white"
                                             )}
                                     >

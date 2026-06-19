@@ -294,8 +294,8 @@ export default function CheckoutPage() {
   if (loading || !transaction) {
     return (
       <div className="h-screen w-screen flex flex-col items-center justify-center bg-[#0d0f14] gap-6">
-        <div className="w-16 h-16 border-8 border-slate-800 border-t-[#1a6b3a] rounded-full animate-spin"></div>
-        <p className="text-[#1a6b3a] font-black text-xs uppercase tracking-[0.4em] animate-pulse">Syncing Payment Gateway...</p>
+        <div className="w-16 h-16 border-8 border-slate-800 border-t-theme-primary rounded-full animate-spin"></div>
+        <p className="text-theme-primary font-black text-xs uppercase tracking-[0.4em] animate-pulse">Syncing Payment Gateway...</p>
       </div>
     );
   }
@@ -307,7 +307,7 @@ export default function CheckoutPage() {
       {/* Toast banner */}
       {toastMessage && (
         <div className="fixed bottom-8 right-8 z-[200] flex items-center gap-3 px-6 py-4 rounded-2xl border shadow-xl bg-slate-900 text-white border-slate-800">
-          <AlertCircle className="w-5 h-5 text-[#1a6b3a]" />
+          <AlertCircle className="w-5 h-5 text-theme-primary" />
           <span className="text-sm font-bold">{toastMessage.message}</span>
         </div>
       )}
@@ -326,12 +326,12 @@ export default function CheckoutPage() {
 
         {/* Welcome branding banner */}
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-[#1a6b3a] flex items-center justify-center shadow-lg shadow-emerald-950/40">
+          <div className="w-12 h-12 rounded-xl bg-theme-primary flex items-center justify-center shadow-lg shadow-theme-primary/40">
             <CreditCard size={24} className="text-white" />
           </div>
           <div>
             <h1 className="text-2xl md:text-3xl font-black uppercase italic tracking-tight text-left">
-              TREASURY <span className="text-[#1a6b3a] not-italic">CHECKOUT</span>
+              TREASURY <span className="text-theme-primary not-italic">CHECKOUT</span>
             </h1>
             <p className="text-xs text-slate-500 font-bold uppercase tracking-wider text-left">Secure Municipal Payment Processing Gateway</p>
           </div>
@@ -342,13 +342,13 @@ export default function CheckoutPage() {
           
           {/* Left Column: Assessment Breakdown */}
           <section className="bg-[#11131a] rounded-[2.5rem] border border-white/5 p-8 relative overflow-hidden flex flex-col justify-between shadow-2xl lg:self-start">
-            <div className="absolute right-4 top-12 h-44 w-44 rotate-12 text-[#1a6b3a]/[0.03] pointer-events-none">
+            <div className="absolute right-4 top-12 h-44 w-44 rotate-12 text-theme-primary/[0.03] pointer-events-none">
               <ShieldCheck className="w-full h-full" />
             </div>
 
             <div className="space-y-6 relative z-10 text-left">
               <div>
-                <p className="flex items-center gap-2 text-[10px] font-black italic uppercase tracking-[0.3em] text-[#1a6b3a]">
+                <p className="flex items-center gap-2 text-[10px] font-black italic uppercase tracking-[0.3em] text-theme-primary">
                   <ShieldCheck className="h-4.5 w-4.5" /> Treasury Assessment
                 </p>
                 <p className="mt-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">Evaluation complete. Verify the breakdown:</p>
@@ -431,7 +431,7 @@ export default function CheckoutPage() {
             {/* Fulfillment Type */}
             <div className="space-y-4">
               <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-950/40 text-[#1a6b3a]">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-950/40 text-theme-primary">
                   <Truck className="h-5 w-5" />
                 </span>
                 <h3 className="text-lg font-black italic uppercase tracking-tight">Fulfillment Type</h3>
@@ -444,13 +444,13 @@ export default function CheckoutPage() {
                   className={cn(
                     "relative flex min-h-24 flex-col items-center justify-center gap-2 rounded-2xl border-2 p-3 text-center transition active:scale-95 cursor-pointer",
                     fulfillment === "PICK_UP" 
-                      ? "border-[#1a6b3a] bg-[#1a6b3a]/10 text-white" 
+                      ? "border-theme-primary bg-theme-primary/10 text-white" 
                       : "border-white/5 bg-white/5 text-slate-400 hover:border-emerald-500/30"
                   )}
                 >
                   <Building2 className="h-6 w-6" />
                   <span className="text-[9px] font-black uppercase tracking-wider">Office Pickup</span>
-                  {fulfillment === "PICK_UP" && <span className="absolute right-2 top-2 flex h-4 w-4 items-center justify-center rounded-full bg-[#1a6b3a]"><Check size={10} className="text-white" /></span>}
+                  {fulfillment === "PICK_UP" && <span className="absolute right-2 top-2 flex h-4 w-4 items-center justify-center rounded-full bg-theme-primary"><Check size={10} className="text-white" /></span>}
                 </button>
 
                 <button
@@ -459,13 +459,13 @@ export default function CheckoutPage() {
                   className={cn(
                     "relative flex min-h-24 flex-col items-center justify-center gap-2 rounded-2xl border-2 p-3 text-center transition active:scale-95 cursor-pointer",
                     fulfillment === "DELIVERY" 
-                      ? "border-[#1a6b3a] bg-[#1a6b3a]/10 text-white" 
+                      ? "border-theme-primary bg-theme-primary/10 text-white" 
                       : "border-white/5 bg-white/5 text-slate-400 hover:border-emerald-500/30"
                   )}
                 >
                   <Truck className="h-6 w-6" />
                   <span className="text-[9px] font-black uppercase tracking-wider">Home Delivery</span>
-                  {fulfillment === "DELIVERY" && <span className="absolute right-2 top-2 flex h-4 w-4 items-center justify-center rounded-full bg-[#1a6b3a]"><Check size={10} className="text-white" /></span>}
+                  {fulfillment === "DELIVERY" && <span className="absolute right-2 top-2 flex h-4 w-4 items-center justify-center rounded-full bg-theme-primary"><Check size={10} className="text-white" /></span>}
                 </button>
               </div>
             </div>
@@ -479,7 +479,7 @@ export default function CheckoutPage() {
                     <button
                       type="button"
                       onClick={() => setIsBrgyDropdownOpen(!isBrgyDropdownOpen)}
-                      className="h-11 w-full rounded-xl border border-white/10 bg-[#0d0f14] px-4 text-xs font-bold text-white flex items-center justify-between transition-all hover:bg-white/5 focus:border-[#1a6b3a] outline-none cursor-pointer"
+                      className="h-11 w-full rounded-xl border border-white/10 bg-[#0d0f14] px-4 text-xs font-bold text-white flex items-center justify-between transition-all hover:bg-white/5 focus:border-theme-primary outline-none cursor-pointer"
                     >
                       <span>{address.barangay || "Select Barangay"}</span>
                       <svg
@@ -513,7 +513,7 @@ export default function CheckoutPage() {
                                 className={cn(
                                   "w-full text-left px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer block",
                                   address.barangay === b.name
-                                    ? "bg-[#1a6b3a] text-white"
+                                    ? "bg-theme-primary text-white"
                                     : "text-slate-300 hover:bg-white/5 hover:text-white"
                                 )}
                               >
@@ -533,7 +533,7 @@ export default function CheckoutPage() {
                     type="text"
                     value={address.houseNumber}
                     onChange={e => updateAddressField("houseNumber", e.target.value)}
-                    className="h-11 w-full rounded-xl border border-white/10 bg-black/20 px-3 text-xs font-bold text-white outline-none focus:border-[#1a6b3a] transition-all"
+                    className="h-11 w-full rounded-xl border border-white/10 bg-black/20 px-3 text-xs font-bold text-white outline-none focus:border-theme-primary transition-all"
                     placeholder="e.g. Blk 1 Lot 2"
                   />
                 </div>
@@ -544,7 +544,7 @@ export default function CheckoutPage() {
                     type="text"
                     value={address.street}
                     onChange={e => updateAddressField("street", e.target.value)}
-                    className="h-11 w-full rounded-xl border border-white/10 bg-black/20 px-3 text-xs font-bold text-white outline-none focus:border-[#1a6b3a] transition-all"
+                    className="h-11 w-full rounded-xl border border-white/10 bg-black/20 px-3 text-xs font-bold text-white outline-none focus:border-theme-primary transition-all"
                     placeholder="e.g. Rizal St"
                   />
                 </div>
@@ -555,7 +555,7 @@ export default function CheckoutPage() {
                     type="text"
                     value={address.sitio}
                     onChange={e => updateAddressField("sitio", e.target.value)}
-                    className="h-11 w-full rounded-xl border border-white/10 bg-black/20 px-3 text-xs font-bold text-white outline-none focus:border-[#1a6b3a] transition-all"
+                    className="h-11 w-full rounded-xl border border-white/10 bg-black/20 px-3 text-xs font-bold text-white outline-none focus:border-theme-primary transition-all"
                     placeholder="e.g. Centro"
                   />
                 </div>
@@ -566,7 +566,7 @@ export default function CheckoutPage() {
                     type="text"
                     value={address.purok}
                     onChange={e => updateAddressField("purok", e.target.value)}
-                    className="h-11 w-full rounded-xl border border-white/10 bg-black/20 px-3 text-xs font-bold text-white outline-none focus:border-[#1a6b3a] transition-all"
+                    className="h-11 w-full rounded-xl border border-white/10 bg-black/20 px-3 text-xs font-bold text-white outline-none focus:border-theme-primary transition-all"
                     placeholder="e.g. Purok 4"
                   />
                 </div>
@@ -577,7 +577,7 @@ export default function CheckoutPage() {
                     type="text"
                     value={address.landmark}
                     onChange={e => updateAddressField("landmark", e.target.value)}
-                    className="h-11 w-full rounded-xl border border-white/10 bg-black/20 px-3 text-xs font-bold text-white outline-none focus:border-[#1a6b3a] transition-all"
+                    className="h-11 w-full rounded-xl border border-white/10 bg-black/20 px-3 text-xs font-bold text-white outline-none focus:border-theme-primary transition-all"
                     placeholder="e.g. Near Barangay Hall"
                   />
                 </div>
@@ -603,7 +603,7 @@ export default function CheckoutPage() {
             {/* Payment Method Options */}
             <div className="space-y-4 border-t border-white/5 pt-6">
               <div className="flex items-center gap-3 text-left">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-950/40 text-[#1a6b3a]">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-950/40 text-theme-primary">
                   <CreditCard className="h-5 w-5" />
                 </span>
                 <h3 className="text-lg font-black italic uppercase tracking-tight">Payment Method</h3>
@@ -620,9 +620,9 @@ export default function CheckoutPage() {
                       : "border-white/5 bg-white/5 text-slate-400 hover:border-emerald-500/30"
                   )}
                 >
-                  <Wallet className={cn("h-6 w-6", paymentMethod === "gcash" && "text-[#1a6b3a]")} />
+                  <Wallet className={cn("h-6 w-6", paymentMethod === "gcash" && "text-theme-primary")} />
                   <span className="text-[9px] font-black uppercase tracking-wider">GCash Wallet</span>
-                  {paymentMethod === "gcash" && <span className="absolute right-2 top-2 flex h-4 w-4 items-center justify-center rounded-full bg-[#1a6b3a] border border-white"><Check size={8} className="text-white" /></span>}
+                  {paymentMethod === "gcash" && <span className="absolute right-2 top-2 flex h-4 w-4 items-center justify-center rounded-full bg-theme-primary border border-white"><Check size={8} className="text-white" /></span>}
                 </button>
 
                 <button
@@ -635,9 +635,9 @@ export default function CheckoutPage() {
                       : "border-white/5 bg-white/5 text-slate-400 hover:border-emerald-500/30"
                   )}
                 >
-                  <QrCode className={cn("h-6 w-6", paymentMethod === "qrph" && "text-[#1a6b3a]")} />
+                  <QrCode className={cn("h-6 w-6", paymentMethod === "qrph" && "text-theme-primary")} />
                   <span className="text-[9px] font-black uppercase tracking-wider">QRPH Scan</span>
-                  {paymentMethod === "qrph" && <span className="absolute right-2 top-2 flex h-4 w-4 items-center justify-center rounded-full bg-[#1a6b3a] border border-white"><Check size={8} className="text-white" /></span>}
+                  {paymentMethod === "qrph" && <span className="absolute right-2 top-2 flex h-4 w-4 items-center justify-center rounded-full bg-theme-primary border border-white"><Check size={8} className="text-white" /></span>}
                 </button>
               </div>
 
@@ -653,7 +653,7 @@ export default function CheckoutPage() {
                 type="button"
                 onClick={handleCheckout}
                 disabled={isSubmitting}
-                className="flex h-14 w-full items-center justify-center rounded-2xl bg-[#1a6b3a] hover:bg-emerald-700 text-white px-4 text-xs font-black uppercase tracking-widest transition shadow-lg shadow-emerald-950/20 active:scale-98 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+                className="flex h-14 w-full items-center justify-center rounded-2xl bg-theme-primary hover:bg-emerald-700 text-white px-4 text-xs font-black uppercase tracking-widest transition shadow-lg shadow-theme-primary/20 active:scale-98 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
               >
                 {isSubmitting ? (
                   <>

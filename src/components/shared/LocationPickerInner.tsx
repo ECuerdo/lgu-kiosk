@@ -109,7 +109,7 @@ export default function LocationPickerInner({
             <GeoJSON
               data={mapandanBorder}
               style={{
-                color: "#1a6b3a",
+                color: "var(--primary-theme)",
                 weight: 2,
                 opacity: 0.6,
                 fillOpacity: 0.05
@@ -134,7 +134,7 @@ export default function LocationPickerInner({
         </div>
 
         <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-[1000] w-full px-4 text-center hidden md:block">
-          <div className="bg-[#1a6b3a]/95 backdrop-blur-md text-white px-2 py-0.5 rounded-full text-[7px] md:text-[8px] font-black uppercase tracking-widest inline-flex items-center gap-1 border border-white/20 select-none">
+          <div className="bg-theme-primary/95 backdrop-blur-md text-white px-2 py-0.5 rounded-full text-[7px] md:text-[8px] font-black uppercase tracking-widest inline-flex items-center gap-1 border border-white/20 select-none">
             <MapPin className="w-2 h-2 animate-pulse" /> Click map to pin
           </div>
         </div>
@@ -169,7 +169,7 @@ export default function LocationPickerInner({
             <GeoJSON
               data={mapandanBorder}
               style={{
-                color: "#1a6b3a",
+                color: "var(--primary-theme)",
                 weight: 2,
                 opacity: 0.6,
                 fillOpacity: 0.05

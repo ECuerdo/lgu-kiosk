@@ -93,7 +93,7 @@ export default function UploadHandoffPage() {
   return (
     <main className="h-dvh overflow-y-auto bg-[#071c12] px-4 py-8 text-slate-900">
       <div className="mx-auto max-w-lg rounded-3xl bg-white p-6 shadow-2xl">
-        <div className="mb-5 flex items-center gap-3 text-[#1a6b3a]">
+        <div className="mb-5 flex items-center gap-3 text-theme-primary">
           <ShieldCheck className="h-9 w-9 shrink-0" />
           <div>
             <h1 className="text-xl font-black uppercase">Secure Document Upload</h1>
@@ -109,7 +109,7 @@ export default function UploadHandoffPage() {
             const showGroup = index === 0 || slots[index - 1]?.group !== item.group;
             return (
               <div key={item.slot}>
-                {showGroup && <h2 className="mb-2 mt-5 text-xs font-black uppercase tracking-widest text-[#1a6b3a]">{item.group}</h2>}
+                {showGroup && <h2 className="mb-2 mt-5 text-xs font-black uppercase tracking-widest text-theme-primary">{item.group}</h2>}
                 <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-slate-200 p-4">
                   <div className={file ? "text-emerald-500" : "text-slate-400"}>
                     {file ? <CheckCircle2 className="h-6 w-6" /> : <FileUp className="h-6 w-6" />}
@@ -120,7 +120,7 @@ export default function UploadHandoffPage() {
                       {uploadingSlot === item.slot ? "Scanning..." : file?.fileName || "Tap to choose file"}
                     </p>
                   </div>
-                  <span className="rounded-full bg-[#1a6b3a] px-3 py-2 text-[10px] font-black uppercase text-white">
+                  <span className="rounded-full bg-theme-primary px-3 py-2 text-[10px] font-black uppercase text-white">
                     {file ? "Re-upload" : "Upload"}
                   </span>
                   <input

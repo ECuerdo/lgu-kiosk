@@ -293,7 +293,7 @@ function NewsSlide({ data }: { data: Record<string, unknown> }) {
   return (
     <div className="slide-announce">
       <div className="announce-header">
-        <div className="tag bg-[#1a6b3a]/20 border-[#1a6b3a] text-[#1a6b3a]">📰 Latest News</div>
+        <div className="tag bg-theme-primary/20 border-theme-primary text-theme-primary">📰 Latest News</div>
         <h2>Local Updates & Stories</h2>
       </div>
       <div className="announce-list">
@@ -303,7 +303,7 @@ function NewsSlide({ data }: { data: Record<string, unknown> }) {
             key={i}
             style={{ animationDelay: `${i * 100}ms` }}
           >
-            <div className="item-num bg-[#1a6b3a]/20 border-[#1a6b3a] text-[#1a6b3a]">{i + 1}</div>
+            <div className="item-num bg-theme-primary/20 border-theme-primary text-theme-primary">{i + 1}</div>
             <div className="item-body">
               <div className="flex items-center gap-2 mb-1">
                  <span className="text-[10px] font-black bg-slate-800 text-slate-300 px-2 py-0.5 rounded uppercase tracking-widest">{item.category}</span>

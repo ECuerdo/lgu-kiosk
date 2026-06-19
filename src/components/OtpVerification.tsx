@@ -112,7 +112,7 @@ export default function OtpVerification({ email, onSuccess, onCancel }: OtpVerif
 
   return (
     <div className="flex flex-col items-center py-8">
-      <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-[#4caf7d]/10 text-[#4caf7d]">
+      <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-theme-secondary/10 text-theme-secondary">
         <svg className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
         </svg>
@@ -133,7 +133,7 @@ export default function OtpVerification({ email, onSuccess, onCancel }: OtpVerif
             value={data}
             onChange={(e) => handleChange(e.target, index)}
             onKeyDown={(e) => handleKeyDown(e, index)}
-            className="h-14 w-12 rounded-xl border border-white/10 bg-white/5 text-center text-2xl font-bold text-white focus:border-[#4caf7d] focus:outline-none focus:ring-1 focus:ring-[#4caf7d]"
+            className="h-14 w-12 rounded-xl border border-white/10 bg-white/5 text-center text-2xl font-bold text-white focus:border-theme-secondary focus:outline-none focus:ring-1 focus:ring-theme-secondary"
           />
         ))}
       </div>
@@ -151,7 +151,7 @@ export default function OtpVerification({ email, onSuccess, onCancel }: OtpVerif
         <button 
           onClick={verifyOtp}
           disabled={loading || otp.join("").length < 6}
-          className="flex-[2] rounded-xl bg-[#4caf7d] py-3 font-bold text-white shadow-lg transition-transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+          className="flex-[2] rounded-xl bg-theme-secondary py-3 font-bold text-white shadow-lg transition-transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
         >
           {loading ? "Verifying..." : "Verify Code"}
         </button>
@@ -161,7 +161,7 @@ export default function OtpVerification({ email, onSuccess, onCancel }: OtpVerif
         type="button"
         onClick={resendOtp}
         disabled={resending || resendCooldown > 0}
-        className="mt-8 font-medium text-[#4caf7d] hover:underline disabled:cursor-not-allowed disabled:text-white/30 disabled:no-underline"
+        className="mt-8 font-medium text-theme-secondary hover:underline disabled:cursor-not-allowed disabled:text-white/30 disabled:no-underline"
       >
         {resending
           ? "Sending..."
