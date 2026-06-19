@@ -18,8 +18,6 @@ import {
     CheckCircle2,
     Users,
     AlertCircle,
-    FileText,
-    X,
     FileWarning,
     Printer,
     ChevronRight,
@@ -27,6 +25,9 @@ import {
 } from "lucide-react";
 
 import DocumentViewerModal from "@/components/shared/DocumentViewerModal";
+import PremiumDocumentUpload from "@/components/shared/PremiumDocumentUpload";
+import QRCode from "qrcode";
+import SecureQrUploadModal from "@/components/shared/SecureQrUploadModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -252,6 +253,14 @@ export default function BirthRegistrationPage() {
     const [viewerTitle, setViewerTitle] = useState("");
     const [barangaysList, setBarangaysList] = useState<string[]>([]);
 
+    // QR Handoff states
+    const [handoffToken, setHandoffToken] = useState("");
+    const [handoffQrCode, setHandoffQrCode] = useState("");
+    const [handoffExpiresAt, setHandoffExpiresAt] = useState(0);
+    const [handoffSessionSlot, setHandoffSessionSlot] = useState<string>("");
+    const [isHandoffOpen, setIsHandoffOpen] = useState(false);
+    const [isCreatingHandoff, setIsCreatingHandoff] = useState(false);
+
     const getNormalizedPlaceOfEvent = (val: string) => {
         if (!val) return "";
         const upperVal = val.toUpperCase();
@@ -260,6 +269,85 @@ export default function BirthRegistrationPage() {
             return `${found.toUpperCase()}, MAPANDAN, PANGASINAN`;
         }
         return val;
+    };
+
+    // QR Handoff Polling
+    useEffect(() => {
+        if (!handoffToken) return;
+        const poll = window.setInterval(async () => {
+            try {
+                const response = await fetch(`/api/upload-handoff/${encodeURIComponent(handoffToken)}`, {
+                    cache: "no-store",
+                });
+                const result = await response.json();
+                if (result.status === "uploaded") {
+                    const files = result.files || [];
+                    const uploadedFile = files[0];
+                    if (uploadedFile) {
+                        const targetKey = handoffSessionSlot.replace("lcr_", "");
+                        setForm(prev => ({
+                            ...prev,
+                            previews: { ...prev.previews, [targetKey]: uploadedFile.url }
+                        }));
+                        setIsHandoffOpen(false);
+                        setHandoffToken("");
+                        toast.success("Document uploaded successfully from mobile device!");
+                    }
+                } else if (!response.ok) {
+                    setIsHandoffOpen(false);
+                    setHandoffToken("");
+                    toast.error("QR Code session expired.");
+                }
+            } catch (error) {
+                console.error("Poller error:", error);
+            }
+        }, 2500);
+        return () => window.clearInterval(poll);
+    }, [handoffToken, handoffSessionSlot]);
+
+    const startHandoff = async (docKey: string) => {
+        if (!userId || isCreatingHandoff) return;
+        setIsCreatingHandoff(true);
+        try {
+            const slot = `lcr_${docKey}`;
+            const response = await fetch("/api/upload-handoff", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ userId, slot }),
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || "Unable to create QR upload session.");
+            
+            const qrDataUrl = await QRCode.toDataURL(result.uploadUrl, {
+                width: 320,
+                margin: 2,
+                color: { dark: "#071c12", light: "#ffffff" },
+            });
+            
+            setHandoffToken(result.token);
+            setHandoffSessionSlot(slot);
+            setHandoffQrCode(qrDataUrl);
+            setHandoffExpiresAt(result.expiresAt);
+            setIsHandoffOpen(true);
+        } catch (error) {
+            toast.error(error instanceof Error ? error.message : "Unable to configure handoff.");
+        } finally {
+            setIsCreatingHandoff(false);
+        }
+    };
+
+    const getHandoffSlotLabel = () => {
+        const map: Record<string, string> = {
+            lcr_marriageCertificate: "Marriage Certificate of Parents",
+            lcr_municipalForm102: "Municipal Form 102",
+            lcr_communityTaxCertificate: "Community Tax Certificate",
+            lcr_negativePSA: "Negative Certification from PSA",
+            lcr_colb: "Certificate of Live Birth (COLB)",
+            lcr_affidavitDelayed: "Affidavit of Delayed Registration",
+            lcr_supportingEvidence1: "Supporting Evidence 1",
+            lcr_supportingEvidence2: "Supporting Evidence 2"
+        };
+        return map[handoffSessionSlot] || "Document";
     };
 
     const handleViewFile = (file: File | null, existingUrl: string | null, title: string) => {
@@ -652,66 +740,45 @@ export default function BirthRegistrationPage() {
     const renderDocCard = (doc: { key: string; label: string }) => {
         const file = form.files[doc.key] || null;
         const preview = form.previews[doc.key] || null;
-        const hasFile = !!(file || preview);
-        const inputId = `doc-upload-${doc.key}`;
+
+        const infoMap: Record<string, string> = {
+            marriageCertificate: "Marriage Certificate of Parents (PDF/Image)",
+            municipalForm102: "Municipal Form 102 (Certificate of Live Birth)",
+            communityTaxCertificate: "Community Tax Certificate / Cedula of Mother",
+            negativePSA: "PSA Negative Certification of Birth",
+            colb: "Certificate of Live Birth (COLB) copy",
+            affidavitDelayed: "Affidavit of Delayed Registration",
+            supportingEvidence1: "Supporting Evidence 1 (Baptismal, School, etc.)",
+            supportingEvidence2: "Supporting Evidence 2 (Baptismal, School, etc.)"
+        };
 
         return (
-            <div key={doc.key} className={cn(
-                "rounded-2xl border-2 border-dashed p-5 flex flex-col gap-3 transition-all duration-200",
-                hasFile ? "border-emerald-500/40 bg-emerald-50/50 dark:bg-emerald-500/5" : (errors.documents ? "border-red-400/50 bg-red-50/30 dark:bg-red-500/5" : "border-slate-200 dark:border-white/10 hover:border-emerald-400/40")
-            )}>
-                <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center shrink-0", hasFile ? "bg-emerald-500/10" : "bg-slate-100 dark:bg-slate-800")}>
-                            {hasFile ? <Check className="w-5 h-5 text-emerald-500" /> : <FileText className="w-5 h-5 text-slate-400" />}
-                        </div>
-                        <div className="min-w-0">
-                            <p className="text-xs font-black uppercase tracking-wide text-slate-800 dark:text-slate-200 truncate">{doc.label}</p>
-                            {hasFile && <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold mt-0.5">{file ? file.name : "Previously uploaded"}</p>}
-                        </div>
-                    </div>
-                    {hasFile && (
-                        <button onClick={() => handleRemoveFile(doc.key)} className="w-7 h-7 rounded-full bg-red-50 dark:bg-red-500/10 flex items-center justify-center text-red-400 hover:text-red-600 transition-colors shrink-0">
-                            <X className="w-3.5 h-3.5" />
-                        </button>
-                    )}
-                </div>
-                {preview && preview.startsWith("http") && (
-                    <button onClick={() => handleViewFile(file, preview, doc.label)} className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline text-left">
-                        👁 View uploaded document
-                    </button>
-                )}
-                <label htmlFor={inputId} className={cn(
-                    "flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest cursor-pointer transition-all",
-                    hasFile ? "bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700" : "bg-emerald-600 text-white hover:bg-emerald-700"
-                )}>
-                    <Upload className="w-3.5 h-3.5" />
-                    {hasFile ? "Replace File" : "Upload Document"}
-                </label>
-                <input
-                    id={inputId}
-                    type="file"
-                    accept="image/*,.pdf,.doc,.docx"
-                    className="hidden"
-                    onChange={async (e) => {
-                        const newFile = e.target.files?.[0];
-                        if (!newFile) return;
-                        saveDraftFile(STORAGE_KEY, doc.key, newFile).catch(err => console.error("Failed to save draft file to IndexedDB:", err));
-                        try {
-                            toast.loading("Uploading document...", { id: `file-upload-${doc.key}` });
-                            const sanitizedKey = doc.key.replace(/[^a-zA-Z0-9_-]/g, '_');
-                            const publicUrl = await uploadFileClientSide(newFile, sanitizedKey, userId);
-                            setForm(prev => ({ ...prev, files: { ...prev.files, [doc.key]: newFile }, previews: { ...prev.previews, [doc.key]: publicUrl } }));
-                            toast.success("Document uploaded!", { id: `file-upload-${doc.key}` });
-                        } catch {
-                            toast.error("Upload failed. Local copy stored.", { id: `file-upload-${doc.key}` });
-                            setForm(prev => ({ ...prev, files: { ...prev.files, [doc.key]: newFile }, previews: { ...prev.previews, [doc.key]: newFile.type.startsWith("image/") ? URL.createObjectURL(newFile) : null } }));
-                        }
-                        setErrors(prev => { if (!prev.documents) return prev; const copy = { ...prev }; delete copy.documents; return copy; });
-                        e.target.value = "";
-                    }}
-                />
-            </div>
+            <PremiumDocumentUpload
+                key={doc.key}
+                label={doc.label}
+                required={true}
+                file={file}
+                previewUrl={preview}
+                infoText={infoMap[doc.key] || "PDF / IMAGE (MAX 5MB)"}
+                error={!!errors.documents}
+                onFileSelect={async (newFile) => {
+                    saveDraftFile(STORAGE_KEY, doc.key, newFile).catch(err => console.error("Failed to save draft file to IndexedDB:", err));
+                    try {
+                        toast.loading("Uploading document...", { id: `file-upload-${doc.key}` });
+                        const sanitizedKey = doc.key.replace(/[^a-zA-Z0-9_-]/g, '_');
+                        const publicUrl = await uploadFileClientSide(newFile, sanitizedKey, userId);
+                        setForm(prev => ({ ...prev, files: { ...prev.files, [doc.key]: newFile }, previews: { ...prev.previews, [doc.key]: publicUrl } }));
+                        toast.success("Document uploaded!", { id: `file-upload-${doc.key}` });
+                    } catch {
+                        toast.error("Upload failed. Local copy stored.", { id: `file-upload-${doc.key}` });
+                        setForm(prev => ({ ...prev, files: { ...prev.files, [doc.key]: newFile }, previews: { ...prev.previews, [doc.key]: newFile.type.startsWith("image/") ? URL.createObjectURL(newFile) : null } }));
+                    }
+                    setErrors(prev => { if (!prev.documents) return prev; const copy = { ...prev }; delete copy.documents; return copy; });
+                }}
+                onClickUpload={() => startHandoff(doc.key)}
+                onClear={() => handleRemoveFile(doc.key)}
+                onView={() => handleViewFile(file, preview, doc.label)}
+            />
         );
     };
 
@@ -752,9 +819,8 @@ export default function BirthRegistrationPage() {
         }
         if (stepId === "PARENTS") {
             const hasMarried = typeof form.parentsMarried !== 'undefined';
-            const hasFatherName = !!form.fatherFirstName?.trim() && !!form.fatherLastName?.trim();
             const hasMotherName = !!form.motherFirstName?.trim() && !!form.motherLastName?.trim();
-            return hasMarried && hasFatherName && hasMotherName;
+            return hasMarried && hasMotherName;
         }
         return true;
     };
@@ -782,13 +848,11 @@ export default function BirthRegistrationPage() {
                 const today = new Date(); today.setHours(23, 59, 59, 999);
                 if (birthDate > today) errs.dateOfEvent = "Date of birth cannot be in the future.";
             }
-            if (!form.placeOfEvent) errs.placeOfEvent = "Please enter place of birth.";
+            if (!form.placeOfEvent) errs.placeOfEvent = "Please select place of birth.";
         }
 
         if (step === "PARENTS") {
             if (typeof form.parentsMarried === 'undefined') errs.parentsMarried = "Please indicate parents' marital status.";
-            if (!form.fatherFirstName?.trim()) errs.fatherFirstName = "Please enter father's first name.";
-            if (!form.fatherLastName?.trim()) errs.fatherLastName = "Please enter father's last name.";
             if (!form.motherFirstName?.trim()) errs.motherFirstName = "Please enter mother's first name.";
             if (!form.motherLastName?.trim()) errs.motherLastName = "Please enter mother's last name.";
         }
@@ -1033,7 +1097,7 @@ export default function BirthRegistrationPage() {
     if (loading) {
         return (
             <div className="flex h-full items-center justify-center">
-                <Loader2 className="h-10 w-10 animate-spin text-emerald-500" />
+                <Loader2 className="h-10 w-10 animate-spin text-theme-primary" />
             </div>
         );
     }
@@ -1052,6 +1116,10 @@ export default function BirthRegistrationPage() {
                 isOpen={policyOpen}
                 onClose={() => setPolicyOpen(false)}
                 onAccept={handleAcceptPolicy}
+                onDecline={() => {
+                    setPolicyAccepted(false);
+                    setPolicyOpen(false);
+                }}
                 themeColor={themeColor}
             />
 
@@ -1086,7 +1154,7 @@ export default function BirthRegistrationPage() {
                         </BreadcrumbItem>
                         <BreadcrumbSeparator />
                         <BreadcrumbItem>
-                            <BreadcrumbPage className="text-xs font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
+                            <BreadcrumbPage className="text-xs font-black uppercase tracking-widest text-theme-primary">
                                 Birth Registration
                             </BreadcrumbPage>
                         </BreadcrumbItem>
@@ -1096,12 +1164,12 @@ export default function BirthRegistrationPage() {
                 {/* Header */}
                 <div className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
                     <div className="flex items-start gap-5">
-                        <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
-                            <Baby className="w-9 h-9 text-emerald-500" />
+                        <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
+                            <Baby className="w-9 h-9 text-white" />
                         </div>
                         <div>
                             <h1 className="text-3xl md:text-5xl font-black uppercase italic tracking-tighter text-slate-900 dark:text-white leading-none">
-                                Birth <span className="text-emerald-500">Registration</span>
+                                Birth <span className="text-theme-primary">Registration</span>
                             </h1>
                             <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-[0.3em] mt-2 italic">
                                 Municipal Civil Registry Office • Application Form
@@ -1121,7 +1189,7 @@ export default function BirthRegistrationPage() {
                                     setSelectedApplication(null);
                                     setCurrentStep("IDENTITY");
                                 }}
-                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold uppercase tracking-wider rounded-2xl py-6 px-6 shadow-lg shadow-emerald-950/20 active:scale-95 transition-all text-xs"
+                                className="bg-theme-primary hover:bg-theme-hover text-white font-bold uppercase tracking-wider rounded-2xl py-6 px-6 shadow-lg shadow-theme-primary/20 active:scale-95 transition-all text-xs"
                             >
                                 New Registration
                             </Button>
@@ -1131,7 +1199,7 @@ export default function BirthRegistrationPage() {
 
                 {/* Stepper */}
                 {currentStep !== "EXISTING" && currentStep !== "SUBMIT" && (
-                    <div className="mb-10 overflow-x-auto">
+                    <div className="mb-10 overflow-x-auto py-4">
                         <div className="flex items-center gap-0 min-w-max mx-auto w-fit">
                             {STEPS.map((step, idx) => {
                                 const isActive = step.id === currentStep;
@@ -1142,24 +1210,24 @@ export default function BirthRegistrationPage() {
                                         <div className="flex flex-col items-center gap-2">
                                             <div className={cn(
                                                 "w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-300 border",
-                                                isActive ? "bg-emerald-500 border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.4)]" :
-                                                isDone ? "bg-emerald-500/10 border-emerald-500/30" :
-                                                "bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-white/10 opacity-40"
+                                                isActive ? "bg-slate-100/80 dark:bg-[#0d120f]/60 border-2 border-theme-primary shadow-[0_0_20px_color-mix(in_srgb,var(--primary-theme)_35%,transparent)] scale-110" :
+                                                isDone ? "bg-slate-50/50 dark:bg-white/[0.02] border border-slate-250/80 dark:border-white/10" :
+                                                "bg-transparent border border-slate-200/40 dark:border-white/5 opacity-40"
                                             )}>
                                                 {isDone
-                                                    ? <Check className="w-6 h-6 text-emerald-500" />
-                                                    : <Icon className={cn("w-6 h-6", isActive ? "text-white animate-pulse" : "text-slate-400")} />
+                                                    ? <Check className="w-5 h-5 text-theme-primary stroke-[3]" />
+                                                    : <Icon className={cn("w-5 h-5", isActive ? "text-theme-primary animate-pulse" : "text-slate-400/60")} />
                                                 }
                                             </div>
                                             <span className={cn(
-                                                "text-[9px] font-black uppercase tracking-widest italic",
-                                                isActive ? "text-emerald-500" : isDone ? "text-emerald-500/60" : "text-slate-400 opacity-40"
+                                                "text-[9px] font-black uppercase tracking-widest italic transition-colors duration-300",
+                                                isActive ? "text-slate-900 dark:text-white font-black scale-105" : isDone ? "text-slate-500 dark:text-slate-400" : "text-slate-400/50 dark:text-slate-600 opacity-40"
                                             )}>
                                                 {step.label}
                                             </span>
                                         </div>
                                         {idx < STEPS.length - 1 && (
-                                            <div className={cn("h-0.5 w-8 md:w-14 mx-1 transition-all duration-300", idx < stepIndex ? "bg-emerald-500/50" : "bg-slate-200 dark:bg-white/10")} />
+                                            <div className={cn("h-0.5 w-8 md:w-14 mx-1 transition-all duration-300", idx < stepIndex ? "bg-theme-primary/30" : "bg-slate-200 dark:bg-white/10")} />
                                         )}
                                     </React.Fragment>
                                 );
@@ -1182,7 +1250,7 @@ export default function BirthRegistrationPage() {
                             <div className="space-y-8 animate-in fade-in duration-500">
                                 <div className="text-center mb-8">
                                     <h2 className="text-3xl md:text-5xl font-black italic uppercase tracking-tighter leading-tight">
-                                        Existing <span className="text-emerald-500">Registrations</span>
+                                        Existing <span className="text-theme-primary">Registrations</span>
                                     </h2>
                                     <p className="text-slate-500 dark:text-slate-400 font-medium italic text-xs md:text-lg uppercase tracking-widest max-w-2xl mx-auto mt-2">
                                         We found previous birth registration applications under your profile.
@@ -1190,7 +1258,7 @@ export default function BirthRegistrationPage() {
                                 </div>
 
                                 {existingRequests.length === 0 ? (
-                                    <div className="text-center py-16 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/5 rounded-[2rem]">
+                                    <div className="text-center py-16 bg-white/40 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-[2rem] backdrop-blur-2xl shadow-xl">
                                         <FileWarning className="w-16 h-16 text-slate-400 dark:text-slate-600 mx-auto mb-4" />
                                         <p className="text-slate-400 font-bold uppercase tracking-widest text-sm">No records found</p>
                                         <p className="text-slate-500 text-xs mt-1">Submit your first birth registration by clicking New Registration.</p>
@@ -1204,13 +1272,17 @@ export default function BirthRegistrationPage() {
                                                 <div
                                                     key={app.id || idx}
                                                     onClick={() => {
-                                                        setSelectedApplication(app);
-                                                        setCurrentStep("SUBMIT");
+                                                        if (app.status === "EVALUATED" || app.status === "UNPAID") {
+                                                            router.push(`/checkout/${app.id}`);
+                                                        } else {
+                                                            setSelectedApplication(app);
+                                                            setCurrentStep("SUBMIT");
+                                                        }
                                                     }}
-                                                    className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-3xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between cursor-pointer hover:border-emerald-500/50 hover:bg-slate-50 dark:hover:bg-emerald-500/[0.02] transition-all duration-300 gap-4"
+                                                    className="bg-white/40 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-3xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between cursor-pointer hover:border-theme-primary/50 hover:bg-slate-50/50 dark:hover:bg-theme-primary/[0.02] transition-all duration-300 gap-4 shadow-lg backdrop-blur-md"
                                                 >
                                                     <div className="flex items-center gap-4">
-                                                        <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
+                                                        <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 text-white flex items-center justify-center shrink-0">
                                                             <Baby className="w-7 h-7" />
                                                         </div>
                                                         <div>
@@ -1218,7 +1290,7 @@ export default function BirthRegistrationPage() {
                                                                 <span className="text-lg font-black tracking-tight">{subName}</span>
                                                                 <span className={cn("text-[9px] font-black uppercase py-0.5 px-2 rounded-full border",
                                                                     app.isCancelled ? "bg-red-500/20 text-red-400 border-red-500/30" :
-                                                                    app.status === "RELEASED" ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" :
+                                                                    app.status === "RELEASED" ? "bg-theme-primary/20 text-theme-primary border-theme-primary/30" :
                                                                     app.status === "FOR_REVISION" ? "bg-amber-500/20 text-amber-400 border-amber-500/30" :
                                                                     "bg-blue-500/20 text-blue-400 border-blue-500/30"
                                                                 )}>
@@ -1234,7 +1306,7 @@ export default function BirthRegistrationPage() {
                                                         </div>
                                                     </div>
                                                     <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
-                                                        <span className="text-[10px] font-black uppercase text-emerald-400 tracking-widest group-hover:translate-x-1 transition-transform flex items-center gap-1">
+                                                        <span className="text-[10px] font-black uppercase text-theme-primary tracking-widest group-hover:translate-x-1 transition-transform flex items-center gap-1">
                                                             View Request <ChevronRight size={14} />
                                                         </span>
                                                     </div>
@@ -1253,11 +1325,11 @@ export default function BirthRegistrationPage() {
                             return (
                                 <div className="space-y-8 animate-in fade-in duration-500">
                                     <div className="text-center">
-                                        <div className="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto mb-4 animate-bounce">
+                                        <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 text-white flex items-center justify-center mx-auto mb-4 animate-bounce">
                                             <CheckCircle2 className="w-10 h-10" />
                                         </div>
                                         <h2 className="text-3xl md:text-5xl font-black italic uppercase tracking-tighter leading-tight">
-                                            Application <span className="text-emerald-500">Summary</span>
+                                            Application <span className="text-theme-primary">Summary</span>
                                         </h2>
                                         <p className="text-slate-500 dark:text-slate-400 font-medium italic text-xs md:text-lg uppercase tracking-widest max-w-2xl mx-auto mt-2">
                                             Review details and current status of your birth registration request.
@@ -1265,7 +1337,7 @@ export default function BirthRegistrationPage() {
                                     </div>
 
                                     {/* Printable Receipt Frame */}
-                                    <div className="max-w-2xl mx-auto bg-white dark:bg-[#111] border border-slate-200 dark:border-white/10 rounded-[2.5rem] p-8 space-y-6 shadow-xl relative overflow-hidden text-slate-900 dark:text-white">
+                                    <div className="max-w-2xl mx-auto bg-white/40 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-[2.5rem] p-8 space-y-6 shadow-2xl relative overflow-hidden text-slate-900 dark:text-white backdrop-blur-2xl">
                                         <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
                                             <Baby size={160} />
                                         </div>
@@ -1273,12 +1345,12 @@ export default function BirthRegistrationPage() {
                                         <div className="flex justify-between items-start gap-4 flex-wrap border-b border-slate-200 dark:border-white/10 pb-6">
                                             <div>
                                                 <h3 className="text-lg font-black uppercase tracking-tight">MUNICIPAL CIVIL REGISTRY</h3>
-                                                <p className="text-[9px] font-black uppercase tracking-[0.25em] text-emerald-600 dark:text-emerald-400">Municipality of Mapandan, Pangasinan</p>
+                                                <p className="text-[9px] font-black uppercase tracking-[0.25em] text-theme-primary">Municipality of Mapandan, Pangasinan</p>
                                             </div>
                                             <div className="text-right">
                                                 <span className={cn("text-[9px] font-black px-4 py-2 rounded-full uppercase tracking-widest border",
                                                     selectedApplication.isCancelled ? "bg-red-500/20 text-red-400 border-red-500/30" :
-                                                    selectedApplication.status === "RELEASED" ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" :
+                                                    selectedApplication.status === "RELEASED" ? "bg-theme-primary/20 text-theme-primary border-theme-primary/30" :
                                                     selectedApplication.status === "FOR_REVISION" ? "bg-amber-500/20 text-amber-400 border-amber-500/30" :
                                                     "bg-blue-500/20 text-blue-400 border-blue-500/30"
                                                 )}>
@@ -1295,7 +1367,7 @@ export default function BirthRegistrationPage() {
                                                 </div>
                                                 <div>
                                                     <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Child's Name</span>
-                                                    <span className="uppercase font-black text-emerald-600 dark:text-emerald-400">{addData.subjectName || "N/A"}</span>
+                                                    <span className="uppercase font-black text-theme-primary">{addData.subjectName || "N/A"}</span>
                                                 </div>
                                                 <div>
                                                     <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Date of Birth</span>
@@ -1336,7 +1408,7 @@ export default function BirthRegistrationPage() {
                                         <div className="border-t border-slate-200 dark:border-white/10 pt-4">
                                             <div className="flex justify-between text-xs font-black uppercase tracking-wider">
                                                 <span className="text-slate-400">Total Application Fee</span>
-                                                <span className="text-emerald-600 dark:text-emerald-400 text-sm">₱{(selectedApplication.totalAmount || 0).toFixed(2)}</span>
+                                                <span className="text-theme-primary text-sm">₱{(selectedApplication.totalAmount || 0).toFixed(2)}</span>
                                             </div>
                                         </div>
 
@@ -1351,7 +1423,7 @@ export default function BirthRegistrationPage() {
                                                 <span>This application requires revision. Please click the button below to resume editing.</span>
                                             </div>
                                         ) : (
-                                            <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex gap-3 text-xs text-emerald-600 dark:text-emerald-300 font-semibold leading-relaxed">
+                                            <div className="p-4 rounded-xl bg-theme-primary/10 border border-theme-primary/20 flex gap-3 text-xs text-theme-primary font-semibold leading-relaxed">
                                                 <CheckCircle2 className="w-5 h-5 shrink-0" />
                                                 <span>Your application has been received and is currently under review by municipal civil registry staff. You will be notified of any updates or when the document is ready.</span>
                                             </div>
@@ -1399,10 +1471,10 @@ export default function BirthRegistrationPage() {
 
                         {/* ============ STEP: IDENTITY ============ */}
                         {currentStep === "IDENTITY" && (
-                            <Card className="bg-white dark:bg-[#111] border-slate-200 dark:border-white/10 rounded-3xl p-8 md:p-12 shadow-lg space-y-8">
+                            <Card className="bg-white/40 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-[2.5rem] p-8 md:p-12 shadow-2xl backdrop-blur-2xl transition-all duration-300 hover:border-theme-primary/30 space-y-8 overflow-visible">
                                 <div className="flex items-center gap-4 mb-2">
-                                    <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-                                        <User className="w-8 h-8 text-emerald-500" />
+                                    <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
+                                        <User className="w-8 h-8 text-white" />
                                     </div>
                                     <div>
                                         <h2 className="text-2xl md:text-3xl font-black uppercase italic tracking-tight text-slate-900 dark:text-white">Informant Information</h2>
@@ -1416,12 +1488,12 @@ export default function BirthRegistrationPage() {
                                     <div className="space-y-2 col-span-2">
                                         <Label className="text-[10px] md:text-xs font-black uppercase tracking-wider italic text-slate-400 dark:text-slate-500">Relationship to Child <span className="text-red-500">*</span></Label>
                                         <Select value={form.relationship} onValueChange={(val) => { setForm(prev => ({ ...prev, relationship: val })); setErrors(prev => { const c = { ...prev }; delete c.relationship; return c; }); }}>
-                                            <SelectTrigger className={cn("rounded-2xl border-slate-200 dark:border-white/10 h-12 text-slate-900 dark:text-white font-bold uppercase italic bg-transparent", errors.relationship && "border-red-500")}>
+                                            <SelectTrigger className={cn("rounded-2xl border-slate-200 dark:border-white/10 h-12 text-slate-900 dark:text-white font-black uppercase italic bg-slate-50/20 dark:bg-black/20 backdrop-blur-md transition-all hover:border-theme-primary/45 focus:border-theme-primary focus:ring-4 focus:ring-theme-primary/15 shadow-sm", errors.relationship && "border-red-500 focus:border-red-500 focus:ring-red-500/20")}>
                                                 <SelectValue placeholder="Select relationship..." />
                                             </SelectTrigger>
-                                            <SelectContent>
+                                            <SelectContent className="bg-white/95 dark:bg-[#0d120f]/95 border-slate-200/85 dark:border-white/10 rounded-2xl shadow-2xl backdrop-blur-2xl mt-2 max-h-60 overflow-y-auto">
                                                 {["FATHER", "MOTHER", "SELF", "GUARDIAN", "OTHER"].map(r => (
-                                                    <SelectItem key={r} value={r}>{r.charAt(0) + r.slice(1).toLowerCase()}</SelectItem>
+                                                    <SelectItem key={r} value={r} className="hover:bg-theme-primary/10 dark:hover:bg-theme-primary/15 font-black uppercase text-xs tracking-wider transition-colors">{r.charAt(0) + r.slice(1).toLowerCase()}</SelectItem>
                                                 ))}
                                             </SelectContent>
                                         </Select>
@@ -1435,7 +1507,7 @@ export default function BirthRegistrationPage() {
                                                 value={form.relationshipSpecify || ""}
                                                 onChange={e => { setForm(prev => ({ ...prev, relationshipSpecify: e.target.value })); setErrors(prev => { const c = { ...prev }; delete c.relationshipSpecify; return c; }); }}
                                                 placeholder="E.g., Grandparent, Sibling..."
-                                                className={cn("rounded-2xl border-slate-200 dark:border-white/10 h-12 text-slate-900 dark:text-white font-bold uppercase italic bg-transparent", errors.relationshipSpecify && "border-red-500")}
+                                                className={cn("rounded-2xl border-slate-200 dark:border-white/10 h-12 text-slate-900 dark:text-white font-black uppercase italic bg-slate-50/20 dark:bg-black/20 backdrop-blur-md transition-all hover:border-theme-primary/45 focus-visible:border-theme-primary focus-visible:ring-theme-primary/25 focus-visible:ring-[3px] shadow-sm", errors.relationshipSpecify && "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/20")}
                                             />
                                             {errors.relationshipSpecify && <p className="text-xs text-red-500 font-semibold">{errors.relationshipSpecify}</p>}
                                         </div>
@@ -1455,7 +1527,7 @@ export default function BirthRegistrationPage() {
                                             <Input
                                                 value={(form as any)[field] || ""}
                                                 readOnly
-                                                className="bg-slate-50/50 dark:bg-white/5 border-slate-200 dark:border-white/5 text-slate-900 dark:text-white font-bold uppercase italic rounded-2xl h-12 cursor-not-allowed opacity-80"
+                                                className="bg-slate-50/10 dark:bg-white/[0.02] border-slate-200/50 dark:border-white/5 text-slate-400 dark:text-slate-500 font-bold uppercase italic rounded-2xl h-12 cursor-not-allowed opacity-60"
                                             />
                                         </div>
                                     ))}
@@ -1474,7 +1546,7 @@ export default function BirthRegistrationPage() {
                                             <Input
                                                 value={(form as any)[field] || ""}
                                                 readOnly
-                                                className="bg-slate-50/50 dark:bg-white/5 border-slate-200 dark:border-white/5 text-slate-900 dark:text-white font-bold uppercase italic rounded-2xl h-12 cursor-not-allowed opacity-80"
+                                                className="bg-slate-50/10 dark:bg-white/[0.02] border-slate-200/50 dark:border-white/5 text-slate-400 dark:text-slate-500 font-bold uppercase italic rounded-2xl h-12 cursor-not-allowed opacity-60"
                                             />
                                         </div>
                                     ))}
@@ -1487,7 +1559,7 @@ export default function BirthRegistrationPage() {
                                         <Input
                                             value={form.informantOccupation}
                                             onChange={e => setForm(prev => ({ ...prev, informantOccupation: e.target.value }))}
-                                            className="rounded-2xl border-slate-200 dark:border-white/10 h-12 text-slate-900 dark:text-white font-bold uppercase italic bg-transparent"
+                                            className="rounded-2xl border-slate-200 dark:border-white/10 h-12 text-slate-900 dark:text-white font-black uppercase italic bg-slate-50/20 dark:bg-black/20 backdrop-blur-md transition-all hover:border-theme-primary/45 focus-visible:border-theme-primary focus-visible:ring-theme-primary/25 focus-visible:ring-[3px] shadow-sm"
                                         />
                                     </div>
 
@@ -1498,7 +1570,7 @@ export default function BirthRegistrationPage() {
                                             value={form.contactNumber}
                                             onChange={e => { setForm(prev => ({ ...prev, contactNumber: e.target.value })); setErrors(prev => { const c = { ...prev }; delete c.contactNumber; return c; }); }}
                                             placeholder="E.g., 09XXXXXXXXX"
-                                            className={cn("rounded-2xl border-slate-200 dark:border-white/10 h-12 text-slate-900 dark:text-white font-bold uppercase italic bg-transparent", errors.contactNumber && "border-red-500")}
+                                            className={cn("rounded-2xl border-slate-200 dark:border-white/10 h-12 text-slate-900 dark:text-white font-black uppercase italic bg-slate-50/20 dark:bg-black/20 backdrop-blur-md transition-all hover:border-theme-primary/45 focus-visible:border-theme-primary focus-visible:ring-theme-primary/25 focus-visible:ring-[3px] shadow-sm", errors.contactNumber && "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/20")}
                                         />
                                         {errors.contactNumber && <p className="text-xs text-red-500 font-semibold">{errors.contactNumber}</p>}
                                         <p className="text-[9px] md:text-[10px] font-black uppercase tracking-wider italic text-amber-500 mt-2 leading-normal">
@@ -1507,14 +1579,12 @@ export default function BirthRegistrationPage() {
                                     </div>
                                 </div>
                             </Card>
-                        )}
-
-                        {/* ============ STEP: DETAILS ============ */}
+                        )}                        {/* ============ STEP: DETAILS ============ */}
                         {currentStep === "DETAILS" && (
-                            <Card className="bg-white dark:bg-[#111] border-slate-200 dark:border-white/10 rounded-3xl p-8 md:p-12 shadow-lg space-y-8">
+                            <Card className="bg-white/40 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-[2.5rem] p-8 md:p-12 shadow-2xl backdrop-blur-2xl transition-all duration-300 hover:border-theme-primary/30 space-y-8 overflow-visible">
                                 <div className="flex items-center gap-4 mb-2">
-                                    <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-                                        <Baby className="w-8 h-8 text-emerald-500" />
+                                    <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
+                                        <Baby className="w-8 h-8 text-white" />
                                     </div>
                                     <div>
                                         <h2 className="text-2xl md:text-3xl font-black uppercase italic tracking-tight text-slate-900 dark:text-white">Child Details</h2>
@@ -1527,12 +1597,12 @@ export default function BirthRegistrationPage() {
                                     <div className="space-y-2 col-span-2">
                                         <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Birth Type</Label>
                                         <Select value={form.birthType} onValueChange={handleBirthTypeChange}>
-                                            <SelectTrigger className="rounded-2xl border-slate-200 dark:border-white/10 h-12 text-slate-900 dark:text-white font-bold uppercase italic bg-transparent">
+                                            <SelectTrigger className="rounded-2xl border-slate-200 dark:border-white/10 h-12 text-slate-900 dark:text-white font-black uppercase italic bg-slate-50/20 dark:bg-black/20 backdrop-blur-md transition-all hover:border-theme-primary/45 focus:border-theme-primary focus:ring-4 focus:ring-theme-primary/15 shadow-sm">
                                                 <SelectValue />
                                             </SelectTrigger>
-                                            <SelectContent>
+                                            <SelectContent className="bg-white/95 dark:bg-[#0d120f]/95 border-slate-200/85 dark:border-white/10 rounded-2xl shadow-2xl backdrop-blur-2xl mt-2 max-h-60 overflow-y-auto">
                                                 {["SINGLE", "TWIN", "TRIPLET", "QUADRUPLET", "QUINTUPLET", "SEXTUPLET"].map(t => (
-                                                    <SelectItem key={t} value={t}>{t.charAt(0) + t.slice(1).toLowerCase()}</SelectItem>
+                                                    <SelectItem key={t} value={t} className="hover:bg-theme-primary/10 dark:hover:bg-theme-primary/15 font-black uppercase text-xs tracking-wider transition-colors">{t.charAt(0) + t.slice(1).toLowerCase()}</SelectItem>
                                                 ))}
                                             </SelectContent>
                                         </Select>
@@ -1544,7 +1614,7 @@ export default function BirthRegistrationPage() {
                                 {form.children.map((child, idx) => (
                                     <div key={idx} className="space-y-4 p-6 rounded-2xl bg-slate-50 dark:bg-slate-800/30 border border-slate-200 dark:border-white/10">
                                         {form.children.length > 1 && (
-                                            <p className="text-xs font-black uppercase tracking-widest text-emerald-500">Child {idx + 1}</p>
+                                            <p className="text-xs font-black uppercase tracking-widest text-theme-primary">Child {idx + 1}</p>
                                         )}
                                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                             {[
@@ -1562,7 +1632,7 @@ export default function BirthRegistrationPage() {
                                                         value={(child as any)[field]}
                                                         onChange={e => handleChildNameChange(idx, field as any, e.target.value)}
                                                         placeholder={placeholder}
-                                                        className={cn("border-slate-200 dark:border-white/10 uppercase", errors[`children.${idx}.${field}`] && "border-red-500")}
+                                                        className={cn("rounded-2xl border-slate-200 dark:border-white/10 h-12 text-slate-900 dark:text-white font-black uppercase italic bg-slate-50/20 dark:bg-black/20 backdrop-blur-md transition-all hover:border-theme-primary/45 focus-visible:border-theme-primary focus-visible:ring-theme-primary/25 focus-visible:ring-[3px] shadow-sm", errors[`children.${idx}.${field}`] && "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/20")}
                                                     />
                                                     {errors[`children.${idx}.${field}`] && <p className="text-xs text-red-500 font-semibold">{errors[`children.${idx}.${field}`]}</p>}
                                                 </div>
@@ -1572,12 +1642,12 @@ export default function BirthRegistrationPage() {
                                             <div className="space-y-2">
                                                 <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Sex <span className="text-red-500">*</span></Label>
                                                 <Select value={child.sex} onValueChange={val => handleChildNameChange(idx, "sex", val)}>
-                                                    <SelectTrigger className={cn("border-slate-200 dark:border-white/10", errors[`children.${idx}.sex`] && "border-red-500")}>
+                                                    <SelectTrigger className={cn("rounded-2xl border-slate-200 dark:border-white/10 h-12 text-slate-900 dark:text-white font-black uppercase italic bg-slate-50/20 dark:bg-black/20 backdrop-blur-md transition-all hover:border-theme-primary/45 focus:border-theme-primary focus:ring-4 focus:ring-theme-primary/15 shadow-sm", errors[`children.${idx}.sex`] && "border-red-500 focus:border-red-500 focus:ring-red-500/20")}>
                                                         <SelectValue placeholder="Select..." />
                                                     </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="MALE">Male</SelectItem>
-                                                        <SelectItem value="FEMALE">Female</SelectItem>
+                                                    <SelectContent className="bg-white/95 dark:bg-[#0d120f]/95 border-slate-200/85 dark:border-white/10 rounded-2xl shadow-2xl backdrop-blur-2xl mt-2 max-h-60 overflow-y-auto">
+                                                        <SelectItem value="MALE" className="hover:bg-theme-primary/10 dark:hover:bg-theme-primary/15 font-black uppercase text-xs tracking-wider transition-colors">Male</SelectItem>
+                                                        <SelectItem value="FEMALE" className="hover:bg-theme-primary/10 dark:hover:bg-theme-primary/15 font-black uppercase text-xs tracking-wider transition-colors">Female</SelectItem>
                                                     </SelectContent>
                                                 </Select>
                                                 {errors[`children.${idx}.sex`] && <p className="text-xs text-red-500 font-semibold">{errors[`children.${idx}.sex`]}</p>}
@@ -1589,7 +1659,7 @@ export default function BirthRegistrationPage() {
                                                         type="time"
                                                         value={child.birthTime}
                                                         onChange={e => handleChildNameChange(idx, "birthTime", e.target.value)}
-                                                        className={cn("border-slate-200 dark:border-white/10", errors[`children.${idx}.birthTime`] && "border-red-500")}
+                                                        className={cn("rounded-2xl border-slate-200 dark:border-white/10 h-12 text-slate-900 dark:text-white font-black uppercase bg-slate-50/20 dark:bg-black/20 backdrop-blur-md transition-all hover:border-theme-primary/45 focus-visible:border-theme-primary focus-visible:ring-theme-primary/25 focus-visible:ring-[3px] shadow-sm", errors[`children.${idx}.birthTime`] && "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/20")}
                                                     />
                                                     {errors[`children.${idx}.birthTime`] && <p className="text-xs text-red-500 font-semibold">{errors[`children.${idx}.birthTime`]}</p>}
                                                 </div>
@@ -1608,7 +1678,7 @@ export default function BirthRegistrationPage() {
                                             value={form.dateOfEvent}
                                             max={new Date().toISOString().split('T')[0]}
                                             onChange={e => handleDateOfEventChange(e.target.value)}
-                                            className={cn("border-slate-200 dark:border-white/10", errors.dateOfEvent && "border-red-500")}
+                                            className={cn("rounded-2xl border-slate-200 dark:border-white/10 h-12 text-slate-900 dark:text-white font-black uppercase bg-slate-50/20 dark:bg-black/20 backdrop-blur-md transition-all hover:border-theme-primary/45 focus-visible:border-theme-primary focus-visible:ring-theme-primary/25 focus-visible:ring-[3px] shadow-sm", errors.dateOfEvent && "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/20")}
                                         />
                                         {errors.dateOfEvent && <p className="text-xs text-red-500 font-semibold">{errors.dateOfEvent}</p>}
                                         {form.registrationType === "LATE" && (
@@ -1617,14 +1687,22 @@ export default function BirthRegistrationPage() {
                                     </div>
                                     <div className="space-y-2">
                                         <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Place of Birth <span className="text-red-500">*</span></Label>
-                                        <Input
-                                            name="placeOfEvent"
-                                            value={form.placeOfEvent}
-                                            onChange={e => setForm(prev => ({ ...prev, placeOfEvent: e.target.value.toUpperCase() }))}
-                                            onBlur={e => setForm(prev => ({ ...prev, placeOfEvent: getNormalizedPlaceOfEvent(e.target.value) }))}
-                                            placeholder="E.g., MAPANDAN, PANGASINAN"
-                                            className={cn("border-slate-200 dark:border-white/10 uppercase", errors.placeOfEvent && "border-red-500")}
-                                        />
+                                        <Select
+                                            value={barangaysList.find(b => (form.placeOfEvent || "").toUpperCase().includes(b.toUpperCase())) || ""}
+                                            onValueChange={(val) => {
+                                                setForm(prev => ({ ...prev, placeOfEvent: `${val.toUpperCase()}, MAPANDAN, PANGASINAN` }));
+                                                setErrors(prev => { const c = { ...prev }; delete c.placeOfEvent; return c; });
+                                            }}
+                                        >
+                                            <SelectTrigger className={cn("rounded-2xl border-slate-200 dark:border-white/10 h-12 text-slate-900 dark:text-white font-black uppercase italic bg-slate-50/20 dark:bg-black/20 backdrop-blur-md transition-all hover:border-theme-primary/45 focus:border-theme-primary focus:ring-4 focus:ring-theme-primary/15 shadow-sm", errors.placeOfEvent && "border-red-500 focus:border-red-500 focus:ring-red-500/20")}>
+                                                <SelectValue placeholder="SELECT BARANGAY..." />
+                                            </SelectTrigger>
+                                            <SelectContent className="bg-white/95 dark:bg-[#0d120f]/95 border-slate-200/85 dark:border-white/10 rounded-2xl shadow-2xl backdrop-blur-2xl mt-2 max-h-60 overflow-y-auto">
+                                                {barangaysList.map(b => (
+                                                    <SelectItem key={b} value={b} className="hover:bg-theme-primary/10 dark:hover:bg-theme-primary/15 font-black uppercase text-xs tracking-wider transition-colors">{b.toUpperCase()}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
                                         {errors.placeOfEvent && <p className="text-xs text-red-500 font-semibold">{errors.placeOfEvent}</p>}
                                     </div>
                                 </div>
@@ -1633,10 +1711,10 @@ export default function BirthRegistrationPage() {
 
                         {/* ============ STEP: PARENTS ============ */}
                         {currentStep === "PARENTS" && (
-                            <Card className="bg-white dark:bg-[#111] border-slate-200 dark:border-white/10 rounded-3xl p-8 md:p-12 shadow-lg space-y-8">
+                            <Card className="bg-white/40 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-[2.5rem] p-8 md:p-12 shadow-2xl backdrop-blur-2xl transition-all duration-300 hover:border-theme-primary/30 space-y-8">
                                 <div className="flex items-center gap-4 mb-2">
-                                    <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-                                        <Users className="w-8 h-8 text-emerald-500" />
+                                    <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
+                                        <Users className="w-8 h-8 text-white" />
                                     </div>
                                     <div>
                                         <h2 className="text-2xl md:text-3xl font-black uppercase italic tracking-tight text-slate-900 dark:text-white">Parental Information</h2>
@@ -1653,10 +1731,10 @@ export default function BirthRegistrationPage() {
                                                 key={String(opt.val)}
                                                 onClick={() => { setForm(prev => ({ ...prev, parentsMarried: opt.val })); setErrors(prev => { const c = { ...prev }; delete c.parentsMarried; return c; }); }}
                                                 className={cn(
-                                                    "flex-1 py-4 rounded-2xl border-2 text-xs font-black uppercase tracking-wide transition-all duration-200",
+                                                    "flex-1 py-4 rounded-2xl border-2 text-xs font-black uppercase tracking-wide transition-all duration-200 cursor-pointer",
                                                     form.parentsMarried === opt.val
-                                                        ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
-                                                        : "border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-400 hover:border-slate-300"
+                                                        ? "border-theme-primary bg-theme-primary/10 text-theme-primary"
+                                                        : "border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-400 hover:border-theme-primary/30"
                                                 )}
                                             >
                                                 {opt.val && form.parentsMarried === true ? <Check className="w-4 h-4 inline mr-1.5" /> : null}
@@ -1673,9 +1751,9 @@ export default function BirthRegistrationPage() {
                                     <h3 className="text-sm font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 border-b border-slate-100 dark:border-white/10 pb-2">Father's Name</h3>
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                         {[
-                                            { field: "fatherFirstName", label: "First Name", req: true },
+                                            { field: "fatherFirstName", label: "First Name", req: false },
                                             { field: "fatherMiddleName", label: "Middle Name", req: false },
-                                            { field: "fatherLastName", label: "Last Name", req: true },
+                                            { field: "fatherLastName", label: "Last Name", req: false },
                                         ].map(({ field, label, req }) => (
                                             <div key={field} className="space-y-2">
                                                 <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500">{label} {req && <span className="text-red-500">*</span>}</Label>
@@ -1684,7 +1762,7 @@ export default function BirthRegistrationPage() {
                                                     value={(form as any)[field] || ""}
                                                     onChange={e => { setForm(prev => ({ ...prev, [field]: e.target.value.toUpperCase() })); setErrors(prev => { const c = { ...prev }; delete c[field]; return c; }); }}
                                                     placeholder={label.split(' ')[0].toUpperCase()}
-                                                    className={cn("border-slate-200 dark:border-white/10 uppercase", errors[field] && "border-red-500")}
+                                                    className={cn("rounded-2xl border-slate-200 dark:border-white/10 h-12 text-slate-900 dark:text-white font-black uppercase bg-slate-50/20 dark:bg-black/20 backdrop-blur-md transition-all hover:border-theme-primary/45 focus-visible:border-theme-primary focus-visible:ring-theme-primary/25 focus-visible:ring-[3px] shadow-sm", errors[field] && "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/20")}
                                                 />
                                                 {errors[field] && <p className="text-xs text-red-500 font-semibold">{errors[field]}</p>}
                                             </div>
@@ -1708,7 +1786,7 @@ export default function BirthRegistrationPage() {
                                                     value={(form as any)[field] || ""}
                                                     onChange={e => { setForm(prev => ({ ...prev, [field]: e.target.value.toUpperCase() })); setErrors(prev => { const c = { ...prev }; delete c[field]; return c; }); }}
                                                     placeholder={label.split(' ')[0].toUpperCase()}
-                                                    className={cn("border-slate-200 dark:border-white/10 uppercase", errors[field] && "border-red-500")}
+                                                    className={cn("rounded-2xl border-slate-200 dark:border-white/10 h-12 text-slate-900 dark:text-white font-black uppercase bg-slate-50/20 dark:bg-black/20 backdrop-blur-md transition-all hover:border-theme-primary/45 focus-visible:border-theme-primary focus-visible:ring-theme-primary/25 focus-visible:ring-[3px] shadow-sm", errors[field] && "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/20")}
                                                 />
                                                 {errors[field] && <p className="text-xs text-red-500 font-semibold">{errors[field]}</p>}
                                             </div>
@@ -1722,35 +1800,48 @@ export default function BirthRegistrationPage() {
                         {currentStep === "CONFIRM" && (
                             <div className="space-y-8">
                                 {/* Fee Summary */}
-                                <Card className="bg-white dark:bg-[#111] border-slate-200 dark:border-white/10 rounded-3xl p-6 md:p-8 shadow-lg">
-                                    <h3 className="text-sm font-black uppercase tracking-widest text-slate-700 dark:text-slate-300 mb-4">Fee Summary</h3>
-                                    <div className="space-y-2 text-sm font-semibold">
-                                        <div className="flex justify-between">
-                                            <span className="text-slate-500">Registration Type</span>
-                                            <span className={form.registrationType === "LATE" ? "text-amber-500" : "text-emerald-500"}>
+                                <Card className="bg-white/40 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-[2.5rem] p-8 shadow-2xl backdrop-blur-2xl transition-all duration-300 hover:border-theme-primary/30 relative overflow-hidden">
+                                    <div className="flex items-center gap-3 mb-6">
+                                        <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white">
+                                            <CheckCircle2 size={18} className="stroke-[2.5]" />
+                                        </div>
+                                        <h3 className="text-sm font-black uppercase tracking-widest text-slate-800 dark:text-slate-200">Fee Summary</h3>
+                                    </div>
+                                    <div className="space-y-3 text-xs md:text-sm font-bold">
+                                        <div className="flex justify-between items-center border-b border-dashed border-slate-200 dark:border-white/10 pb-3">
+                                            <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Registration Type</span>
+                                            <span className={cn("text-xs font-black uppercase px-2.5 py-1 rounded-full border",
+                                                form.registrationType === "LATE" 
+                                                    ? "bg-amber-500/20 text-amber-400 border-amber-500/30" 
+                                                    : "bg-theme-primary/20 text-theme-primary border-theme-primary/30"
+                                            )}>
                                                 {form.registrationType === "LATE" ? `Delayed (${form.lateDuration} yrs)` : "Timely"}
                                             </span>
                                         </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-slate-500">Base Fee</span>
-                                            <span>₱{baseFee.toFixed(2)}</span>
+                                        <div className="flex justify-between items-center border-b border-dashed border-slate-200 dark:border-white/10 pb-3">
+                                            <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Base Fee</span>
+                                            <span className="text-slate-700 dark:text-slate-350">₱{baseFee.toFixed(2)}</span>
                                         </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-slate-500">Processing & e-Copy Fee</span>
-                                            <span>₱215.00</span>
+                                        <div className="flex justify-between items-center border-b border-dashed border-slate-200 dark:border-white/10 pb-3">
+                                            <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Processing & e-Copy Fee</span>
+                                            <span className="text-slate-700 dark:text-slate-350">₱215.00</span>
                                         </div>
-                                        <div className="flex justify-between border-t border-slate-200 dark:border-white/10 pt-2 mt-2">
-                                            <span className="font-black uppercase tracking-wide text-slate-900 dark:text-white">Total</span>
-                                            <span className="font-black text-emerald-600 dark:text-emerald-400 text-lg">₱{totalAmount.toFixed(2)}</span>
+                                        
+                                        {/* Total Receipt Row */}
+                                        <div className="flex justify-between items-center bg-gradient-to-r from-theme-primary to-theme-secondary/85 text-white rounded-2xl p-4 md:p-6 shadow-xl shadow-theme-primary/10 mt-6">
+                                            <span className="font-black uppercase tracking-widest text-[10px] md:text-xs">Total Amount Due</span>
+                                            <span className="font-black text-xl md:text-2xl tracking-tight">₱{totalAmount.toFixed(2)}</span>
                                         </div>
                                     </div>
                                 </Card>
 
                                 {/* Documents */}
-                                <Card id="documents-section" className="bg-white dark:bg-[#111] border-slate-200 dark:border-white/10 rounded-3xl p-6 md:p-8 shadow-lg space-y-6">
+                                <Card id="documents-section" className="bg-white/40 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-[2.5rem] p-8 shadow-2xl backdrop-blur-2xl transition-all duration-300 hover:border-theme-primary/30 space-y-6">
                                     <div className="flex items-center gap-3">
-                                        <Upload className="w-6 h-6 text-emerald-500" />
-                                        <h3 className="text-sm font-black uppercase tracking-widest text-slate-700 dark:text-slate-300">Required Documents</h3>
+                                        <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white">
+                                            <Upload size={18} className="stroke-[2.5]" />
+                                        </div>
+                                        <h3 className="text-sm font-black uppercase tracking-widest text-slate-800 dark:text-slate-200">Required Documents</h3>
                                     </div>
 
                                     {errors.documents && (
@@ -1793,22 +1884,22 @@ export default function BirthRegistrationPage() {
                                                                 key={opt.value}
                                                                 className={cn(
                                                                     "flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all",
-                                                                    isChecked ? "border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-500/10" :
+                                                                    isChecked ? "border-theme-primary bg-theme-primary/10" :
                                                                     isDisabled ? "border-slate-100 dark:border-white/5 opacity-40 cursor-not-allowed" :
-                                                                    "border-slate-200 dark:border-white/10 hover:border-emerald-400/40"
+                                                                    "border-slate-200 dark:border-white/10 hover:border-theme-primary/40"
                                                                 )}
                                                             >
                                                                 <input
                                                                     type="checkbox"
-                                                                    className="accent-emerald-500 w-4 h-4 shrink-0"
+                                                                    className="accent-theme-primary w-4 h-4 shrink-0"
                                                                     checked={isChecked}
                                                                     disabled={isDisabled}
                                                                     onChange={() => toggleSupportingEvidence(opt.value)}
                                                                 />
-                                                                <span className={cn("text-xs font-semibold", isChecked ? "text-emerald-700 dark:text-emerald-400" : "text-slate-600 dark:text-slate-300")}>
+                                                                <span className={cn("text-xs font-semibold", isChecked ? "text-theme-primary" : "text-slate-600 dark:text-slate-300")}>
                                                                     {opt.label}
                                                                 </span>
-                                                                {isChecked && <Check className="w-4 h-4 text-emerald-500 ml-auto shrink-0" />}
+                                                                {isChecked && <Check className="w-4 h-4 text-theme-primary ml-auto shrink-0" />}
                                                             </label>
                                                         );
                                                     })}
@@ -1840,7 +1931,7 @@ export default function BirthRegistrationPage() {
                                         <div className={cn(
                                             "w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 transition-all",
                                             policyAccepted 
-                                                ? "border-emerald-500 bg-emerald-500 text-white" 
+                                                ? "border-theme-primary bg-theme-primary text-white" 
                                                 : (errors.policyAccepted ? "border-red-500" : "border-slate-400 dark:border-slate-600 bg-transparent")
                                         )}>
                                             {policyAccepted && <Check className="w-5 h-5 stroke-[3]" />}
@@ -1875,7 +1966,7 @@ export default function BirthRegistrationPage() {
                         {currentStep !== "CONFIRM" ? (
                             <Button
                                 onClick={goNext}
-                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-black uppercase tracking-wider text-xs px-8 py-5 shadow-lg shadow-emerald-500/20"
+                                className="bg-theme-primary hover:bg-theme-hover text-white font-black uppercase tracking-wider text-xs px-8 py-5 shadow-lg shadow-theme-primary/20 cursor-pointer"
                             >
                                 Next Step <ArrowRight className="w-4 h-4 ml-2" />
                             </Button>
@@ -1883,7 +1974,7 @@ export default function BirthRegistrationPage() {
                             <Button
                                 onClick={handleSubmit}
                                 disabled={submitting}
-                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-black uppercase tracking-wider text-xs px-8 py-5 shadow-lg shadow-emerald-500/20 disabled:opacity-60"
+                                className="bg-theme-primary hover:bg-theme-hover text-white font-black uppercase tracking-wider text-xs px-8 py-5 shadow-lg shadow-theme-primary/20 disabled:opacity-60 cursor-pointer"
                             >
                                 {submitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Submitting...</> : <><Check className="w-4 h-4 mr-2" />Submit Application</>}
                             </Button>
@@ -1891,6 +1982,15 @@ export default function BirthRegistrationPage() {
                     </div>
                 )}
             </div>
+
+            {/* Reusable QR Handoff Modal */}
+            <SecureQrUploadModal
+                isOpen={isHandoffOpen}
+                onClose={() => { setIsHandoffOpen(false); setHandoffToken(""); }}
+                qrCode={handoffQrCode}
+                expiresAt={handoffExpiresAt}
+                slotLabel={getHandoffSlotLabel()}
+            />
         </div>
     );
 }

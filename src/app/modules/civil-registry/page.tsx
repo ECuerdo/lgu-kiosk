@@ -55,7 +55,7 @@ const CIVIL_REGISTRY_SERVICES: RegistryService[] = [
       pang: "Iparehistro so bagon niyanak (husto ed panahon odino asakbay).",
       ilo: "Iparehistro ti kabarbaro a nayanak (husto iti panawen wenno naladaw)."
     },
-    icon: <Clock className="w-8 h-8 text-emerald-500" />,
+    icon: <Clock className="w-8 h-8 text-theme-primary" />,
     status: "ACTIVE",
     path: "/modules/civil-registry/birth-registration"
   },
@@ -74,7 +74,7 @@ const CIVIL_REGISTRY_SERVICES: RegistryService[] = [
       pang: "Pangasingger na certified true copy na walan sertipiko na niyanak.",
       ilo: "Dawaten ti certified true copy ti adda a sertipiko ti pannakayanak."
     },
-    icon: <Copy className="w-8 h-8 text-emerald-500" />,
+    icon: <Copy className="w-8 h-8 text-theme-primary" />,
     status: "ACTIVE",
     path: "/modules/civil-registry/birth-certificate-request"
   },
@@ -93,7 +93,7 @@ const CIVIL_REGISTRY_SERVICES: RegistryService[] = [
       pang: "Kerew na endorso na lokal ya sertipiko na niyanak ed PSA.",
       ilo: "Agdawat ti endorso ti lokal a sertipiko ti pannakayanak iti PSA."
     },
-    icon: <FileCheck className="w-8 h-8 text-emerald-500" />,
+    icon: <FileCheck className="w-8 h-8 text-theme-primary" />,
     status: "COMING_SOON",
     estimatedTime: "3-5 Business Days",
     baseFee: "₱150.00",
@@ -127,7 +127,7 @@ const CIVIL_REGISTRY_SERVICES: RegistryService[] = [
       pang: "Iparehistro so inatey odino kerew na kopya na sertipiko na inatey.",
       ilo: "Iparehistro ti ipupusay wenno agdawat ti sertipiko ti natay."
     },
-    icon: <Skull className="w-8 h-8 text-emerald-500" />,
+    icon: <Skull className="w-8 h-8 text-theme-primary" />,
     status: "COMING_SOON",
     estimatedTime: "Same Day Processing",
     baseFee: "Free",
@@ -161,7 +161,7 @@ const CIVIL_REGISTRY_SERVICES: RegistryService[] = [
       pang: "Pangasingger na certified true copy na walan sertipiko na inatey.",
       ilo: "Dawaten ti certified true copy ti adda a sertipiko ti ipupusay."
     },
-    icon: <Copy className="w-8 h-8 text-emerald-500" />,
+    icon: <Copy className="w-8 h-8 text-theme-primary" />,
     status: "COMING_SOON",
     estimatedTime: "1-2 Business Days",
     baseFee: "₱115.00",
@@ -195,7 +195,7 @@ const CIVIL_REGISTRY_SERVICES: RegistryService[] = [
       pang: "Kerew na endorso na lokal ya sertipiko na inatey ed PSA.",
       ilo: "Agdawat ti endorso ti lokal a sertipiko ti ipupusay iti PSA."
     },
-    icon: <FileCheck className="w-8 h-8 text-emerald-500" />,
+    icon: <FileCheck className="w-8 h-8 text-theme-primary" />,
     status: "COMING_SOON",
     estimatedTime: "3-5 Business Days",
     baseFee: "₱150.00",
@@ -229,7 +229,7 @@ const CIVIL_REGISTRY_SERVICES: RegistryService[] = [
       pang: "Man-apply na lisensya na kasal ed Pilipinas.",
       ilo: "Ag-apply para iti lisensya ti kasar ditoy Pilipinas."
     },
-    icon: <HeartHandshake className="w-8 h-8 text-emerald-500" />,
+    icon: <HeartHandshake className="w-8 h-8 text-theme-primary" />,
     status: "COMING_SOON",
     estimatedTime: "10-12 Days",
     baseFee: "₱250.00",
@@ -265,7 +265,7 @@ const CIVIL_REGISTRY_SERVICES: RegistryService[] = [
       pang: "Pangasingger na certified copy na sertipiko na kasal.",
       ilo: "Dawaten ti certified copy ti sertipiko ti kasar."
     },
-    icon: <Heart className="w-8 h-8 text-emerald-500" />,
+    icon: <Heart className="w-8 h-8 text-theme-primary" />,
     status: "COMING_SOON",
     estimatedTime: "1-2 Business Days",
     baseFee: "Free (Standard Registration)",
@@ -299,7 +299,7 @@ const CIVIL_REGISTRY_SERVICES: RegistryService[] = [
       pang: "Pangasingger na certified true copy na walan sertipiko na kasal.",
       ilo: "Dawaten ti certified true copy ti adda a sertipiko ti kasar."
     },
-    icon: <Copy className="w-8 h-8 text-emerald-500" />,
+    icon: <Copy className="w-8 h-8 text-theme-primary" />,
     status: "COMING_SOON",
     estimatedTime: "1-2 Business Days",
     baseFee: "₱115.00",
@@ -333,7 +333,7 @@ const CIVIL_REGISTRY_SERVICES: RegistryService[] = [
       pang: "Kerew na endorso na lokal ya sertipiko na kasal ed PSA.",
       ilo: "Agdawat ti endorso ti lokal a sertipiko ti kasar iti PSA."
     },
-    icon: <FileCheck className="w-8 h-8 text-emerald-500" />,
+    icon: <FileCheck className="w-8 h-8 text-theme-primary" />,
     status: "COMING_SOON",
     estimatedTime: "3-5 Business Days",
     baseFee: "₱150.00",
@@ -493,10 +493,10 @@ export default function CivilRegistryHubPage() {
             {t.back}
           </Button>
 
-          <div className="flex items-center gap-3 bg-white dark:bg-[#151821] border border-slate-200 dark:border-white/10 rounded-2xl px-6 py-4 text-xs md:text-base font-black uppercase tracking-widest text-[#4caf7d] shadow-md">
+          <div className="flex items-center gap-3 bg-white dark:bg-[#151821] border border-slate-200 dark:border-white/10 rounded-2xl px-6 py-4 text-xs md:text-base font-black uppercase tracking-widest text-theme-secondary shadow-md">
             <span className="relative flex h-3 w-3 mr-1">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-[#1a6b3a]"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-theme-primary opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-theme-primary"></span>
             </span>
             {t.residentHeader}
           </div>
@@ -506,10 +506,10 @@ export default function CivilRegistryHubPage() {
         <div className="flex justify-center items-center gap-6 md:gap-12 lg:gap-20 mb-16 mt-8 max-w-6xl mx-auto">
           {/* Step 1: STATUS */}
           <div className="flex flex-col items-center gap-3">
-            <div className="w-16 h-16 md:w-20 md:h-20 rounded-3xl bg-emerald-500 flex items-center justify-center shadow-[0_0_30px_rgba(16,185,129,0.5)]">
+            <div className="w-16 h-16 md:w-20 md:h-20 rounded-3xl bg-theme-primary flex items-center justify-center shadow-[0_0_30px_color-mix(in srgb, var(--primary-theme) 0.5 * 100%, transparent)]">
               <Sparkles className="w-7 h-7 md:w-9 md:h-9 text-white animate-pulse" />
             </div>
-            <span className="text-[10px] md:text-sm font-black uppercase tracking-widest text-emerald-500 italic">
+            <span className="text-[10px] md:text-sm font-black uppercase tracking-widest text-theme-primary italic">
               STATUS
             </span>
           </div>
@@ -570,9 +570,9 @@ export default function CivilRegistryHubPage() {
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-7xl lg:text-8xl font-black italic uppercase tracking-tighter leading-none select-none text-slate-900 dark:text-white">
               {lang === "en" ? (
-                <>CHOOSE APPLICATION <span className="text-emerald-500 dark:text-emerald-400">PATHWAY</span></>
+                <>CHOOSE APPLICATION <span className="text-theme-primary">PATHWAY</span></>
               ) : (
-                <>{t.headlinePart1} <span className="text-emerald-500 dark:text-emerald-400">{t.headlinePart2}</span></>
+                <>{t.headlinePart1} <span className="text-theme-primary">{t.headlinePart2}</span></>
               )}
             </h2>
             <p className="text-xs md:text-xl font-bold text-slate-500 dark:text-slate-400 uppercase tracking-[0.4em] mt-5 italic">
@@ -590,7 +590,7 @@ export default function CivilRegistryHubPage() {
                 <div key={cat} className="space-y-8">
                   {/* Category Header with Vertical Accent Bar */}
                   <div className="flex items-center gap-4 pl-1">
-                    <div className="w-[8px] h-12 bg-emerald-500 rounded-full shrink-0"></div>
+                    <div className="w-[8px] h-12 bg-theme-primary rounded-full shrink-0"></div>
                     <div className="space-y-1">
                       <h3 className="text-xl md:text-3xl lg:text-4xl font-black text-slate-900 dark:text-white italic uppercase tracking-wider leading-none">
                         {catTrans.title[lang] || catTrans.title.en}
@@ -609,18 +609,18 @@ export default function CivilRegistryHubPage() {
                         onClick={() => handleServiceClick(service)}
                         whileHover={{ y: -6 }}
                         transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                        className="group flex flex-col justify-start min-h-[260px] md:min-h-[300px] bg-slate-50/50 dark:bg-[#151821]/80 border border-slate-200/80 dark:border-[#202534] rounded-[2rem] p-8 md:p-10 hover:border-emerald-500/50 dark:hover:border-emerald-500/30 hover:bg-slate-100/30 dark:hover:bg-[#1a1e2c] active:scale-[0.98] transition-all duration-300 cursor-pointer relative overflow-hidden shadow-md hover:shadow-xl dark:hover:shadow-[0_0_30px_rgba(16,185,129,0.08)]"
+                        className="group flex flex-col justify-start min-h-[260px] md:min-h-[300px] bg-slate-50/50 dark:bg-[#151821]/80 border border-slate-200/80 dark:border-[#202534] rounded-[2rem] p-8 md:p-10 hover:border-theme-primary/50 dark:hover:border-theme-primary/30 hover:bg-slate-100/30 dark:hover:bg-[#1a1e2c] active:scale-[0.98] transition-all duration-300 cursor-pointer relative overflow-hidden shadow-md hover:shadow-xl dark:hover:shadow-[0_0_30px_color-mix(in srgb, var(--primary-theme) 0.08 * 100%, transparent)]"
                       >
                         {/* Card Icon */}
                         <div className="mb-6">
                           <div className="w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-slate-200/50 dark:bg-[#0c0d12] border border-slate-300/30 dark:border-white/5 flex items-center justify-center">
                             {/* Render icon with scaled dimensions dynamically */}
-                            {React.cloneElement(service.icon as React.ReactElement<{ className?: string }>, { className: "w-8 h-8 md:w-10 md:h-10 text-emerald-500" })}
+                            {React.cloneElement(service.icon as React.ReactElement<{ className?: string }>, { className: "w-8 h-8 md:w-10 md:h-10 text-theme-primary" })}
                           </div>
                         </div>
 
                         {/* Title */}
-                        <h4 className="text-lg md:text-2xl lg:text-3xl font-black text-slate-900 dark:text-white group-hover:text-emerald-500 dark:group-hover:text-emerald-400 transition-colors leading-tight mb-3 uppercase italic tracking-tight">
+                        <h4 className="text-lg md:text-2xl lg:text-3xl font-black text-slate-900 dark:text-white group-hover:text-theme-primary transition-colors leading-tight mb-3 uppercase italic tracking-tight">
                           {service.title[lang] || service.title.en}
                         </h4>
 
@@ -658,8 +658,8 @@ export default function CivilRegistryHubPage() {
               </button>
 
               <div className="flex items-center gap-4 mb-6">
-                <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0">
-                  {selectedService.icon}
+                <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
+                  {React.cloneElement(selectedService.icon as React.ReactElement<{ className?: string }>, { className: "w-8 h-8 text-white" })}
                 </div>
                 <div>
                   <Badge className="bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-white/10 uppercase font-black text-[9px] py-0.5 px-2 rounded-full mb-1">
@@ -673,14 +673,14 @@ export default function CivilRegistryHubPage() {
 
               <div className="space-y-6">
                 <div className="bg-slate-50 dark:bg-[#0c0d12]/50 border border-slate-100 dark:border-white/5 rounded-2xl p-5 space-y-4">
-                  <h3 className="text-xs font-black uppercase tracking-wider text-emerald-500 dark:text-emerald-400 flex items-center gap-1.5">
+                  <h3 className="text-xs font-black uppercase tracking-wider text-theme-primary flex items-center gap-1.5">
                     <BookOpen size={16} />
                     {t.requirementsTitle}
                   </h3>
                   <ul className="space-y-2 text-xs font-semibold text-slate-600 dark:text-slate-300">
                     {(selectedService.requirements?.[lang] || selectedService.requirements?.en || []).map((req, index) => (
                       <li key={index} className="flex items-start gap-2">
-                        <span className="text-emerald-500 font-bold mt-0.5">•</span>
+                        <span className="text-theme-primary font-bold mt-0.5">•</span>
                         <span>{req}</span>
                       </li>
                     ))}
@@ -694,12 +694,12 @@ export default function CivilRegistryHubPage() {
                   </div>
                   <div className="bg-slate-50 dark:bg-[#0c0d12]/50 border border-slate-100 dark:border-white/5 rounded-2xl p-4">
                     <p className="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">{t.fees}</p>
-                    <p className="text-sm font-black text-emerald-500 dark:text-emerald-400">{selectedService.baseFee || "Free"}</p>
+                    <p className="text-sm font-black text-theme-primary">{selectedService.baseFee || "Free"}</p>
                   </div>
                 </div>
 
-                <div className="p-4 rounded-xl bg-emerald-50/50 dark:bg-emerald-500/5 border border-emerald-200 dark:border-emerald-500/10 flex gap-3 text-xs font-semibold text-emerald-800 dark:text-emerald-400 leading-relaxed">
-                  <Info className="w-5 h-5 shrink-0 text-emerald-500" />
+                <div className="p-4 rounded-xl bg-theme-primary/10 border border-theme-primary/20 flex gap-3 text-xs font-semibold text-theme-primary leading-relaxed">
+                  <Info className="w-5 h-5 shrink-0 text-theme-primary" />
                   <span>
                     This service is currently being digitized. When complete, you will be able to apply directly through this kiosk terminal.
                   </span>
@@ -709,7 +709,7 @@ export default function CivilRegistryHubPage() {
               <div className="mt-8 flex justify-end">
                 <Button
                   onClick={() => setSelectedService(null)}
-                  className="w-full sm:w-auto rounded-xl bg-emerald-600 hover:bg-emerald-700 font-black uppercase tracking-wider py-5 px-8 text-xs text-white"
+                  className="w-full sm:w-auto rounded-xl bg-theme-primary hover:bg-theme-hover font-black uppercase tracking-wider py-5 px-8 text-xs text-white"
                 >
                   {t.closeBtn}
                 </Button>

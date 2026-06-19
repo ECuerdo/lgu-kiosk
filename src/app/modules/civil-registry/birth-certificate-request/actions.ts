@@ -20,6 +20,18 @@ export async function getCurrentUserResident(userId: string) {
   }
 }
 
+// ─── Get System Setting ──────────────────────────────────────────────────────
+export async function getSystemSettingAction(key: string) {
+  try {
+    const setting = await (prisma as any).systemSetting?.findUnique({
+      where: { key }
+    });
+    return { success: true, data: setting?.value ?? null };
+  } catch {
+    return { success: true, data: null };
+  }
+}
+
 export async function submitBirthCertificateRequest(formData: FormData, userId: string) {
   try {
     if (!userId) {
@@ -118,7 +130,7 @@ export async function submitBirthCertificateRequest(formData: FormData, userId: 
     await processFile("newIdFileBack", "ids");
 
     // Get current resident data for snapshot
-    const resident = await prisma.resident.findFirst({
+    let resident = await prisma.resident.findFirst({
       where: { userId: userId }
     });
 
@@ -127,7 +139,7 @@ export async function submitBirthCertificateRequest(formData: FormData, userId: 
       data: {
         userId: userId,
         typeId: type.id,
-        status: "FOR_REQUESTING",
+        status: "FOR_INSPECTION",
         residentSnapshot: resident ? (resident as any) : {},
         additionalData: additionalData,
         totalAmount: type.baseFee,

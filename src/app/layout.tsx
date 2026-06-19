@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import GlobalKeyboard from "@/components/shared/GlobalKeyboard";
 import KioskMaintenanceGuard from "@/components/shared/KioskMaintenanceGuard";
 import ThemeProvider from "@/components/shared/ThemeProvider";
+import DynamicTheme from "@/components/shared/DynamicTheme";
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
@@ -28,6 +29,7 @@ export default function RootLayout({
       </head>
       <body className={cn(hideKioskCursor && "hide-kiosk-cursor")}>
         <ThemeProvider>
+          <DynamicTheme />
           <KioskMaintenanceGuard />
           {children}
           <GlobalKeyboard />

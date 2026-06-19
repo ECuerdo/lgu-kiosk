@@ -514,9 +514,9 @@ export default function CedulaPage() {
   if (loading) {
     return (
       <div className="h-screen w-screen flex flex-col items-center justify-center bg-[#f8fafc] gap-6">
-        <div className="w-20 h-20 border-8 border-slate-100 border-t-[#1a6b3a] rounded-full animate-spin"></div>
+        <div className="w-20 h-20 border-8 border-slate-100 border-t-theme-primary rounded-full animate-spin"></div>
         <div className="text-center">
-          <p className="text-[#1a6b3a] font-black text-xs uppercase tracking-[0.4em] animate-pulse">Initializing Portal</p>
+          <p className="text-theme-primary font-black text-xs uppercase tracking-[0.4em] animate-pulse">Initializing Portal</p>
           <p className="text-slate-400 text-[10px] font-bold uppercase mt-2">Connecting to municipal database</p>
         </div>
       </div>
@@ -560,7 +560,7 @@ export default function CedulaPage() {
         <div className="flex flex-col gap-6 px-1 md:px-0 text-left">
           <div className="space-y-1 md:space-y-2">
             <h1 className="text-4xl md:text-7xl font-black text-white uppercase italic tracking-tighter leading-none select-none">
-              MY CEDULA <span className="text-[#1a6b3a] underline decoration-[6px] md:decoration-8 decoration-[#1a6b3a]/20 underline-offset-[6px] md:underline-offset-[12px]">REQUESTS</span>
+              MY CEDULA <span className="text-theme-primary underline decoration-[6px] md:decoration-8 decoration-theme-primary/20 underline-offset-[6px] md:underline-offset-[12px]">REQUESTS</span>
             </h1>
             <p className="text-[9px] md:text-[11px] font-bold text-slate-400 uppercase tracking-[0.4em] ml-1 md:ml-2 italic">Track the status, pay, or print your Community Tax Certificate requests</p>
           </div>
@@ -571,7 +571,7 @@ export default function CedulaPage() {
                 setActiveTab("apply");
                 setCurrentStep("STATUS");
               }}
-              className="h-14 px-8 rounded-2xl bg-[#1a6b3a] hover:bg-emerald-700 text-white font-black uppercase tracking-widest text-xs shadow-lg transition-all active:scale-95 cursor-pointer shrink-0"
+              className="h-14 px-8 rounded-2xl bg-theme-primary hover:bg-emerald-700 text-white font-black uppercase tracking-widest text-xs shadow-lg transition-all active:scale-95 cursor-pointer shrink-0"
             >
               New Request
             </button>
@@ -583,7 +583,7 @@ export default function CedulaPage() {
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6 px-1 md:px-0">
               <div className="space-y-1 md:space-y-2 text-left">
                 <h1 className="text-4xl md:text-7xl font-black text-white uppercase italic tracking-tighter leading-none select-none">
-                  COMMUNITY <span className="text-[#1a6b3a] underline decoration-[6px] md:decoration-8 decoration-[#1a6b3a]/20 underline-offset-[6px] md:underline-offset-[12px]">TAX</span>
+                  COMMUNITY <span className="text-theme-primary underline decoration-[6px] md:decoration-8 decoration-theme-primary/20 underline-offset-[6px] md:underline-offset-[12px]">TAX</span>
                 </h1>
                 <p className="text-[9px] md:text-[11px] font-bold text-slate-400 uppercase tracking-[0.4em] ml-1 md:ml-2 italic">Community Tax Certificate / Cedula Portal</p>
               </div>
@@ -633,15 +633,15 @@ export default function CedulaPage() {
               >
                 <div className={cn(
                   "w-11 h-11 md:w-16 md:h-16 rounded-xl md:rounded-2xl flex items-center justify-center transition-all duration-500 border-2",
-                  isActive ? "bg-[#1a6b3a] text-white border-[#1a6b3a] shadow-[0_0_20px_rgba(26,107,58,0.3)] scale-105 md:scale-110" :
+                  isActive ? "bg-theme-primary text-white border-theme-primary shadow-[0_0_20px_rgba(26,107,58,0.3)] scale-105 md:scale-110" :
                     isCompleted ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/30" :
-                      "bg-slate-100 dark:bg-white/5 text-slate-400 border-transparent group-hover:border-[#1a6b3a]/30"
+                      "bg-slate-100 dark:bg-white/5 text-slate-400 border-transparent group-hover:border-theme-primary/30"
                 )}>
                   <Icon className="w-4 h-4 md:w-7 md:h-7" />
                 </div>
                 <span className={cn(
                   "text-[7px] md:text-[10px] uppercase tracking-widest text-center italic hidden sm:block",
-                  isActive ? "text-[#1a6b3a] opacity-100 font-black" : "opacity-40 group-hover:opacity-100 transition-opacity"
+                  isActive ? "text-theme-primary opacity-100 font-black" : "opacity-40 group-hover:opacity-100 transition-opacity"
                 )}>
                   {step.label}
                 </span>
@@ -686,10 +686,10 @@ export default function CedulaPage() {
                                 router.push(`/modules/cedula/${app.id}`);
                               }
                             }}
-                            className="p-6 rounded-3xl border border-slate-200/60 dark:border-white/5 bg-slate-50/50 dark:bg-white/5 hover:border-[#1a6b3a]/30 transition-all flex flex-col sm:flex-row items-center justify-between gap-4 cursor-pointer"
+                            className="p-6 rounded-3xl border border-slate-200/60 dark:border-white/5 bg-slate-50/50 dark:bg-white/5 hover:border-theme-primary/30 transition-all flex flex-col sm:flex-row items-center justify-between gap-4 cursor-pointer"
                           >
                             <div className="flex items-center gap-4 w-full sm:w-auto">
-                              <div className="w-12 h-12 rounded-2xl bg-[#1a6b3a]/10 text-[#1a6b3a] flex items-center justify-center shrink-0">
+                              <div className="w-12 h-12 rounded-2xl bg-theme-primary/10 text-theme-primary flex items-center justify-center shrink-0">
                                 <FileText size={24} />
                               </div>
                               <div className="space-y-1 text-left">
@@ -753,7 +753,7 @@ export default function CedulaPage() {
               <div className="space-y-8 md:space-y-12">
                 <div className="space-y-3 md:space-y-4 text-center">
                   <h2 className="text-3xl md:text-5xl font-black italic uppercase tracking-tighter leading-tight select-none">
-                    Choose Application <span className="text-[#1a6b3a] italic">Pathway</span>
+                    Choose Application <span className="text-theme-primary italic">Pathway</span>
                   </h2>
                   <p className="text-slate-500 font-medium italic text-xs md:text-sm uppercase tracking-widest max-w-2xl mx-auto select-none">
                     Select your current community tax status to proceed.
@@ -819,14 +819,14 @@ export default function CedulaPage() {
                           isLocked
                             ? "opacity-50 border-slate-100 bg-slate-50/70 cursor-not-allowed"
                             : isSelected
-                              ? "border-[#1a6b3a] bg-[#1a6b3a] text-white shadow-xl scale-[1.02]"
-                              : "border-slate-200 bg-white/45 hover:border-[#1a6b3a]/30"
+                              ? "border-theme-primary bg-theme-primary text-white shadow-xl scale-[1.02]"
+                              : "border-slate-200 bg-white/45 hover:border-theme-primary/30"
                         )}
                       >
                         <div className="flex items-center justify-between w-full">
                           <div className={cn(
                             "w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300",
-                            isSelected ? "bg-white/20 text-white" : "bg-[#1a6b3a]/10 text-[#1a6b3a]"
+                            isSelected ? "bg-white/20 text-white" : "bg-theme-primary/10 text-theme-primary"
                           )}>
                             <Icon className="w-5 h-5 stroke-[2.5]" />
                           </div>
@@ -836,7 +836,7 @@ export default function CedulaPage() {
                             </div>
                           ) : isSelected && (
                             <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center shadow-md animate-in zoom-in-50 duration-300">
-                              <Check className="w-3.5 h-3.5 text-[#1a6b3a] stroke-[3]" />
+                              <Check className="w-3.5 h-3.5 text-theme-primary stroke-[3]" />
                             </div>
                           )}
                         </div>
@@ -868,7 +868,7 @@ export default function CedulaPage() {
             {activeTab === "apply" && currentStep === "RESIDENT" && residentData && (
               <div className="space-y-6 md:space-y-8 flex-1">
                 <div className="space-y-1">
-                  <h2 className="text-xl md:text-2xl font-black italic uppercase tracking-tighter leading-tight">Identity <span className="text-[#1a6b3a] italic">Confirmation</span></h2>
+                  <h2 className="text-xl md:text-2xl font-black italic uppercase tracking-tighter leading-tight">Identity <span className="text-theme-primary italic">Confirmation</span></h2>
                   <p className="text-[10px] md:text-xs text-slate-500 font-medium italic">Verify your personal records. Only the contact number should be provided/updated.</p>
                 </div>
 
@@ -993,9 +993,9 @@ export default function CedulaPage() {
                   </div>
                 </div>
 
-                <div className="bg-[#1a6b3a]/5 border border-[#1a6b3a]/10 p-3 md:p-4 rounded-2xl flex items-center gap-2">
-                  <Sparkles className="w-3.5 h-3.5 text-[#1a6b3a] shrink-0" />
-                  <p className="text-[8px] md:text-[10px] text-[#1a6b3a] font-black italic leading-tight uppercase tracking-widest">
+                <div className="bg-theme-primary/5 border border-theme-primary/10 p-3 md:p-4 rounded-2xl flex items-center gap-2">
+                  <Sparkles className="w-3.5 h-3.5 text-theme-primary shrink-0" />
+                  <p className="text-[8px] md:text-[10px] text-theme-primary font-black italic leading-tight uppercase tracking-widest">
                     Note: Changes will update your Resident Profile upon submission.
                   </p>
                 </div>
@@ -1007,7 +1007,7 @@ export default function CedulaPage() {
               <div className="space-y-8 md:space-y-12 flex-1">
                 <div className="space-y-2 md:space-y-4 text-center md:text-left">
                   <h2 className="text-2xl md:text-3xl font-black italic uppercase tracking-tighter leading-tight">
-                    {isStudent ? "Request" : "Tax"} <span className="text-[#1a6b3a] italic">Declaration</span>
+                    {isStudent ? "Request" : "Tax"} <span className="text-theme-primary italic">Declaration</span>
                   </h2>
                   <p className="text-slate-500 font-medium italic text-xs md:text-sm leading-relaxed uppercase tracking-wider">
                     {isStudent
@@ -1029,7 +1029,7 @@ export default function CedulaPage() {
                           onChange={(e) => setPurpose(e.target.value)}
                           placeholder="Enter the purpose of your Cedula request (e.g. Scholarship application, School Enrollment, Board Exam, Valid ID verification, etc.)"
                           className={cn(
-                            "w-full min-h-[140px] p-4 rounded-xl border shadow-sm text-sm font-bold bg-white text-slate-800 focus:outline-none focus:ring-[#1a6b3a] focus:border-[#1a6b3a] transition-all leading-relaxed",
+                            "w-full min-h-[140px] p-4 rounded-xl border shadow-sm text-sm font-bold bg-white text-slate-800 focus:outline-none focus:ring-theme-primary focus:border-theme-primary transition-all leading-relaxed",
                             showValidationErrors && !purpose.trim() ? "border-rose-500 focus:ring-rose-500 focus:border-rose-500 bg-rose-50/20" : "border-slate-200"
                           )}
                         />
@@ -1124,19 +1124,19 @@ export default function CedulaPage() {
                                   className={cn(
                                     "px-5 py-4 rounded-xl border-2 transition-all duration-300 text-left relative overflow-hidden flex items-center justify-between gap-4 group select-none shadow-sm cursor-pointer",
                                     isSelected
-                                      ? "border-[#1a6b3a] bg-[#1a6b3a]/5"
-                                      : "border-slate-200 bg-white/40 hover:border-[#1a6b3a]/30"
+                                      ? "border-theme-primary bg-theme-primary/5"
+                                      : "border-slate-200 bg-white/40 hover:border-theme-primary/30"
                                   )}
                                 >
                                   <h4 className={cn(
                                     "text-sm font-black uppercase italic tracking-wider whitespace-nowrap",
-                                    isSelected ? "text-[#1a6b3a]" : "text-slate-800"
+                                    isSelected ? "text-theme-primary" : "text-slate-800"
                                   )}>
                                     {opt.label}
                                   </h4>
                                   <p className={cn(
                                     "text-[10px] font-bold uppercase tracking-tighter text-right",
-                                    isSelected ? "text-[#1a6b3a]/70" : "text-slate-500"
+                                    isSelected ? "text-theme-primary/70" : "text-slate-500"
                                   )}>
                                     {opt.desc}
                                   </p>
@@ -1171,7 +1171,7 @@ export default function CedulaPage() {
                       </div>
                       <div className="pt-2 flex justify-between items-end relative z-10">
                         <div className="space-y-1 mb-2 text-left">
-                          <span className="block text-[9px] font-black uppercase tracking-widest text-[#1a6b3a] italic">Estimated Total</span>
+                          <span className="block text-[9px] font-black uppercase tracking-widest text-theme-primary italic">Estimated Total</span>
                           <p className="text-[7px] font-bold text-white/40 uppercase tracking-tighter italic leading-none">
                             * Subject to admin evaluation.
                           </p>
@@ -1190,7 +1190,7 @@ export default function CedulaPage() {
             {activeTab === "apply" && currentStep === "DOCUMENTS" && (
               <div className="space-y-6 flex-1">
                 <div className="space-y-1">
-                  <h2 className="text-xl md:text-2xl font-black italic uppercase tracking-tighter leading-tight">Attach <span className="text-[#1a6b3a] italic">Documents</span></h2>
+                  <h2 className="text-xl md:text-2xl font-black italic uppercase tracking-tighter leading-tight">Attach <span className="text-theme-primary italic">Documents</span></h2>
                   <p className="text-[10px] md:text-xs text-slate-500 font-medium italic uppercase tracking-wider">
                     Use your phone to scan the QR code and securely upload documents.
                   </p>
@@ -1207,7 +1207,7 @@ export default function CedulaPage() {
                     >
                       {handoffDocuments.idFile ? (
                         <div className="flex flex-col items-center justify-between h-full w-full space-y-4">
-                          <div className="w-14 h-14 bg-emerald-500/10 text-[#1a6b3a] rounded-2xl flex items-center justify-center">
+                          <div className="w-14 h-14 bg-emerald-500/10 text-theme-primary rounded-2xl flex items-center justify-center">
                             <ShieldCheck size={28} className="stroke-[2.5]" />
                           </div>
                           <div className="space-y-1">
@@ -1222,7 +1222,7 @@ export default function CedulaPage() {
                                 setViewerTitle("Valid ID Card Preview");
                                 setViewerOpen(true);
                               }}
-                              className="px-5 py-2.5 rounded-full bg-[#1a6b3a] hover:bg-emerald-700 text-white font-black text-[9px] uppercase tracking-wider shadow-md transition-all active:scale-95 cursor-pointer"
+                              className="px-5 py-2.5 rounded-full bg-theme-primary hover:bg-emerald-700 text-white font-black text-[9px] uppercase tracking-wider shadow-md transition-all active:scale-95 cursor-pointer"
                             >
                               Preview
                             </button>
@@ -1247,7 +1247,7 @@ export default function CedulaPage() {
                           <button
                             type="button"
                             onClick={() => startHandoff("idFile")}
-                            className="mt-4 px-6 py-3 rounded-xl bg-[#1a6b3a] hover:bg-emerald-700 text-white font-black uppercase tracking-widest text-[9px] shadow-lg shadow-emerald-950/20 active:scale-95 transition-all cursor-pointer"
+                            className="mt-4 px-6 py-3 rounded-xl bg-theme-primary hover:bg-emerald-700 text-white font-black uppercase tracking-widest text-[9px] shadow-lg shadow-theme-primary/20 active:scale-95 transition-all cursor-pointer"
                           >
                             Upload ID
                           </button>
@@ -1265,7 +1265,7 @@ export default function CedulaPage() {
                   >
                     {handoffDocuments.proofFile ? (
                       <div className="flex flex-col items-center justify-between h-full w-full space-y-4">
-                        <div className="w-14 h-14 bg-emerald-500/10 text-[#1a6b3a] rounded-2xl flex items-center justify-center">
+                        <div className="w-14 h-14 bg-emerald-500/10 text-theme-primary rounded-2xl flex items-center justify-center">
                           <FileText size={28} className="stroke-[2.5]" />
                         </div>
                         <div className="space-y-1">
@@ -1280,7 +1280,7 @@ export default function CedulaPage() {
                               setViewerTitle(isStudent ? "Student ID / Enrollment Form Preview" : "Proof of Income Preview");
                               setViewerOpen(true);
                             }}
-                            className="px-5 py-2.5 rounded-full bg-[#1a6b3a] hover:bg-emerald-700 text-white font-black text-[9px] uppercase tracking-wider shadow-md transition-all active:scale-95 cursor-pointer"
+                            className="px-5 py-2.5 rounded-full bg-theme-primary hover:bg-emerald-700 text-white font-black text-[9px] uppercase tracking-wider shadow-md transition-all active:scale-95 cursor-pointer"
                           >
                             Preview
                           </button>
@@ -1307,7 +1307,7 @@ export default function CedulaPage() {
                         <button
                           type="button"
                           onClick={() => startHandoff("proofFile")}
-                          className="mt-4 px-6 py-3 rounded-xl bg-[#1a6b3a] hover:bg-emerald-700 text-white font-black uppercase tracking-widest text-[9px] shadow-lg shadow-emerald-950/20 active:scale-95 transition-all cursor-pointer"
+                          className="mt-4 px-6 py-3 rounded-xl bg-theme-primary hover:bg-emerald-700 text-white font-black uppercase tracking-widest text-[9px] shadow-lg shadow-theme-primary/20 active:scale-95 transition-all cursor-pointer"
                         >
                           Upload Document
                         </button>
@@ -1322,7 +1322,7 @@ export default function CedulaPage() {
             {activeTab === "apply" && currentStep === "SUBMIT" && (
               <div className="space-y-6 flex-1">
                 <div className="space-y-1">
-                  <h2 className="text-xl md:text-2xl font-black italic uppercase tracking-tighter leading-tight">Review <span className="text-[#1a6b3a] italic">Summary</span></h2>
+                  <h2 className="text-xl md:text-2xl font-black italic uppercase tracking-tighter leading-tight">Review <span className="text-theme-primary italic">Summary</span></h2>
                   <p className="text-slate-500 font-medium italic text-xs uppercase tracking-wider">Review your details and submit for approval.</p>
                 </div>
                 
@@ -1362,13 +1362,13 @@ export default function CedulaPage() {
                         }
                       }}
                       showValidationErrors={showValidationErrors}
-                      themeColor="#1a6b3a"
+                      themeColor = "var(--primary-theme)"
                     />
                   </div>
 
                   <div className="bg-slate-900 rounded-[2rem] p-8 flex flex-col justify-between shadow-2xl text-white">
                     <div>
-                      <h4 className="font-black text-[10px] uppercase text-[#1a6b3a] tracking-widest mb-4">Tax Assessment Summary</h4>
+                      <h4 className="font-black text-[10px] uppercase text-theme-primary tracking-widest mb-4">Tax Assessment Summary</h4>
                       <div className="space-y-3 text-xs font-bold uppercase tracking-wider opacity-80">
                         <div className="flex justify-between">
                           <span>Basic Community Tax:</span>
@@ -1396,7 +1396,7 @@ export default function CedulaPage() {
             {/* Evaluation/Pending Processing Screen */}
             {currentStep === "EVALUATION" && selectedApplication && (
               <div className="space-y-6 flex-1 text-center py-10">
-                <div className="mx-auto w-24 h-24 bg-emerald-50 rounded-full flex items-center justify-center text-[#1a6b3a] mb-6 shadow-inner animate-pulse">
+                <div className="mx-auto w-24 h-24 bg-emerald-50 rounded-full flex items-center justify-center text-theme-primary mb-6 shadow-inner animate-pulse">
                   <CheckCircle2 size={56} />
                 </div>
                 <h3 className="text-3xl font-black text-slate-900 tracking-tight">CEDULA REQUEST FILED</h3>
@@ -1415,7 +1415,7 @@ export default function CedulaPage() {
                   </div>
                   <div className="flex justify-between">
                     <span>Calculated Total:</span>
-                    <span className="font-bold text-[#1a6b3a]">₱{selectedApplication.totalAmount.toFixed(2)}</span>
+                    <span className="font-bold text-theme-primary">₱{selectedApplication.totalAmount.toFixed(2)}</span>
                   </div>
                 </div>
 
@@ -1433,7 +1433,7 @@ export default function CedulaPage() {
                     {selectedApplication.status === "FOR_CLAIM" && selectedApplication.eCopyUrl && (
                       <button
                         onClick={() => handlePrintDocument(selectedApplication.eCopyUrl, "Cedula document")}
-                        className="px-8 py-4 bg-[#1a6b3a] hover:bg-emerald-700 text-white rounded-2xl font-bold uppercase tracking-widest shadow-lg shadow-emerald-950/20 flex items-center gap-2 cursor-pointer"
+                        className="px-8 py-4 bg-theme-primary hover:bg-emerald-700 text-white rounded-2xl font-bold uppercase tracking-widest shadow-lg shadow-theme-primary/20 flex items-center gap-2 cursor-pointer"
                       >
                         <Printer size={18} />
                         Print Cedula
@@ -1443,7 +1443,7 @@ export default function CedulaPage() {
                     {(selectedApplication.status === "UNPAID" || selectedApplication.status === "EVALUATED") && (
                       <button
                         onClick={() => router.push(`/checkout/${selectedApplication.id}`)}
-                        className="px-8 py-4 bg-[#1a6b3a] hover:bg-emerald-700 text-white rounded-2xl font-bold uppercase tracking-widest shadow-lg shadow-emerald-950/20 cursor-pointer"
+                        className="px-8 py-4 bg-theme-primary hover:bg-emerald-700 text-white rounded-2xl font-bold uppercase tracking-widest shadow-lg shadow-theme-primary/20 cursor-pointer"
                       >
                         Pay Online
                       </button>
@@ -1495,7 +1495,7 @@ export default function CedulaPage() {
                   <button
                     onClick={handleSubmit}
                     disabled={isSubmitting}
-                    className="px-8 py-4 bg-[#1a6b3a] hover:bg-emerald-700 text-white rounded-xl font-bold uppercase tracking-widest shadow-lg shadow-emerald-950/20 flex items-center gap-2"
+                    className="px-8 py-4 bg-theme-primary hover:bg-emerald-700 text-white rounded-xl font-bold uppercase tracking-widest shadow-lg shadow-theme-primary/20 flex items-center gap-2"
                   >
                     {isSubmitting ? "Submitting..." : "Submit Application"}
                     <CheckCircle2 size={16} />
@@ -1503,7 +1503,7 @@ export default function CedulaPage() {
                 ) : (
                   <button
                     onClick={handleNext}
-                    className="px-8 py-4 bg-[#1a6b3a] hover:bg-emerald-700 text-white rounded-xl font-bold uppercase tracking-widest shadow-lg shadow-emerald-950/20 flex items-center gap-2"
+                    className="px-8 py-4 bg-theme-primary hover:bg-emerald-700 text-white rounded-xl font-bold uppercase tracking-widest shadow-lg shadow-theme-primary/20 flex items-center gap-2"
                   >
                     Next
                     <ChevronRight size={16} />
@@ -1525,7 +1525,7 @@ export default function CedulaPage() {
       />
 
       {/* Privacy modal */}
-      <PrivacyTermsModal isOpen={isPrivacyModalOpen} onClose={() => setIsPrivacyModalOpen(false)} onAccept={() => setPrivacyAccepted(true)} themeColor="#1a6b3a" />
+      <PrivacyTermsModal isOpen={isPrivacyModalOpen} onClose={() => setIsPrivacyModalOpen(false)} onAccept={() => setPrivacyAccepted(true)} themeColor = "var(--primary-theme)" />
 
 
 

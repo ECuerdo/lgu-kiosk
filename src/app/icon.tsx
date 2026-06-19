@@ -57,7 +57,7 @@ export default async function Icon() {
           alignItems: "center",
           justifyContent: "center",
           background: "#0f172a",
-          color: "#4caf7d",
+          color: "var(--primary-theme-secondary)",
           fontWeight: 700,
           fontSize: 18,
           borderRadius: "9999px",

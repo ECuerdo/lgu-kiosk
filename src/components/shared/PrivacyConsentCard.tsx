@@ -18,7 +18,7 @@ export const PrivacyConsentCard = forwardRef<HTMLDivElement, PrivacyConsentCardP
       privacyAccepted,
       onToggle,
       showValidationErrors,
-      themeColor = "#1a6b3a",
+      themeColor = "var(--primary-theme)",
       id = "privacyConsentCard",
     },
     ref

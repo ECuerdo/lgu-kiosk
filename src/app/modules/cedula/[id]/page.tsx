@@ -172,8 +172,8 @@ export default function CedulaTrackerPage() {
   if (loading || !request) {
     return (
       <div className="h-screen w-screen flex flex-col items-center justify-center bg-[#0F172A] gap-6">
-        <div className="w-16 h-16 border-8 border-slate-800 border-t-[#1a6b3a] rounded-full animate-spin"></div>
-        <p className="text-[#1a6b3a] font-black text-xs uppercase tracking-[0.4em] animate-pulse">Syncing Details...</p>
+        <div className="w-16 h-16 border-8 border-slate-800 border-t-theme-primary rounded-full animate-spin"></div>
+        <p className="text-theme-primary font-black text-xs uppercase tracking-[0.4em] animate-pulse">Syncing Details...</p>
       </div>
     );
   }
@@ -203,7 +203,7 @@ export default function CedulaTrackerPage() {
       {/* Toast banner */}
       {toastMessage && (
         <div className="fixed bottom-8 right-8 z-[200] flex items-center gap-3 px-6 py-4 rounded-2xl border shadow-xl bg-slate-900 text-white border-slate-800">
-          <AlertCircle className="w-5 h-5 text-[#1a6b3a]" />
+          <AlertCircle className="w-5 h-5 text-theme-primary" />
           <span className="text-sm font-bold">{toastMessage.message}</span>
         </div>
       )}
@@ -215,26 +215,26 @@ export default function CedulaTrackerPage() {
           <span className="text-slate-700 font-bold">/</span>
           <Link href="/modules/cedula" className="hover:text-white transition-colors duration-200">Requests</Link>
           <span className="text-slate-700 font-bold">/</span>
-          <span className="py-2 px-4 bg-[#1a6b3a] text-white font-black rounded-full shadow-lg shadow-emerald-950/40">Tracker</span>
+          <span className="py-2 px-4 bg-theme-primary text-white font-black rounded-full shadow-lg shadow-theme-primary/40">Tracker</span>
         </nav>
       </div>
 
       {/* Tracker Hub Header */}
       <div className="space-y-4">
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-[#1a6b3a] flex items-center justify-center shadow-lg shadow-emerald-950/40">
+          <div className="w-14 h-14 rounded-2xl bg-theme-primary flex items-center justify-center shadow-lg shadow-theme-primary/40">
             <Sparkles size={28} className="text-white" />
           </div>
           <div className="space-y-1.5 text-left">
             <h1 className="text-3xl md:text-5xl font-black uppercase italic tracking-tighter leading-none">
-              COMMUNITY TAX CERTIFICATE - {isStudent ? "STUDENT" : isJuridical ? "JURIDICAL" : "INDIVIDUAL"} <span className="text-[#1a6b3a] not-italic">HUB</span>
+              COMMUNITY TAX CERTIFICATE - {isStudent ? "STUDENT" : isJuridical ? "JURIDICAL" : "INDIVIDUAL"} <span className="text-theme-primary not-italic">HUB</span>
             </h1>
             <div className="inline-block mt-2">
               <span className={cn(
                 "px-3.5 py-1.5 rounded-full border text-[9px] font-black uppercase tracking-widest",
                 isCancelled ? "bg-red-500/10 border-red-500/20 text-red-500" :
                 request.status === "FOR_REQUESTING" ? "bg-amber-500/10 border-amber-500/20 text-amber-500 animate-pulse" :
-                "bg-[#1a6b3a]/10 border-[#1a6b3a]/20 text-[#1a6b3a]"
+                "bg-theme-primary/10 border-theme-primary/20 text-theme-primary"
               )}>
                 {isCancelled ? "CANCELLED" : request.status.replace("_", " ")}
               </span>
@@ -254,7 +254,7 @@ export default function CedulaTrackerPage() {
               className={cn(
                 "flex-1 py-3 px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer text-center",
                 activeSubTab === tab
-                  ? "bg-[#1a6b3a] text-white shadow-md"
+                  ? "bg-theme-primary text-white shadow-md"
                   : "text-slate-500 hover:text-slate-300"
               )}
             >
@@ -287,7 +287,7 @@ export default function CedulaTrackerPage() {
           {/* TAB CONTENT: OVERVIEW */}
           {activeSubTab === "overview" && (
             <div className="bg-[#11131a] rounded-[2.5rem] border border-white/5 p-8 md:p-10 shadow-2xl space-y-8 text-left">
-              <h3 className="text-xs font-black uppercase tracking-widest text-[#1a6b3a] italic border-l-4 border-[#1a6b3a] pl-4">
+              <h3 className="text-xs font-black uppercase tracking-widest text-theme-primary italic border-l-4 border-theme-primary pl-4">
                 Application Matrix
               </h3>
               
@@ -306,13 +306,13 @@ export default function CedulaTrackerPage() {
                 </div>
                 <div className="space-y-1">
                   <p className="text-[10px] md:text-xs uppercase font-black text-slate-500">Logistics Phase</p>
-                  <p className="text-sm md:text-base font-black italic uppercase text-[#1a6b3a]">
+                  <p className="text-sm md:text-base font-black italic uppercase text-theme-primary">
                     {logisticsPhase}
                   </p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-[10px] md:text-xs uppercase font-black text-slate-500">Payment Status</p>
-                  <p className="text-sm md:text-base font-black italic uppercase text-[#1a6b3a]">
+                  <p className="text-sm md:text-base font-black italic uppercase text-theme-primary">
                     {paymentPhase}
                   </p>
                 </div>
@@ -329,7 +329,7 @@ export default function CedulaTrackerPage() {
                 
                 {/* Personal Identity */}
                 <div className="space-y-6">
-                  <h3 className="text-xs font-black uppercase tracking-widest text-[#1a6b3a] italic border-l-4 border-[#1a6b3a] pl-4">
+                  <h3 className="text-xs font-black uppercase tracking-widest text-theme-primary italic border-l-4 border-theme-primary pl-4">
                     Personal Identity
                   </h3>
                   <div className="grid grid-cols-2 gap-y-6 gap-x-4">
@@ -374,12 +374,12 @@ export default function CedulaTrackerPage() {
 
                 {/* Financial Declarations */}
                 <div className="space-y-6 pt-4 border-t border-white/5">
-                  <h3 className="text-xs font-black uppercase tracking-widest text-[#1a6b3a] italic border-l-4 border-[#1a6b3a] pl-4">
+                  <h3 className="text-xs font-black uppercase tracking-widest text-theme-primary italic border-l-4 border-theme-primary pl-4">
                     Financial Declarations
                   </h3>
                   <div className="space-y-1">
                     <p className="text-[10px] uppercase font-black text-slate-500 tracking-wider">Annual Gross Income</p>
-                    <p className="text-2xl font-black italic text-[#1a6b3a]">
+                    <p className="text-2xl font-black italic text-theme-primary">
                       ₱{(request.additionalData?.income ? Number(request.additionalData.income).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 }) : "0")}
                     </p>
                   </div>
@@ -389,14 +389,14 @@ export default function CedulaTrackerPage() {
 
               {/* Right Column: Registered Address Card */}
               <div className="space-y-6">
-                <h3 className="text-xs font-black uppercase tracking-widest text-[#1a6b3a] italic border-l-4 border-[#1a6b3a] pl-4">
+                <h3 className="text-xs font-black uppercase tracking-widest text-theme-primary italic border-l-4 border-theme-primary pl-4">
                   Registered Address
                 </h3>
                 
                 <div className="bg-[#11131a] border border-white/5 rounded-[2.5rem] p-8 relative overflow-hidden flex flex-col gap-6 justify-center min-h-[200px] shadow-xl">
                   {/* Subtle map icon in background */}
                   <div className="absolute right-6 top-1/2 -translate-y-1/2 opacity-[0.03] pointer-events-none">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="w-32 h-32 text-[#1a6b3a]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-32 h-32 text-theme-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                       <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
@@ -434,7 +434,7 @@ export default function CedulaTrackerPage() {
               
               {/* Requirements preview cards */}
               <div className="space-y-6">
-                <h3 className="text-xs font-black uppercase tracking-widest text-[#1a6b3a] italic border-l-4 border-[#1a6b3a] pl-4">
+                <h3 className="text-xs font-black uppercase tracking-widest text-theme-primary italic border-l-4 border-theme-primary pl-4">
                   Requirements
                 </h3>
                 
@@ -457,7 +457,7 @@ export default function CedulaTrackerPage() {
                         setViewerTitle("Valid ID Preview");
                         setViewerOpen(true);
                       }}
-                      className="relative z-10 px-6 py-2.5 bg-[#1a6b3a] hover:bg-emerald-700 text-white font-black text-[10px] uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-emerald-950/50 hover:scale-105 active:scale-95 cursor-pointer"
+                      className="relative z-10 px-6 py-2.5 bg-theme-primary hover:bg-emerald-700 text-white font-black text-[10px] uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-theme-primary/50 hover:scale-105 active:scale-95 cursor-pointer"
                     >
                       VIEW
                     </button>
@@ -486,7 +486,7 @@ export default function CedulaTrackerPage() {
                         setViewerTitle(isStudent ? "Student Verification Preview" : "Financial Evidence Preview");
                         setViewerOpen(true);
                       }}
-                      className="relative z-10 px-6 py-2.5 bg-[#1a6b3a] hover:bg-emerald-700 text-white font-black text-[10px] uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-emerald-950/50 hover:scale-105 active:scale-95 cursor-pointer"
+                      className="relative z-10 px-6 py-2.5 bg-theme-primary hover:bg-emerald-700 text-white font-black text-[10px] uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-theme-primary/50 hover:scale-105 active:scale-95 cursor-pointer"
                     >
                       VIEW
                     </button>
@@ -501,7 +501,7 @@ export default function CedulaTrackerPage() {
 
               {/* Fulfillment info shown cleanly at the bottom */}
               <div className="space-y-6 pt-6 border-t border-white/5">
-                <h3 className="text-xs font-black uppercase tracking-widest text-[#1a6b3a] italic border-l-4 border-[#1a6b3a] pl-4">
+                <h3 className="text-xs font-black uppercase tracking-widest text-theme-primary italic border-l-4 border-theme-primary pl-4">
                   Fulfillment Details
                 </h3>
                 
@@ -536,7 +536,7 @@ export default function CedulaTrackerPage() {
                       </div>
                       <div className="space-y-1">
                         <p className="text-[10px] uppercase font-black text-slate-500 tracking-wider">Delivery Fee</p>
-                        <p className="text-sm font-bold text-[#1a6b3a]">
+                        <p className="text-sm font-bold text-theme-primary">
                           ₱{(request.fiscalSnapshot?.deliveryFee || 0).toFixed(2)}
                         </p>
                       </div>
@@ -555,7 +555,7 @@ export default function CedulaTrackerPage() {
           <div className="space-y-6">
             <div className="bg-[#11131a] rounded-[2.5rem] border border-white/5 p-8 flex flex-col justify-between min-h-[350px] shadow-2xl relative text-left">
               <div>
-                <h3 className="text-[10px] font-black uppercase text-[#1a6b3a] tracking-widest mb-6">
+                <h3 className="text-[10px] font-black uppercase text-theme-primary tracking-widest mb-6">
                   Government Verification
                 </h3>
                 <p className="text-sm font-bold italic text-slate-300 leading-relaxed">
@@ -580,7 +580,7 @@ export default function CedulaTrackerPage() {
                     <span className="block text-[8px] text-amber-500 font-bold uppercase leading-none mt-1">* Pending evaluation</span>
                   )}
                 </div>
-                <span className="text-2xl font-black italic text-[#1a6b3a] leading-none">
+                <span className="text-2xl font-black italic text-theme-primary leading-none">
                   ₱{(request.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </span>
               </div>
@@ -591,7 +591,7 @@ export default function CedulaTrackerPage() {
               {request.status === "FOR_CLAIM" && request.eCopyUrl && (
                 <button
                   onClick={() => handlePrintDocument(request.eCopyUrl, "Cedula document")}
-                  className="w-full py-4 bg-[#1a6b3a] hover:bg-emerald-700 text-white rounded-2xl font-bold uppercase tracking-widest text-xs shadow-lg shadow-emerald-950/20 flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95"
+                  className="w-full py-4 bg-theme-primary hover:bg-emerald-700 text-white rounded-2xl font-bold uppercase tracking-widest text-xs shadow-lg shadow-theme-primary/20 flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95"
                 >
                   <Printer size={16} />
                   Print Cedula
@@ -601,7 +601,7 @@ export default function CedulaTrackerPage() {
               {(request.status === "UNPAID" || request.status === "EVALUATED") && !isCancelled && (
                 <button
                   onClick={() => setIsPaymentModalOpen(true)}
-                  className="w-full py-4 bg-[#1a6b3a] hover:bg-emerald-700 text-white rounded-2xl font-bold uppercase tracking-widest text-xs shadow-lg shadow-emerald-950/20 cursor-pointer transition-all active:scale-95"
+                  className="w-full py-4 bg-theme-primary hover:bg-emerald-700 text-white rounded-2xl font-bold uppercase tracking-widest text-xs shadow-lg shadow-theme-primary/20 cursor-pointer transition-all active:scale-95"
                 >
                   Pay Online
                 </button>
@@ -617,11 +617,11 @@ export default function CedulaTrackerPage() {
             {request.paymentReference && (
               <div className="bg-[#11131a] rounded-[2.5rem] border border-white/5 p-8 shadow-2xl relative text-left space-y-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-950/40 text-[#1a6b3a] flex items-center justify-center font-bold text-sm">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-950/40 text-theme-primary flex items-center justify-center font-bold text-sm">
                     #
                   </div>
                   <div>
-                    <span className="block text-[8px] font-black uppercase text-[#1a6b3a] tracking-widest">PAYMENT REFERENCE</span>
+                    <span className="block text-[8px] font-black uppercase text-theme-primary tracking-widest">PAYMENT REFERENCE</span>
                     <span className="block text-sm font-black italic uppercase text-slate-200">REFERENCE NUMBER</span>
                   </div>
                 </div>
@@ -650,19 +650,19 @@ export default function CedulaTrackerPage() {
             {(request.status === "FOR_PROCESSING" || request.orUrl) && (
               <div className="bg-[#11131a] rounded-[2.5rem] border border-white/5 p-8 shadow-2xl relative text-left space-y-6 overflow-hidden">
                 <div className="absolute right-4 top-4 opacity-[0.05] pointer-events-none">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-24 h-24 text-[#1a6b3a]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-24 h-24 text-theme-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                   </svg>
                 </div>
                 
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-950/40 text-[#1a6b3a] flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-950/40 text-theme-primary flex items-center justify-center">
                     <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                     </svg>
                   </div>
                   <div>
-                    <span className="block text-[8px] font-black uppercase text-[#1a6b3a] tracking-widest">FINANCIAL RECORD SECURED</span>
+                    <span className="block text-[8px] font-black uppercase text-theme-primary tracking-widest">FINANCIAL RECORD SECURED</span>
                     <span className="block text-sm font-black italic uppercase text-slate-200">OFFICIAL RECEIPT (OR)</span>
                   </div>
                 </div>
@@ -679,7 +679,7 @@ export default function CedulaTrackerPage() {
                     }}
                     target="_blank"
                     rel="noreferrer"
-                    className="flex py-3 bg-[#1a6b3a] hover:bg-emerald-700 text-white rounded-xl font-bold uppercase tracking-wider text-[10px] items-center justify-center gap-1.5 transition-all shadow-md shadow-emerald-950/20 active:scale-95 cursor-pointer"
+                    className="flex py-3 bg-theme-primary hover:bg-emerald-700 text-white rounded-xl font-bold uppercase tracking-wider text-[10px] items-center justify-center gap-1.5 transition-all shadow-md shadow-theme-primary/20 active:scale-95 cursor-pointer"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />

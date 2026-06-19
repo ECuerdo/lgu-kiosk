@@ -154,7 +154,7 @@ export default function RfidOverlay() {
           </div>
           {step === "VERIFYING" && (
             <div className="flex flex-col items-center py-12">
-              <div className="h-16 w-16 animate-spin rounded-full border-4 border-[#4caf7d] border-t-transparent" />
+              <div className="h-16 w-16 animate-spin rounded-full border-4 border-theme-secondary border-t-transparent" />
               <p className="mt-6 text-xl font-medium text-white/80">Identifying Resident...</p>
             </div>
           )}
@@ -189,12 +189,12 @@ export default function RfidOverlay() {
           {step === "SERVICES" && resident && (
             <div className="w-full py-4">
               <div className="mb-6 flex justify-center">
-                <div className="relative h-24 w-24 overflow-hidden rounded-full border-2 border-[#4caf7d]">
+                <div className="relative h-24 w-24 overflow-hidden rounded-full border-2 border-theme-secondary">
                   {resident.photoUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={resident.photoUrl} alt={resident.fullName} className="h-full w-full object-cover" />
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-[#1a6b3a] text-2xl text-white">
+                    <div className="flex h-full w-full items-center justify-center bg-theme-primary text-2xl text-white">
                       {resident.fullName.charAt(0)}
                     </div>
                   )}
@@ -217,7 +217,7 @@ export default function RfidOverlay() {
 
                 <button 
                   onClick={() => goToDashboard("barangay")}
-                  className="group relative h-48 overflow-hidden rounded-2xl bg-gradient-to-br from-[#4caf7d] to-[#1a6b3a] p-6 text-left shadow-lg transition-transform hover:scale-[1.02]"
+                  className="group relative h-48 overflow-hidden rounded-2xl bg-gradient-to-br from-theme-secondary to-theme-primary p-6 text-left shadow-lg transition-transform hover:scale-[1.02]"
                 >
                    <div className="absolute right-[-10px] top-[-10px] opacity-10 transition-transform group-hover:scale-110">
                     <svg className="h-32 w-32" fill="currentColor" viewBox="0 0 24 24"><path d="M12 11.5A2.5 2.5 0 0114.5 14a2.5 2.5 0 01-2.5 2.5A2.5 2.5 0 019.5 14a2.5 2.5 0 012.5-2.5M12 2L3 7v6h2v6h14v-6h2V7L12 2z" /></svg>
@@ -231,7 +231,7 @@ export default function RfidOverlay() {
 
           {step === "SUCCESS" && (
             <div className="py-20">
-              <div className="mx-auto mb-8 flex h-24 w-24 animate-bounce items-center justify-center rounded-full bg-[#4caf7d] text-white">
+              <div className="mx-auto mb-8 flex h-24 w-24 animate-bounce items-center justify-center rounded-full bg-theme-secondary text-white">
                 <svg className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                 </svg>

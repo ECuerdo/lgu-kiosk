@@ -8,7 +8,7 @@ import type { LocationPickerInnerProps } from "./LocationPickerInner";
 function MapLoading() {
   return (
     <div className="w-full h-[350px] bg-slate-900 rounded-2xl flex flex-col items-center justify-center border border-white/10">
-      <Loader2 className="w-8 h-8 text-[#1a6b3a] animate-spin mb-4" />
+      <Loader2 className="w-8 h-8 text-theme-primary animate-spin mb-4" />
       <p className="text-slate-500 font-medium">Loading Picker Map...</p>
     </div>
   );
