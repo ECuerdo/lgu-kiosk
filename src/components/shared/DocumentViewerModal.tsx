@@ -107,7 +107,7 @@ export default function DocumentViewerModal({
 
     const activeUrl = React.useMemo(() => {
         // Prefer local File blob URL when available (avoids iframe embedding issues with remote storage)
-        if (file) {
+        if (file && file.size > 0) {
             return URL.createObjectURL(file);
         }
         if (currentDoc) {
@@ -119,14 +119,14 @@ export default function DocumentViewerModal({
     const activeTitle = currentDoc ? currentDoc.label : title;
 
     const fileExtension = React.useMemo(() => {
-        if (file?.name) return getFileExtension(file.name);
+        if (file && file.size > 0 && file.name) return getFileExtension(file.name);
         if (activeUrl) return getFileExtension(activeUrl);
         return "";
     }, [file, activeUrl]);
 
     const isLocalDocx = React.useMemo(() => {
         if (fileExtension !== "docx") return false;
-        if (file) return true;
+        if (file && file.size > 0) return true;
         if (activeUrl && (activeUrl.startsWith("blob:") || activeUrl.startsWith("data:"))) return true;
         return false;
     }, [fileExtension, file, activeUrl]);
@@ -152,7 +152,7 @@ export default function DocumentViewerModal({
         async function renderDocx() {
             try {
                 let docxBlob: Blob;
-                if (file) {
+                if (file && file.size > 0) {
                     docxBlob = file;
                 } else if (activeUrl) {
                     const response = await fetch(activeUrl);
@@ -197,7 +197,7 @@ export default function DocumentViewerModal({
     }, [isOpen, file, activeUrl, isLocalDocx]);
 
     const isPdf = React.useMemo(() => {
-        if (file) {
+        if (file && file.size > 0) {
             return file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
         }
         if (fetchedType) {
@@ -224,7 +224,7 @@ export default function DocumentViewerModal({
 
         let active = true;
 
-        if (file) {
+        if (file && file.size > 0) {
             const reader = new FileReader();
             reader.onloadend = () => {
                 if (active && typeof reader.result === "string") {
@@ -264,7 +264,7 @@ export default function DocumentViewerModal({
 
     const isDocument = React.useMemo(() => {
         if (isPdf) return true;
-        if (file) {
+        if (file && file.size > 0) {
             if (file.type.startsWith("image/")) return false;
             return documentExtensions.includes(fileExtension) || file.type.startsWith("application/");
         }

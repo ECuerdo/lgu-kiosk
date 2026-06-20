@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { compressImage } from "@/lib/image-compression";
 
 interface PremiumDocumentUploadProps {
+    id?: string;
     label: string;
     required?: boolean;
     file: File | null;
@@ -21,6 +22,7 @@ interface PremiumDocumentUploadProps {
 }
 
 export default function PremiumDocumentUpload({
+    id,
     label,
     required = false,
     file,
@@ -132,7 +134,7 @@ export default function PremiumDocumentUpload({
     const currentPreview = previewUrl || (file ? URL.createObjectURL(file) : existingUrl || null);
 
     return (
-        <div className={cn(
+        <div id={id} className={cn(
             "p-5 md:p-6 bg-slate-50 dark:bg-white/5 rounded-[2rem] border border-dashed flex flex-col gap-4 transition-all duration-300 w-full hover:border-slate-350 dark:hover:border-white/20",
             error 
                 ? "!border-red-500 !border-solid !border-2 dark:!border-red-500/80 ring-2 ring-red-500/20 bg-red-50/10 animate-pulse" 

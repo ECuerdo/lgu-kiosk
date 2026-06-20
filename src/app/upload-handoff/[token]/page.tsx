@@ -94,6 +94,11 @@ export default function UploadHandoffPage() {
             { slot: "idFront", label: "Valid ID Front Photo", group: "Valid ID Copy (Front & Back)" },
             { slot: "idBack", label: "Valid ID Back Photo", group: "Valid ID Copy (Front & Back)" }
           ]
+      : sessionSlot === "lcr_birth_psa"
+        ? [
+            { slot: "psaNegativeCert", label: "PSA Negative Certification", group: "Required Documents" },
+            { slot: "form1a", label: "Form 1A (Local Registry Copy)", group: "Required Documents" }
+          ]
         : sessionSlot === "idFile" || sessionSlot === "proofFile"
         ? [{ slot: sessionSlot, label: CEDULA_LABELS[sessionSlot] || "Secure Document Upload", group: "Cedula Application Document" }]
         : sessionSlot === "bfp"

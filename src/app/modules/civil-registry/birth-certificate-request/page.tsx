@@ -1,34 +1,40 @@
-/* eslint-disable react/no-unescaped-entities, @next/next/no-img-element, @typescript-eslint/no-explicit-any */
+/* eslint-disable react/no-unescaped-entities, @typescript-eslint/no-explicit-any */
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
 import QRCode from "qrcode";
 import PrivacyTermsModal from "@/components/shared/PrivacyTermsModal";
+import DocumentViewerModal from "@/components/shared/DocumentViewerModal";
+import SecureQrUploadModal from "@/components/shared/SecureQrUploadModal";
 
 import {
   CheckCircle,
-  UploadCloud,
   User,
   Users,
   AlertCircle,
-  FileWarning,
   CheckCircle2,
   Upload,
   Printer,
-  Check,
-  QrCode,
   ChevronRight,
   ChevronLeft,
   Search,
+  Home
 } from "lucide-react";
+import Link from "next/link";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import {
@@ -45,6 +51,11 @@ import {
   getExistingBirthRequests,
   getSecureUploadUrlAction
 } from "./actions";
+import RequestList from "../_components/request-list";
+import InformantInfo from "../_components/informant-info";
+import ReviewAndSubmit from "../_components/review-and-submit";
+import RequiredDocuments from "../_components/required-documents";
+import ReadOnlyDocumentPreview from "../_components/read-only-document-preview";
 
 type Step = "EXISTING" | "IDENTITY" | "DETAILS" | "PARENTS" | "UPLOAD" | "SUBMIT";
 
@@ -125,9 +136,16 @@ export default function BirthCertificatePage() {
   const [idBackHandoffFileName, setIdBackHandoffFileName] = useState("");
   const [handoffToken, setHandoffToken] = useState("");
   const [handoffQrCode, setHandoffQrCode] = useState("");
-  const [, setHandoffExpiresAt] = useState(0);
+  const [handoffExpiresAt, setHandoffExpiresAt] = useState(0);
   const [isHandoffOpen, setIsHandoffOpen] = useState(false);
   const [isCreatingHandoff, setIsCreatingHandoff] = useState(false);
+  const [handoffSessionSlot, setHandoffSessionSlot] = useState("");
+
+  // Document Viewer State
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [viewerFile, setViewerFile] = useState<File | null>(null);
+  const [viewerUrl, setViewerUrl] = useState<string | null>(null);
+  const [viewerTitle, setViewerTitle] = useState("");
 
   const [idChoice, setIdChoice] = useState<"PROFILE" | "UPLOAD">("PROFILE");
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
@@ -259,7 +277,7 @@ export default function BirthCertificatePage() {
     return () => window.clearInterval(poll);
   }, [handoffToken, idFrontHandoffUrl, idBackHandoffUrl]);
 
-  const startHandoff = async () => {
+  const startHandoff = async (slot: string = "birth_id") => {
     if (!residentData || isCreatingHandoff) return;
     setIsCreatingHandoff(true);
     try {
@@ -267,7 +285,7 @@ export default function BirthCertificatePage() {
       const response = await fetch("/api/upload-handoff", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, slot: "birth_id" }),
+        body: JSON.stringify({ userId, slot }),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Unable to create QR upload.");
@@ -277,6 +295,7 @@ export default function BirthCertificatePage() {
         color: { dark: "#071c12", light: "#ffffff" },
       });
       setHandoffToken(result.token);
+      setHandoffSessionSlot(slot);
       setHandoffQrCode(qrDataUrl);
       setHandoffExpiresAt(result.expiresAt);
       setIsHandoffOpen(true);
@@ -285,6 +304,26 @@ export default function BirthCertificatePage() {
     } finally {
       setIsCreatingHandoff(false);
     }
+  };
+
+  const handleOpenViewer = (file: File | null, title: string, url: string | null = null) => {
+    setViewerFile(file);
+    setViewerUrl(url);
+    setViewerTitle(title);
+    setViewerOpen(true);
+  };
+
+
+
+
+
+  const getHandoffSlotLabel = () => {
+    const map: Record<string, string> = {
+      birth_id: "Front & Back ID Photos",
+      idFront: "Valid ID (Front Side)",
+      idBack: "Valid ID (Back Side)",
+    };
+    return map[handoffSessionSlot] || "Document";
   };
 
   // Initialization
@@ -332,6 +371,27 @@ export default function BirthCertificatePage() {
           }));
         }
 
+        // Check for saved step, form data, and handoff URLs
+        const savedStep = sessionStorage.getItem("birth-cert-step");
+        const savedForm = sessionStorage.getItem("birth-cert-form");
+        const savedFrontUrl = sessionStorage.getItem("birth-cert-front-url");
+        const savedBackUrl = sessionStorage.getItem("birth-cert-back-url");
+        const savedFrontName = sessionStorage.getItem("birth-cert-front-name");
+        const savedBackName = sessionStorage.getItem("birth-cert-back-name");
+
+        if (savedForm) {
+          try {
+            const parsed = JSON.parse(savedForm);
+            setFormData(prev => ({ ...prev, ...parsed }));
+          } catch (e) {
+            console.error("Failed to parse saved form", e);
+          }
+        }
+        if (savedFrontUrl) setIdFrontHandoffUrl(savedFrontUrl);
+        if (savedBackUrl) setIdBackHandoffUrl(savedBackUrl);
+        if (savedFrontName) setIdFrontHandoffFileName(savedFrontName);
+        if (savedBackName) setIdBackHandoffFileName(savedBackName);
+
         if (requestsRes.success && requestsRes.data && requestsRes.data.length > 0) {
           setExistingRequests(requestsRes.data);
           const returnedApplication = returnedTransactionId
@@ -342,9 +402,17 @@ export default function BirthCertificatePage() {
             setCurrentStep("SUBMIT");
             return;
           }
-          setCurrentStep("EXISTING");
+          if (savedStep && savedStep !== "SUBMIT") {
+            setCurrentStep(savedStep as Step);
+          } else {
+            setCurrentStep("EXISTING");
+          }
         } else {
-          setCurrentStep("IDENTITY");
+          if (savedStep && savedStep !== "SUBMIT") {
+            setCurrentStep(savedStep as Step);
+          } else {
+            setCurrentStep("IDENTITY");
+          }
         }
       } catch (err) {
         console.error(err);
@@ -355,35 +423,115 @@ export default function BirthCertificatePage() {
     init();
   }, [router]);
 
+  useEffect(() => {
+    if (!loading && !selectedApplication) {
+      sessionStorage.setItem("birth-cert-step", currentStep);
+      // Remove File object before stringifying
+      const formCopy: any = { ...formData };
+      delete formCopy.newIdFile;
+      delete formCopy.newIdFileBack;
+      sessionStorage.setItem("birth-cert-form", JSON.stringify(formCopy));
+
+      if (idFrontHandoffUrl) {
+        sessionStorage.setItem("birth-cert-front-url", idFrontHandoffUrl);
+      } else {
+        sessionStorage.removeItem("birth-cert-front-url");
+      }
+      if (idBackHandoffUrl) {
+        sessionStorage.setItem("birth-cert-back-url", idBackHandoffUrl);
+      } else {
+        sessionStorage.removeItem("birth-cert-back-url");
+      }
+      if (idFrontHandoffFileName) {
+        sessionStorage.setItem("birth-cert-front-name", idFrontHandoffFileName);
+      } else {
+        sessionStorage.removeItem("birth-cert-front-name");
+      }
+      if (idBackHandoffFileName) {
+        sessionStorage.setItem("birth-cert-back-name", idBackHandoffFileName);
+      } else {
+        sessionStorage.removeItem("birth-cert-back-name");
+      }
+    }
+  }, [currentStep, formData, idFrontHandoffUrl, idBackHandoffUrl, idFrontHandoffFileName, idBackHandoffFileName, loading, selectedApplication]);
+
   const handleFormChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   const validateIdentityStep = () => {
-    if (!formData.relation || !formData.contactNumber) {
+    const errs: Record<string, string> = {};
+    if (!formData.relation) errs.relationship = "Required";
+    if (!formData.contactNumber) errs.contactNumber = "Required";
+
+    const valid = Object.keys(errs).length === 0;
+    setShowValidationErrors(!valid);
+
+    if (!valid) {
       toast.warning("Please select relationship and provide your contact number.");
-      setShowValidationErrors(true);
-      return false;
+      const firstErrorKey = Object.keys(errs)[0];
+      setTimeout(() => {
+        let element: any = document.getElementById(firstErrorKey) || document.getElementsByName(firstErrorKey)[0];
+        if (!element && firstErrorKey === "relationship") {
+          element = (document.querySelector('[role="combobox"]') || document.querySelector('button[aria-autocomplete="none"]')) as any;
+        }
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth", block: "center" });
+          element.focus();
+        }
+      }, 100);
     }
-    return true;
+    return valid;
   };
 
   const validateDetailsStep = () => {
-    if (!formData.certFirstName || !formData.certLastName || !formData.dateOfEvent || !formData.placeOfEvent || !formData.sex) {
+    const errs: Record<string, string> = {};
+    if (!formData.certFirstName?.trim()) errs.certFirstName = "Required";
+    if (!formData.certLastName?.trim()) errs.certLastName = "Required";
+    if (!formData.sex) errs.sex = "Required";
+    if (!formData.dateOfEvent) errs.dateOfEvent = "Required";
+    if (!formData.placeOfEvent?.trim()) errs.placeOfEvent = "Required";
+
+    const valid = Object.keys(errs).length === 0;
+    setShowValidationErrors(!valid);
+
+    if (!valid) {
       toast.warning("Please fill in all required fields (First Name, Last Name, Date of Birth, Place, and Sex).");
-      setShowValidationErrors(true);
-      return false;
+      const firstErrorKey = Object.keys(errs)[0];
+      setTimeout(() => {
+        let element: any = document.getElementById(firstErrorKey) || document.getElementsByName(firstErrorKey)[0];
+        if (!element && firstErrorKey === "sex") {
+          element = (document.querySelector('[role="combobox"]') || document.querySelector('button[aria-autocomplete="none"]')) as any;
+        }
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth", block: "center" });
+          element.focus();
+        }
+      }, 100);
     }
-    return true;
+    return valid;
   };
 
   const validateParentsStep = () => {
-    if (!formData.motherFirstName || !formData.motherLastName) {
+    const errs: Record<string, string> = {};
+    if (!formData.motherFirstName?.trim()) errs.motherFirstName = "Required";
+    if (!formData.motherLastName?.trim()) errs.motherLastName = "Required";
+
+    const valid = Object.keys(errs).length === 0;
+    setShowValidationErrors(!valid);
+
+    if (!valid) {
       toast.warning("Mother's Maiden First Name and Last Name are required.");
-      setShowValidationErrors(true);
-      return false;
+      const firstErrorKey = Object.keys(errs)[0];
+      setTimeout(() => {
+        const element = document.getElementById(firstErrorKey) || document.getElementsByName(firstErrorKey)[0];
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth", block: "center" });
+          element.focus();
+        }
+      }, 100);
     }
-    return true;
+    return valid;
   };
 
   const handleNextFromIdentity = () => {
@@ -418,6 +566,14 @@ export default function BirthCertificatePage() {
       const hasBack = idBackHandoffUrl || formData.newIdFileBack;
       if (!hasFront || !hasBack) {
         toast.warning("Please upload both the Front and Back sides of your valid ID.");
+        setShowValidationErrors(true);
+        setTimeout(() => {
+          const firstErrorKey = !hasFront ? "idFront" : "idBack";
+          const element = document.getElementById(firstErrorKey);
+          if (element) {
+            element.scrollIntoView({ behavior: "smooth", block: "center" });
+          }
+        }, 100);
         return;
       }
     }
@@ -531,6 +687,35 @@ export default function BirthCertificatePage() {
   return (
     <div ref={pageScrollRef} className="h-full overflow-y-auto px-4 py-8 md:px-12 md:py-12 bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-white">
 
+      {/* Breadcrumb */}
+      <div className="mx-auto max-w-7xl mb-6">
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link href="/dashboard" className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors">
+                  <Home className="h-3.5 w-3.5" /> Dashboard
+                </Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link href="/modules/civil-registry" className="text-xs font-bold uppercase tracking-widest text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors">
+                  Civil Registry
+                </Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage className="text-xs font-black uppercase tracking-widest text-theme-primary">
+                Birth Certificate Request
+              </BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+      </div>
+
       {/* Title Header */}
       <div className="mx-auto max-w-7xl mb-8">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6 px-1 md:px-0">
@@ -541,25 +726,17 @@ export default function BirthCertificatePage() {
             <p className="text-[9px] md:text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-[0.4em] ml-1 md:ml-2 italic">LCR Civil Registry Request Portal</p>
           </div>
           {currentStep === "EXISTING" && (
-            <div className="flex gap-4">
-              <Button
-                onClick={() => router.push("/modules/civil-registry")}
-                className="bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 font-bold uppercase tracking-wider rounded-2xl py-6 px-8 border border-slate-200 dark:border-white/10 active:scale-95 transition-all text-xs"
-              >
-                <ChevronLeft className="inline-block mr-1 w-4 h-4" /> Back to Hub
-              </Button>
-              <Button
-                onClick={() => {
-                  setSelectedApplication(null);
-                  setPrivacyAccepted(false);
-                  setMaxStepIdx(0);
-                  setCurrentStep("IDENTITY");
-                }}
-                className="bg-theme-primary hover:bg-theme-hover text-white font-bold uppercase tracking-wider rounded-2xl py-6 px-8 shadow-lg shadow-theme-primary/20 active:scale-95 transition-all text-xs"
-              >
-                New Certified Copy Request
-              </Button>
-            </div>
+            <Button
+              onClick={() => {
+                setSelectedApplication(null);
+                setPrivacyAccepted(false);
+                setMaxStepIdx(0);
+                setCurrentStep("IDENTITY");
+              }}
+              className="bg-theme-primary hover:bg-theme-hover text-white font-bold uppercase tracking-wider rounded-2xl py-6 px-8 shadow-lg shadow-theme-primary/20 active:scale-95 transition-all text-xs"
+            >
+              New Certified Copy Request
+            </Button>
           )}
         </div>
       </div>
@@ -614,7 +791,7 @@ export default function BirthCertificatePage() {
 
         {/* Step: EXISTING (Applications List) */}
         {currentStep === "EXISTING" && (
-          <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500 flex-1">
+          <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500 flex-1 flex flex-col">
             <div className="text-center mb-8">
               <h2 className="text-3xl md:text-5xl font-black italic uppercase tracking-tighter leading-tight">
                 Existing <span className="text-theme-primary">Requests</span>
@@ -624,56 +801,27 @@ export default function BirthCertificatePage() {
               </p>
             </div>
 
-            {existingRequests.length === 0 ? (
-              <div className="text-center py-16 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 rounded-[2rem]">
-                <FileWarning className="w-16 h-16 text-slate-600 mx-auto mb-4" />
-                <p className="text-slate-400 font-bold uppercase tracking-widest text-sm">No records found</p>
-                <p className="text-slate-500 text-xs mt-1">Submit your first copy request by clicking New Request.</p>
-              </div>
-            ) : (
-              <div className="grid gap-4">
-                {existingRequests.map((app, idx) => (
-                  <div
-                    key={app.id || idx}
-                    onClick={() => {
-                      setSelectedApplication(app);
-                      setCurrentStep("SUBMIT");
-                    }}
-                    className="bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-3xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between cursor-pointer hover:border-theme-primary/50 hover:bg-slate-100 dark:hover:bg-theme-primary/[0.02] transition-all duration-300 gap-4"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white flex items-center justify-center shrink-0">
-                        <Users className="w-7 h-7" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-lg font-black tracking-tight">{app.birthCertificateRequest?.subjectName || "Birth Certificate Copy"}</span>
-                          <Badge className={cn("text-[9px] font-black uppercase py-0.5 px-2 rounded-full",
-                            app.status === "PAID" && "bg-theme-primary/20 text-theme-primary border border-theme-primary/30",
-                            app.status === "UNPAID" && "bg-amber-500/20 text-amber-400 border border-amber-500/30",
-                            app.status === "FOR_REQUESTING" && "bg-blue-500/20 text-blue-400 border border-blue-500/30",
-                            app.status === "RELEASED" && "bg-theme-primary text-white"
-                          )}>
-                            {app.status}
-                          </Badge>
-                        </div>
-                        <p className="text-slate-400 font-bold text-[10px] uppercase tracking-wider mt-1">
-                          Date: {new Date(app.createdAt).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" })}
-                        </p>
-                        <p className="text-slate-500 text-[9px] uppercase tracking-widest font-black mt-0.5">
-                          ID: {app.id}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
-                      <span className="text-[10px] font-black uppercase text-theme-primary tracking-widest group-hover:translate-x-1 transition-transform flex items-center gap-1">
-                        View Request <ChevronRight size={14} />
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            <RequestList
+              requests={existingRequests}
+              onItemClick={(app) => {
+                setSelectedApplication(app);
+                setCurrentStep("SUBMIT");
+              }}
+              emptyMessage="No records found"
+              emptySubMessage="Submit your first copy request by clicking New Request."
+              getSubjectName={(app) => app.birthCertificateRequest?.subjectName || "Birth Certificate Copy"}
+            />
+
+            {/* Navigation buttons at the bottom of list */}
+            <div className="flex pt-8 mt-auto border-t border-slate-200 dark:border-white/10">
+              <Button
+                type="button"
+                onClick={() => router.push("/modules/civil-registry")}
+                className="rounded-xl border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 px-8 py-5 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 transition-all"
+              >
+                <ChevronLeft className="inline-block mr-1 w-4 h-4" /> Back to Hub
+              </Button>
+            </div>
           </div>
         )}
 
@@ -692,170 +840,31 @@ export default function BirthCertificatePage() {
             </div>
 
             <div className="space-y-6">
-              {/* Row 1: Relationship */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="space-y-2 col-span-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">
-                    Relationship to Subject <span className="text-red-500">*</span>
-                  </Label>
-                  <Select
-                    value={formData.relation}
-                    onValueChange={val => handleFormChange("relation", val)}
-                  >
-                    <SelectTrigger className="h-12 w-full rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/20 dark:bg-black/20 px-4 text-sm font-bold text-slate-900 dark:text-white outline-none focus-visible:ring-theme-primary/20 focus:border-theme-primary">
-                      <SelectValue placeholder="Select relationship" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-white/10 text-slate-900 dark:text-white">
-                      {RELATION_OPTIONS.map(opt => (
-                        <SelectItem key={opt} value={opt} className="focus:bg-theme-primary focus:text-white">
-                          {opt}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="hidden md:block col-span-2" />
-              </div>
-
-              {/* Row 2: Names (Read-Only) */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">
-                    First Name
-                  </Label>
-                  <Input
-                    value={residentData?.firstName || ""}
-                    readOnly
-                    className="bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/5 text-slate-700 dark:text-white/80 font-bold uppercase rounded-xl h-12 cursor-not-allowed opacity-80"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">
-                    Middle Name
-                  </Label>
-                  <Input
-                    value={residentData?.middleName || ""}
-                    readOnly
-                    className="bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/5 text-slate-700 dark:text-white/80 font-bold uppercase rounded-xl h-12 cursor-not-allowed opacity-80"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">
-                    Last Name
-                  </Label>
-                  <Input
-                    value={residentData?.lastName || ""}
-                    readOnly
-                    className="bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/5 text-slate-700 dark:text-white/80 font-bold uppercase rounded-xl h-12 cursor-not-allowed opacity-80"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">
-                    Suffix
-                  </Label>
-                  <Input
-                    value={residentData?.suffix || ""}
-                    readOnly
-                    className="bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/5 text-slate-700 dark:text-white/80 font-bold uppercase rounded-xl h-12 cursor-not-allowed opacity-80"
-                  />
-                </div>
-              </div>
-
-              {/* Row 3: Birth Date, Age, Civil Status, Citizenship (Read-Only) */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">
-                    Birth Date
-                  </Label>
-                  <Input
-                    value={formatBirthDate(residentData?.dateOfBirth)}
-                    readOnly
-                    className="bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/5 text-slate-700 dark:text-white/80 font-bold uppercase rounded-xl h-12 cursor-not-allowed opacity-80"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">
-                    Age
-                  </Label>
-                  <Input
-                    value={residentData?.age?.toString() || ""}
-                    readOnly
-                    className="bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/5 text-slate-700 dark:text-white/80 font-bold uppercase rounded-xl h-12 cursor-not-allowed opacity-80"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">
-                    Civil Status
-                  </Label>
-                  <Input
-                    value={residentData?.civilStatus || ""}
-                    readOnly
-                    className="bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/5 text-slate-700 dark:text-white/80 font-bold rounded-xl h-12 cursor-not-allowed opacity-80"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">
-                    Citizenship
-                  </Label>
-                  <Input
-                    value={residentData?.citizenship || ""}
-                    readOnly
-                    className="bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/5 text-slate-700 dark:text-white/80 font-bold uppercase rounded-xl h-12 cursor-not-allowed opacity-80"
-                  />
-                </div>
-              </div>
-
-              {/* Row 4: Occupation, Contact Number */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">
-                    Occupation
-                  </Label>
-                  <Input
-                    placeholder="Enter occupation"
-                    value={formData.occupation}
-                    onChange={e => handleFormChange("occupation", e.target.value.toUpperCase())}
-                    className="h-12 bg-slate-50/20 dark:bg-black/20 border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-xl placeholder:text-slate-500 focus-visible:ring-theme-primary/20 uppercase"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">
-                    Contact Number <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    required
-                    placeholder="Enter active mobile number"
-                    value={formData.contactNumber}
-                    onChange={e => handleFormChange("contactNumber", e.target.value)}
-                    className={cn(
-                      "h-12 bg-slate-50/20 dark:bg-black/20 text-slate-900 dark:text-white rounded-xl placeholder:text-slate-500 focus-visible:ring-theme-primary/20 border",
-                      showValidationErrors && !formData.contactNumber
-                        ? "border-red-500 dark:border-red-500"
-                        : "border-slate-200 dark:border-white/10"
-                    )}
-                  />
-                  <p className="text-[9px] md:text-[10px] font-black uppercase tracking-wider italic text-amber-600 dark:text-amber-500 mt-2 leading-normal">
-                    * NOTE: PLEASE USE YOUR ACTIVE CONTACT NUMBER. THIS WILL BE USED TO CONTACT YOU REGARDING YOUR TRANSACTION.
-                  </p>
-                </div>
-              </div>
-
-              {/* Row 5: Email Address (Optional) */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">
-                    Email Address (Optional)
-                  </Label>
-                  <Input
-                    type="email"
-                    placeholder="Enter email address"
-                    value={formData.email}
-                    onChange={e => handleFormChange("email", e.target.value)}
-                    className="h-12 bg-slate-50/20 dark:bg-black/20 border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-xl placeholder:text-slate-500 focus-visible:ring-theme-primary/20"
-                  />
-                </div>
-                <div className="hidden md:block" />
-              </div>
+              <InformantInfo
+                firstName={residentData?.firstName}
+                middleName={residentData?.middleName}
+                lastName={residentData?.lastName}
+                suffix={residentData?.suffix}
+                birthDate={residentData?.dateOfBirth}
+                age={residentData?.age?.toString()}
+                civilStatus={residentData?.civilStatus}
+                citizenship={residentData?.citizenship}
+                relationship={formData.relation}
+                occupation={formData.occupation}
+                contactNumber={formData.contactNumber}
+                email={formData.email}
+                onRelationshipChange={(val) => handleFormChange("relation", val)}
+                onOccupationChange={(val) => handleFormChange("occupation", val)}
+                onContactNumberChange={(val) => handleFormChange("contactNumber", val)}
+                onEmailChange={(val) => handleFormChange("email", val)}
+                relationshipOptions={RELATION_OPTIONS}
+                errors={{
+                  relationship: (showValidationErrors && !formData.relation) ? "Required" : "",
+                  contactNumber: (showValidationErrors && !formData.contactNumber) ? "Required" : ""
+                }}
+                showErrors={showValidationErrors}
+                isCardWrapped={false}
+              />
             </div>
 
             <div className="flex justify-between items-center pt-8 mt-auto">
@@ -906,6 +915,7 @@ export default function BirthCertificatePage() {
                       </Label>
                       <Input
                         required
+                        id="certFirstName"
                         placeholder="First Name"
                         value={formData.certFirstName}
                         onChange={e => !isSelf && handleFormChange("certFirstName", e.target.value)}
@@ -941,6 +951,7 @@ export default function BirthCertificatePage() {
                       </Label>
                       <Input
                         required
+                        id="certLastName"
                         placeholder="Last Name"
                         value={formData.certLastName}
                         onChange={e => !isSelf && handleFormChange("certLastName", e.target.value)}
@@ -978,11 +989,14 @@ export default function BirthCertificatePage() {
                       onValueChange={val => !isSelf && handleFormChange("sex", val)}
                       disabled={isSelf}
                     >
-                      <SelectTrigger className={cn(
-                        "h-12 w-full rounded-xl bg-slate-50/20 dark:bg-black/20 px-4 text-sm font-bold text-slate-900 dark:text-white outline-none focus-visible:ring-theme-primary/20 focus:border-theme-primary border",
-                        showValidationErrors && !formData.sex ? "border-red-500 dark:border-red-500" : "border-slate-200 dark:border-white/10",
-                        isSelf && "cursor-not-allowed bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/5 text-slate-700 dark:text-white/80 opacity-80"
-                      )}>
+                      <SelectTrigger
+                        id="sex"
+                        className={cn(
+                          "h-12 w-full rounded-xl bg-slate-50/20 dark:bg-black/20 px-4 text-sm font-bold text-slate-900 dark:text-white outline-none focus-visible:ring-theme-primary/20 focus:border-theme-primary border",
+                          showValidationErrors && !formData.sex ? "border-red-500 dark:border-red-500" : "border-slate-200 dark:border-white/10",
+                          isSelf && "cursor-not-allowed bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/5 text-slate-700 dark:text-white/80 opacity-80"
+                        )}
+                      >
                         <SelectValue placeholder="Select Gender" />
                       </SelectTrigger>
                       <SelectContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-white/10 text-slate-900 dark:text-white">
@@ -1000,6 +1014,7 @@ export default function BirthCertificatePage() {
                     </Label>
                     <Input
                       required
+                      id="dateOfEvent"
                       type="date"
                       value={formData.dateOfEvent}
                       onChange={e => !isSelf && handleFormChange("dateOfEvent", e.target.value)}
@@ -1018,6 +1033,7 @@ export default function BirthCertificatePage() {
                     </Label>
                     <Input
                       required
+                      id="placeOfEvent"
                       placeholder="e.g. Mapandan, Pangasinan"
                       value={formData.placeOfEvent}
                       onChange={e => !isSelf && handleFormChange("placeOfEvent", e.target.value)}
@@ -1110,6 +1126,7 @@ export default function BirthCertificatePage() {
                     <Label className="text-[9px] font-black uppercase tracking-widest text-slate-500">First Name <span className="text-red-500">*</span></Label>
                     <Input
                       required
+                      id="motherFirstName"
                       placeholder="Mother's First Name"
                       value={formData.motherFirstName}
                       onChange={e => handleFormChange("motherFirstName", e.target.value)}
@@ -1134,6 +1151,7 @@ export default function BirthCertificatePage() {
                   <Label className="text-[9px] font-black uppercase tracking-widest text-slate-500">Last Name <span className="text-red-500">*</span></Label>
                   <Input
                     required
+                    id="motherLastName"
                     placeholder="Mother's Last Name"
                     value={formData.motherLastName}
                     onChange={e => handleFormChange("motherLastName", e.target.value)}
@@ -1179,254 +1197,89 @@ export default function BirthCertificatePage() {
               </p>
             </div>
 
-            <div className="max-w-2xl mx-auto mt-6">
-              <div className="flex justify-center gap-4 mb-6">
-                <button
-                  type="button"
-                  onClick={() => setIdChoice("PROFILE")}
-                  className={cn(
-                    "flex-1 py-4 px-6 rounded-2xl border text-center font-bold text-xs uppercase tracking-wider transition-all",
-                    idChoice === "PROFILE" ? "border-theme-primary bg-theme-primary text-white shadow-lg shadow-theme-primary/20" : "border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-white/5 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-white/20"
-                  )}
-                >
-                  Use Profile ID Copy
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIdChoice("UPLOAD")}
-                  className={cn(
-                    "flex-1 py-4 px-6 rounded-2xl border text-center font-bold text-xs uppercase tracking-wider transition-all",
-                    idChoice === "UPLOAD" ? "border-theme-primary bg-theme-primary text-white shadow-lg shadow-theme-primary/20" : "border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-white/5 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-white/20"
-                  )}
-                >
-                  Upload New ID Copy
-                </button>
-              </div>
-
-              {idChoice === "PROFILE" && (
-                <div className="bg-slate-50/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-[2rem] p-8 text-center space-y-6">
-                  {(residentData?.idFrontUrl || residentData?.idBackUrl) ? (
-                    <div className="space-y-6">
-                      <p className="text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider text-xs">Valid ID Photo on Profile</p>
-                      
-                      <div className="grid sm:grid-cols-2 gap-6 max-w-2xl mx-auto">
-                        {/* Front Side */}
-                        <div className="space-y-2">
-                          <p className="text-slate-600 dark:text-slate-400 font-bold uppercase tracking-wider text-[10px]">Front Side</p>
-                          {residentData.idFrontUrl ? (
-                            <div className="relative aspect-[1.586/1] border border-slate-200 dark:border-white/10 rounded-2xl overflow-hidden shadow-2xl bg-white/[0.02]">
-                              <img src={residentData.idFrontUrl} alt="Resident Valid ID Front" className="w-full h-full object-cover" />
-                            </div>
-                          ) : (
-                            <div className="flex flex-col justify-center items-center aspect-[1.586/1] border border-dashed border-slate-200 dark:border-white/10 rounded-2xl bg-slate-50/30 dark:bg-white/[0.02] py-8">
-                              <FileWarning className="w-8 h-8 text-amber-500 mb-2" />
-                              <p className="text-amber-500 text-[10px] font-bold uppercase tracking-wider">No Front ID Found</p>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Back Side */}
-                        <div className="space-y-2">
-                          <p className="text-slate-600 dark:text-slate-400 font-bold uppercase tracking-wider text-[10px]">Back Side</p>
-                          {residentData.idBackUrl ? (
-                            <div className="relative aspect-[1.586/1] border border-slate-200 dark:border-white/10 rounded-2xl overflow-hidden shadow-2xl bg-white/[0.02]">
-                              <img src={residentData.idBackUrl} alt="Resident Valid ID Back" className="w-full h-full object-cover" />
-                            </div>
-                          ) : (
-                            <div className="flex flex-col justify-center items-center aspect-[1.586/1] border border-dashed border-slate-200 dark:border-white/10 rounded-2xl bg-slate-50/30 dark:bg-white/[0.02] py-8">
-                              <FileWarning className="w-8 h-8 text-amber-500 mb-2" />
-                              <p className="text-amber-500 text-[10px] font-bold uppercase tracking-wider">No Back ID Found</p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {residentData.idFrontUrl && residentData.idBackUrl ? (
-                        <p className="text-theme-primary text-xs font-black uppercase tracking-widest flex items-center justify-center gap-1">
-                          <CheckCircle size={16} /> Verified Profile ID Selected
-                        </p>
-                      ) : (
-                        <div className="space-y-2">
-                          <p className="text-amber-600 dark:text-amber-400 font-bold uppercase tracking-widest text-[10px]">Missing Front or Back ID on Profile</p>
-                          <p className="text-slate-500 dark:text-slate-400 text-xs">Please choose "Upload New ID Copy" to upload both sides of your ID.</p>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="space-y-4 py-6">
-                      <FileWarning className="w-12 h-12 text-amber-500 mx-auto" />
-                      <p className="text-amber-600 dark:text-amber-400 font-bold uppercase tracking-widest text-xs">No Profile ID Found</p>
-                      <p className="text-slate-500 dark:text-slate-400 text-sm max-w-sm mx-auto">Please choose "Upload New ID Copy" to upload your ID photo.</p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {idChoice === "UPLOAD" && (
-                <div className="bg-slate-50/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-[2rem] p-8 text-center space-y-6">
-                  <div className="grid sm:grid-cols-2 gap-6">
-                    {/* Phone QR Upload */}
-                    <div className="border border-slate-200 dark:border-white/10 rounded-2xl p-6 bg-slate-50/30 dark:bg-white/[0.02] flex flex-col justify-between min-h-[220px]">
-                      <div>
-                        <QrCode className="w-10 h-10 text-slate-600 dark:text-slate-400 mx-auto mb-3" />
-                        <h4 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white">Upload Front & Back from Phone</h4>
-                        <p className="text-slate-500 text-[10px] font-semibold mt-1">Scan a QR code to securely upload both Front and Back ID photos using your phone camera.</p>
-                      </div>
-                      <Button
-                        type="button"
-                        onClick={startHandoff}
-                        disabled={isCreatingHandoff}
-                        className="bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 font-bold uppercase tracking-widest text-[9px] rounded-xl mt-4 w-full py-5 border border-slate-200 dark:border-white/10"
-                      >
-                        {isCreatingHandoff ? "Creating Session..." : "Scan QR Code"}
-                      </Button>
-                    </div>
-
-                    {/* Desktop Kiosk File Upload */}
-                    <div className="border border-slate-200 dark:border-white/10 rounded-2xl p-6 bg-slate-50/30 dark:bg-white/[0.02] flex flex-col justify-between min-h-[220px]">
-                      <div>
-                        <UploadCloud className="w-10 h-10 text-slate-600 dark:text-slate-400 mx-auto mb-3" />
-                        <h4 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white">Direct Upload</h4>
-                        <p className="text-slate-500 dark:text-slate-400 text-[10px] font-semibold mt-1">Upload files directly from this kiosk local filesystem.</p>
-                      </div>
-                      <div className="space-y-3 mt-4">
-                        {/* Front Side Upload */}
-                        <div className="relative">
-                          <input
-                            type="file"
-                            accept="image/*,application/pdf"
-                            id="file-upload-front"
-                            className="hidden"
-                            onChange={e => {
-                              const file = e.target.files?.[0];
-                              if (file) {
-                                setIsUploadingId(true);
-                                (async () => {
-                                  try {
-                                    toast.loading("Uploading ID Front...", { id: "id-front-upload" });
-                                    const userId = residentData?.userId || residentData?.id;
-                                    if (!userId) {
-                                      throw new Error("User profile not found. Please log in again.");
-                                    }
-                                    const publicUrl = await uploadFileClientSide(file, "newIdFile", userId);
-                                    setIdFrontHandoffUrl(publicUrl);
-                                    setIdFrontHandoffFileName(file.name);
-                                    handleFormChange("newIdFile", null);
-                                    toast.success("ID Front uploaded successfully!", { id: "id-front-upload" });
-                                  } catch (error: any) {
-                                    console.error(error);
-                                    toast.error(error.message || "Failed to upload ID Front.", { id: "id-front-upload" });
-                                  } finally {
-                                    setIsUploadingId(false);
-                                  }
-                                })();
-                              }
-                            }}
-                          />
-                          <Button
-                            type="button"
-                            onClick={() => document.getElementById("file-upload-front")?.click()}
-                            disabled={isUploadingId}
-                            className="bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 font-bold uppercase tracking-widest text-[9px] rounded-xl w-full py-4 text-slate-700 dark:text-slate-300 disabled:opacity-50"
-                          >
-                            {isUploadingId ? "Uploading..." : "Select Front ID"}
-                          </Button>
-                        </div>
-
-                        {/* Back Side Upload */}
-                        <div className="relative">
-                          <input
-                            type="file"
-                            accept="image/*,application/pdf"
-                            id="file-upload-back"
-                            className="hidden"
-                            onChange={e => {
-                              const file = e.target.files?.[0];
-                              if (file) {
-                                setIsUploadingId(true);
-                                (async () => {
-                                  try {
-                                    toast.loading("Uploading ID Back...", { id: "id-back-upload" });
-                                    const userId = residentData?.userId || residentData?.id;
-                                    if (!userId) {
-                                      throw new Error("User profile not found. Please log in again.");
-                                    }
-                                    const publicUrl = await uploadFileClientSide(file, "newIdFileBack", userId);
-                                    setIdBackHandoffUrl(publicUrl);
-                                    setIdBackHandoffFileName(file.name);
-                                    handleFormChange("newIdFileBack", null);
-                                    toast.success("ID Back uploaded successfully!", { id: "id-back-upload" });
-                                  } catch (error: any) {
-                                    console.error(error);
-                                    toast.error(error.message || "Failed to upload ID Back.", { id: "id-back-upload" });
-                                  } finally {
-                                    setIsUploadingId(false);
-                                  }
-                                })();
-                              }
-                            }}
-                          />
-                          <Button
-                            type="button"
-                            onClick={() => document.getElementById("file-upload-back")?.click()}
-                            disabled={isUploadingId}
-                            className="bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 font-bold uppercase tracking-widest text-[9px] rounded-xl w-full py-4 text-slate-700 dark:text-slate-300 disabled:opacity-50"
-                          >
-                            {isUploadingId ? "Uploading..." : "Select Back ID"}
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Uploaded Files Status */}
-                  <div className="space-y-3 mt-4">
-                    {/* Front ID Status */}
-                    {(idFrontHandoffUrl || formData.newIdFile) && (
-                      <div className="p-4 rounded-xl bg-theme-primary/10 border border-theme-primary/20 text-slate-900 dark:text-white flex items-center justify-between text-xs font-bold">
-                        <div className="flex items-center gap-2">
-                          <CheckCircle size={16} />
-                          <span>Front ID Ready: {idFrontHandoffFileName || "Valid ID Front Uploaded"}</span>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          onClick={() => {
-                            setIdFrontHandoffUrl(null);
-                            handleFormChange("newIdFile", null);
-                            setIdFrontHandoffFileName("");
-                          }}
-                          className="text-red-400 hover:text-red-300 hover:bg-red-500/10 h-auto p-1 font-bold text-[9px] uppercase tracking-wider"
-                        >
-                          Remove
-                        </Button>
-                      </div>
-                    )}
-                    {/* Back ID Status */}
-                    {(idBackHandoffUrl || formData.newIdFileBack) && (
-                      <div className="p-4 rounded-xl bg-theme-primary/10 border border-theme-primary/20 text-slate-900 dark:text-white flex items-center justify-between text-xs font-bold">
-                        <div className="flex items-center gap-2">
-                          <CheckCircle size={16} />
-                          <span>Back ID Ready: {idBackHandoffFileName || "Valid ID Back Uploaded"}</span>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          onClick={() => {
-                            setIdBackHandoffUrl(null);
-                            handleFormChange("newIdFileBack", null);
-                            setIdBackHandoffFileName("");
-                          }}
-                          className="text-red-400 hover:text-red-300 hover:bg-red-500/10 h-auto p-1 font-bold text-[9px] uppercase tracking-wider"
-                        >
-                          Remove
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
+            <div className="max-w-2xl mx-auto mt-6 w-full">
+              <RequiredDocuments
+                title="Required Documents"
+                subtitle="Please provide clear copies of the front and back of your valid ID."
+                idChoice={idChoice}
+                onIdChoiceChange={setIdChoice}
+                residentData={residentData}
+                hasProfileId={!!(residentData?.idFrontUrl || residentData?.idBackUrl)}
+                onViewProfileId={(side) => {
+                  const url = side === "front" ? residentData?.idFrontUrl : residentData?.idBackUrl;
+                  handleOpenViewer(null, `Valid ID (${side === "front" ? "Front Side" : "Back Side"})`, url);
+                }}
+                documents={[
+                  {
+                    key: "idFront",
+                    label: "Valid ID (Front Side)",
+                    file: formData.newIdFile,
+                    previewUrl: idFrontHandoffUrl,
+                    infoText: "PDF / IMAGE (MAX 5MB)",
+                    error: showValidationErrors && !idFrontHandoffUrl && !formData.newIdFile,
+                    onFileSelect: async (newFile) => {
+                      setIsUploadingId(true);
+                      try {
+                        toast.loading("Uploading ID Front...", { id: "id-front-upload" });
+                        const userId = residentData?.userId || residentData?.id;
+                        if (!userId) throw new Error("User profile not found. Please log in again.");
+                        const publicUrl = await uploadFileClientSide(newFile, "newIdFile", userId);
+                        setIdFrontHandoffUrl(publicUrl);
+                        setIdFrontHandoffFileName(newFile.name);
+                        handleFormChange("newIdFile", newFile);
+                        toast.success("ID Front uploaded!", { id: "id-front-upload" });
+                      } catch (error: any) {
+                        toast.error(error.message || "Upload failed.", { id: "id-front-upload" });
+                        handleFormChange("newIdFile", newFile);
+                      } finally {
+                        setIsUploadingId(false);
+                      }
+                    },
+                    onClickUpload: () => startHandoff("idFront"),
+                    onClear: () => {
+                      setIdFrontHandoffUrl(null);
+                      handleFormChange("newIdFile", null);
+                      setIdFrontHandoffFileName("");
+                      toast.success("Front ID removed.");
+                    },
+                    onView: () => handleOpenViewer(formData.newIdFile, "Valid ID (Front Side)", idFrontHandoffUrl),
+                  },
+                  {
+                    key: "idBack",
+                    label: "Valid ID (Back Side)",
+                    file: formData.newIdFileBack,
+                    previewUrl: idBackHandoffUrl,
+                    infoText: "PDF / IMAGE (MAX 5MB)",
+                    error: showValidationErrors && !idBackHandoffUrl && !formData.newIdFileBack,
+                    onFileSelect: async (newFile) => {
+                      setIsUploadingId(true);
+                      try {
+                        toast.loading("Uploading ID Back...", { id: "id-back-upload" });
+                        const userId = residentData?.userId || residentData?.id;
+                        if (!userId) throw new Error("User profile not found. Please log in again.");
+                        const publicUrl = await uploadFileClientSide(newFile, "newIdFileBack", userId);
+                        setIdBackHandoffUrl(publicUrl);
+                        setIdBackHandoffFileName(newFile.name);
+                        handleFormChange("newIdFileBack", newFile);
+                        toast.success("ID Back uploaded!", { id: "id-back-upload" });
+                      } catch (error: any) {
+                        toast.error(error.message || "Upload failed.", { id: "id-back-upload" });
+                        handleFormChange("newIdFileBack", newFile);
+                      } finally {
+                        setIsUploadingId(false);
+                      }
+                    },
+                    onClickUpload: () => startHandoff("idBack"),
+                    onClear: () => {
+                      setIdBackHandoffUrl(null);
+                      handleFormChange("newIdFileBack", null);
+                      setIdBackHandoffFileName("");
+                      toast.success("Back ID removed.");
+                    },
+                    onView: () => handleOpenViewer(formData.newIdFileBack, "Valid ID (Back Side)", idBackHandoffUrl),
+                  }
+                ]}
+              />
             </div>
 
             <div className="flex justify-between items-center pt-8 mt-auto">
@@ -1451,174 +1304,181 @@ export default function BirthCertificatePage() {
         {/* Step: SUBMIT */}
         {currentStep === "SUBMIT" && (
           !selectedApplication ? (
-            <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500 flex-1">
-              <div className="text-center">
-                <h2 className="text-3xl md:text-5xl font-black italic uppercase tracking-tighter leading-tight">
-                  Review & <span className="text-theme-primary">Confirm</span>
-                </h2>
-                <p className="text-slate-400 font-medium italic text-xs md:text-lg uppercase tracking-widest max-w-2xl mx-auto mt-2">
-                  Please review your information before final submission.
-                </p>
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-6 mt-6">
-                {/* Card 1: Subject Details */}
-                <div className="bg-slate-50/30 dark:bg-white/[0.02] border border-slate-200 dark:border-white/5 p-6 rounded-3xl space-y-4">
-                  <h3 className="text-sm font-black uppercase tracking-widest text-theme-primary flex items-center gap-2">
-                    <User size={16} /> Subject Details (Aplikante)
-                  </h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400">First Name</span>
-                      <span className="text-slate-900 dark:text-white text-sm font-bold uppercase">{formData.certFirstName}</span>
-                    </div>
-                    <div>
-                      <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Middle Name</span>
-                      <span className="text-slate-900 dark:text-white text-sm font-bold uppercase">{formData.certMiddleName || "N/A"}</span>
-                    </div>
-                    <div>
-                      <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Last Name</span>
-                      <span className="text-slate-900 dark:text-white text-sm font-bold uppercase">{formData.certLastName}</span>
-                    </div>
-                    <div>
-                      <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Suffix</span>
-                      <span className="text-slate-900 dark:text-white text-sm font-bold uppercase">{formData.certSuffix || "N/A"}</span>
-                    </div>
-                    <div>
-                      <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Gender</span>
-                      <span className="text-slate-900 dark:text-white text-sm font-bold uppercase">{formData.sex}</span>
-                    </div>
-                    <div>
-                      <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Date of Birth</span>
-                      <span className="text-slate-900 dark:text-white text-sm font-bold">{formatBirthDate(formData.dateOfEvent)}</span>
-                    </div>
-                    <div className="col-span-2">
-                      <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Place of Birth</span>
-                      <span className="text-slate-900 dark:text-white text-sm font-bold uppercase">{formData.placeOfEvent}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Card 2: Parents Details */}
-                <div className="bg-slate-50/30 dark:bg-white/[0.02] border border-slate-200 dark:border-white/5 p-6 rounded-3xl space-y-4">
-                  <h3 className="text-sm font-black uppercase tracking-widest text-theme-primary flex items-center gap-2">
-                    <Users size={16} /> Parents Information
-                  </h3>
-                  <div className="space-y-3">
-                    <div>
-                      <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Father's Full Name</span>
-                      <span className="text-slate-900 dark:text-white text-sm font-bold uppercase">
-                        {[formData.fatherFirstName, formData.fatherMiddleName, formData.fatherLastName].filter(Boolean).join(" ") || "N/A"}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Mother's Maiden Name</span>
-                      <span className="text-slate-900 dark:text-white text-sm font-bold uppercase">
-                        {[formData.motherFirstName, formData.motherMiddleName, formData.motherLastName].filter(Boolean).join(" ") || "N/A"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Card 3: Requestor & Contact Details */}
-                <div className="bg-slate-50/30 dark:bg-white/[0.02] border border-slate-200 dark:border-white/5 p-6 rounded-3xl space-y-4">
-                  <h3 className="text-sm font-black uppercase tracking-widest text-theme-primary flex items-center gap-2">
-                    <User size={16} /> Requestor & Contact Info
-                  </h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Relationship</span>
-                      <span className="text-slate-900 dark:text-white text-sm font-bold uppercase">{formData.relation}</span>
-                    </div>
-                    <div>
-                      <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Contact Number</span>
-                      <span className="text-slate-900 dark:text-white text-sm font-bold">{formData.contactNumber}</span>
-                    </div>
-                    <div>
-                      <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Email Address</span>
-                      <span className="text-slate-900 dark:text-white text-sm font-bold">{formData.email || "N/A"}</span>
-                    </div>
-                    <div>
-                      <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Occupation</span>
-                      <span className="text-slate-900 dark:text-white text-sm font-bold uppercase">{formData.occupation || "N/A"}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Card 4: Uploaded Files Preview */}
-                <div className="bg-slate-50/30 dark:bg-white/[0.02] border border-slate-200 dark:border-white/5 p-6 rounded-3xl space-y-4">
-                  <h3 className="text-sm font-black uppercase tracking-widest text-theme-primary flex items-center gap-2">
-                    <Upload size={16} /> Verification IDs
-                  </h3>
-                  <div className="space-y-3">
-                    {idChoice === "PROFILE" ? (
+            <ReviewAndSubmit
+              title="Review & Confirm"
+              subtitle="Please review your information before final submission."
+              policyAccepted={privacyAccepted}
+              onPolicyAcceptedChange={setPrivacyAccepted}
+              onReviewPolicy={() => setIsPrivacyModalOpen(true)}
+              showErrors={showValidationErrors}
+              submitting={isSubmitting}
+              submitLabel="Submit Application"
+              onSubmit={handleSubmitRequest}
+              onBack={() => setCurrentStep("UPLOAD")}
+              backLabel="Back to Upload"
+              detailsCards={
+                <div className="grid md:grid-cols-2 gap-6 mt-6">
+                  {/* Card 1: Subject Details (Aplikante) */}
+                  <div className="bg-slate-50/30 dark:bg-white/[0.02] border border-slate-200 dark:border-white/5 p-6 rounded-3xl space-y-4">
+                    <h3 className="text-sm font-black uppercase tracking-widest text-theme-primary flex items-center gap-2">
+                      <User size={16} /> Subject Details (Aplikante)
+                    </h3>
+                    <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Verification Source</span>
-                        <span className="text-slate-900 dark:text-white text-sm font-bold uppercase flex items-center gap-1.5 mt-1">
-                          <CheckCircle size={14} className="text-theme-primary" /> Verified Profile ID Attached
+                        <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400">First Name</span>
+                        <span className="text-slate-900 dark:text-white text-sm font-bold uppercase">{formData.certFirstName}</span>
+                      </div>
+                      <div>
+                        <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Middle Name</span>
+                        <span className="text-slate-900 dark:text-white text-sm font-bold uppercase">{formData.certMiddleName || "N/A"}</span>
+                      </div>
+                      <div>
+                        <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Last Name</span>
+                        <span className="text-slate-900 dark:text-white text-sm font-bold uppercase">{formData.certLastName}</span>
+                      </div>
+                      <div>
+                        <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Suffix</span>
+                        <span className="text-slate-900 dark:text-white text-sm font-bold uppercase">{formData.certSuffix || "N/A"}</span>
+                      </div>
+                      <div>
+                        <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Gender</span>
+                        <span className="text-slate-900 dark:text-white text-sm font-bold uppercase">{formData.sex}</span>
+                      </div>
+                      <div>
+                        <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Date of Birth</span>
+                        <span className="text-slate-900 dark:text-white text-sm font-bold">{formatBirthDate(formData.dateOfEvent)}</span>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Place of Birth</span>
+                        <span className="text-slate-900 dark:text-white text-sm font-bold uppercase">{formData.placeOfEvent}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Card 2: Parents Details */}
+                  <div className="bg-slate-50/30 dark:bg-white/[0.02] border border-slate-200 dark:border-white/5 p-6 rounded-3xl space-y-4">
+                    <h3 className="text-sm font-black uppercase tracking-widest text-theme-primary flex items-center gap-2">
+                      <Users size={16} /> Parents Information
+                    </h3>
+                    <div className="space-y-3">
+                      <div>
+                        <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Father's Full Name</span>
+                        <span className="text-slate-900 dark:text-white text-sm font-bold uppercase">
+                          {[formData.fatherFirstName, formData.fatherMiddleName, formData.fatherLastName].filter(Boolean).join(" ") || "N/A"}
                         </span>
                       </div>
-                    ) : (
-                      <div className="space-y-2">
-                        <div>
-                          <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Front ID File</span>
-                          <span className="text-slate-900 dark:text-white text-xs font-bold truncate block">
-                            {idFrontHandoffFileName || (formData.newIdFile ? "Front ID File Uploaded" : "None")}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Back ID File</span>
-                          <span className="text-slate-900 dark:text-white text-xs font-bold truncate block">
-                            {idBackHandoffFileName || (formData.newIdFileBack ? "Back ID File Uploaded" : "None")}
-                          </span>
-                        </div>
+                      <div>
+                        <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Mother's Maiden Name</span>
+                        <span className="text-slate-900 dark:text-white text-sm font-bold uppercase">
+                          {[formData.motherFirstName, formData.motherMiddleName, formData.motherLastName].filter(Boolean).join(" ") || "N/A"}
+                        </span>
                       </div>
-                    )}
+                    </div>
+                  </div>
+
+                  {/* Card 3: Requestor & Contact Details */}
+                  <div className="bg-slate-50/30 dark:bg-white/[0.02] border border-slate-200 dark:border-white/5 p-6 rounded-3xl space-y-4">
+                    <h3 className="text-sm font-black uppercase tracking-widest text-theme-primary flex items-center gap-2">
+                      <User size={16} /> Requestor & Contact Info
+                    </h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Relationship</span>
+                        <span className="text-slate-900 dark:text-white text-sm font-bold uppercase">{formData.relation}</span>
+                      </div>
+                      <div>
+                        <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Contact Number</span>
+                        <span className="text-slate-900 dark:text-white text-sm font-bold">{formData.contactNumber}</span>
+                      </div>
+                      <div>
+                        <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Email Address</span>
+                        <span className="text-slate-900 dark:text-white text-sm font-bold">{formData.email || "N/A"}</span>
+                      </div>
+                      <div>
+                        <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Occupation</span>
+                        <span className="text-slate-900 dark:text-white text-sm font-bold uppercase">{formData.occupation || "N/A"}</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
+              }
+              documentsSection={
+                <div className="bg-white/40 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-[2.5rem] p-8 shadow-2xl backdrop-blur-2xl transition-all duration-300 hover:border-theme-primary/30 space-y-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white">
+                      <Upload size={18} className="stroke-[2.5]" />
+                    </div>
+                    <h3 className="text-sm font-black uppercase tracking-widest text-slate-800 dark:text-slate-200">Verification IDs</h3>
+                  </div>
 
-              {/* Data Privacy Terms */}
-              <div
-                onClick={() => setIsPrivacyModalOpen(true)}
-                className="p-6 rounded-3xl bg-slate-50/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 shadow-lg flex items-center gap-6 cursor-pointer hover:bg-slate-100 dark:hover:bg-white/10 transition-all mt-6"
-              >
-                <div className={cn(
-                  "w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 transition-all",
-                  privacyAccepted
-                    ? "border-theme-primary bg-theme-primary text-white"
-                    : "border-slate-300 dark:border-white/30 bg-transparent"
-                )}>
-                  {privacyAccepted && <Check className="w-5 h-5 stroke-[3]" />}
-                </div>
-                <div className="space-y-1">
-                  <h3 className="text-xs md:text-sm font-black uppercase tracking-wider italic text-slate-900 dark:text-slate-200">
-                    Data Privacy and Terms Agreement
-                  </h3>
-                  <p className="text-[9px] md:text-[10px] font-black uppercase tracking-wider italic text-slate-500 dark:text-slate-400 leading-normal">
-                    I authorize the LGU to process my personal information in accordance with the Data Privacy Act. I confirm all info is true and correct. Click to review agreement.
-                  </p>
-                </div>
-              </div>
+                  {idChoice === "PROFILE" ? (
+                    <div className="space-y-3 w-full">
+                      <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">
+                        <CheckCircle2 size={14} className="text-theme-primary" />
+                        <span>Verified Profile ID Attached</span>
+                      </div>
 
-              <div className="flex justify-between items-center pt-8 mt-auto">
-                <Button
-                  type="button"
-                  onClick={() => setCurrentStep("UPLOAD")}
-                  className="rounded-xl border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 px-8 py-5 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300"
-                >
-                  <ChevronLeft className="inline-block mr-1 w-4 h-4" /> Back to Upload
-                </Button>
-                <Button
-                  type="button"
-                  onClick={handleSubmitRequest}
-                  disabled={isSubmitting}
-                  className="rounded-xl bg-theme-primary hover:bg-theme-hover px-8 py-5 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-theme-primary/40 disabled:opacity-50"
-                >
-                  {isSubmitting ? "Submitting..." : <>Submit Application <ChevronRight className="inline-block mr-1 w-4 h-4" /></>}
-                </Button>
-              </div>
-            </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
+                        {/* Front ID Card */}
+                        <ReadOnlyDocumentPreview
+                          file={null}
+                          previewUrl={residentData?.idFrontUrl}
+                          label="Front ID Photo"
+                          fileName="Profile ID Front"
+                          onView={() => {
+                            if (residentData?.idFrontUrl) {
+                              handleOpenViewer(null, "Valid ID (Front Side)", residentData.idFrontUrl);
+                            }
+                          }}
+                        />
+
+                        {/* Back ID Card */}
+                        <ReadOnlyDocumentPreview
+                          file={null}
+                          previewUrl={residentData?.idBackUrl}
+                          label="Back ID Photo"
+                          fileName="Profile ID Back"
+                          onView={() => {
+                            if (residentData?.idBackUrl) {
+                              handleOpenViewer(null, "Valid ID (Back Side)", residentData.idBackUrl);
+                            }
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
+                      {/* Front ID Card */}
+                      <ReadOnlyDocumentPreview
+                        file={formData.newIdFile}
+                        previewUrl={idFrontHandoffUrl}
+                        label="Front ID Photo"
+                        fileName={idFrontHandoffFileName || (formData.newIdFile ? formData.newIdFile.name : "Not uploaded")}
+                        onView={() => {
+                          if (formData.newIdFile || idFrontHandoffUrl) {
+                            handleOpenViewer(formData.newIdFile, "Valid ID (Front Side)", idFrontHandoffUrl);
+                          }
+                        }}
+                      />
+
+                      {/* Back ID Card */}
+                      <ReadOnlyDocumentPreview
+                        file={formData.newIdFileBack}
+                        previewUrl={idBackHandoffUrl}
+                        label="Back ID Photo"
+                        fileName={idBackHandoffFileName || (formData.newIdFileBack ? formData.newIdFileBack.name : "Not uploaded")}
+                        onView={() => {
+                          if (formData.newIdFileBack || idBackHandoffUrl) {
+                            handleOpenViewer(formData.newIdFileBack, "Valid ID (Back Side)", idBackHandoffUrl);
+                          }
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+              }
+            />
+
           ) : (
             <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500 flex-1">
               <div className="text-center">
@@ -1724,43 +1584,23 @@ export default function BirthCertificatePage() {
 
       </div>
 
-      {/* Secure Handoff QR Code Dialog */}
-      <Dialog open={isHandoffOpen} onOpenChange={setIsHandoffOpen}>
-        <DialogContent className="max-w-md bg-white dark:bg-[#090c11] border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-[2rem] p-8 text-center shadow-2xl">
-          <DialogHeader>
-            <DialogTitle className="sr-only">Mobile Document Handoff</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-6">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-theme-primary">Mobile Handoff</p>
-              <h3 className="text-xl font-black uppercase tracking-tighter mt-1 text-slate-900 dark:text-white">Scan to Upload ID</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 font-medium">Scan this QR code with your phone to open the file uploader and attach your ID photo directly.</p>
-            </div>
+      {/* Secure Handoff QR Code Modal */}
+      <SecureQrUploadModal
+        isOpen={isHandoffOpen}
+        onClose={() => { setIsHandoffOpen(false); setHandoffToken(""); }}
+        qrCode={handoffQrCode}
+        slotLabel={getHandoffSlotLabel()}
+        expiresAt={handoffExpiresAt}
+      />
 
-            {handoffQrCode ? (
-              <div className="bg-white p-4 rounded-3xl inline-block shadow-2xl mx-auto">
-                <img src={handoffQrCode} alt="Handoff QR Code" className="w-64 h-64 mx-auto" />
-              </div>
-            ) : (
-              <div className="w-64 h-64 rounded-3xl bg-white/5 flex items-center justify-center animate-pulse mx-auto">
-                <QrCode size={48} className="text-slate-600" />
-              </div>
-            )}
-
-            <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
-              Awaiting file upload...
-            </div>
-
-            <Button
-              type="button"
-              onClick={() => setIsHandoffOpen(false)}
-              className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl py-4"
-            >
-              Cancel Handoff
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Document Viewer Modal */}
+      <DocumentViewerModal
+        isOpen={viewerOpen}
+        onClose={() => setViewerOpen(false)}
+        file={viewerFile}
+        fileUrl={viewerUrl}
+        title={viewerTitle}
+      />
 
 
 
