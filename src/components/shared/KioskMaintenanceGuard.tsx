@@ -4,8 +4,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ShieldAlert } from "lucide-react";
 
-const POLL_MS = 5000;
-
 export default function KioskMaintenanceGuard() {
   const [isMaintenance, setIsMaintenance] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -14,7 +12,7 @@ export default function KioskMaintenanceGuard() {
 
   const checkMaintenance = useCallback(async () => {
     try {
-      const response = await fetch(`/api/system-settings/kiosk_maintenance_mode?t=${Date.now()}`, {
+      const response = await fetch(`/api/system-settings/kiosk_maintenance_mode`, {
         cache: "no-store",
       });
       const result = await response.json();
@@ -39,9 +37,6 @@ export default function KioskMaintenanceGuard() {
     const initialCheckId = window.setTimeout(() => {
       void checkMaintenance();
     }, 0);
-    const intervalId = window.setInterval(() => {
-      void checkMaintenance();
-    }, POLL_MS);
 
     const handleWake = () => {
       void checkMaintenance();
@@ -53,7 +48,6 @@ export default function KioskMaintenanceGuard() {
 
     return () => {
       window.clearTimeout(initialCheckId);
-      window.clearInterval(intervalId);
       window.removeEventListener("focus", handleWake);
       window.removeEventListener("pageshow", handleWake);
       document.removeEventListener("visibilitychange", handleWake);

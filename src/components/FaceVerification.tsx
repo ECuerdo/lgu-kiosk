@@ -1,113 +1,330 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import * as faceapi from "face-api.js";
 
 interface FaceVerificationProps {
   residentName?: string;
   referenceImageUrl?: string | null;
   authSource?: string | null;
+  facialRecognition?: unknown;
   onSuccess: () => void;
   onCancel: () => void;
+}
+
+type FacialRecognitionObject =
+  | {
+      mode?: "reference_image" | "embedding" | "liveness";
+      referenceImageUrl?: string;
+      selfieUrl?: string;
+      descriptor?: number[];
+      embedding?: number[];
+      model?: string;
+      verifiedAt?: string;
+    }
+  | string
+  | null
+  | undefined;
+
+const MODEL_URL = "https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights";
+const MATCH_THRESHOLD = 0.5;
+
+function isFaceRecognitionObject(
+  input: unknown
+): input is {
+  mode?: "reference_image" | "embedding" | "liveness";
+  referenceImageUrl?: string;
+  selfieUrl?: string;
+  descriptor?: number[];
+  embedding?: number[];
+  model?: string;
+  verifiedAt?: string;
+} {
+  return Boolean(input) && typeof input === "object" && !Array.isArray(input);
+}
+
+function getRecognitionObject(input: unknown): Exclude<FacialRecognitionObject, string | null | undefined> | null {
+  if (!input) return null;
+  if (typeof input === "string") {
+    try {
+      const parsed = JSON.parse(input) as FacialRecognitionObject;
+      return isFaceRecognitionObject(parsed) ? parsed : null;
+    } catch {
+      return null;
+    }
+  }
+  if (isFaceRecognitionObject(input)) return input;
+  return null;
+}
+
+function toFloat32Array(values: number[]) {
+  return new Float32Array(values);
+}
+
+async function loadImage(url: string) {
+  const img = await faceapi.fetchImage(url);
+  return img;
+}
+
+async function detectReferenceFace(img: HTMLImageElement | HTMLVideoElement | HTMLCanvasElement) {
+  const configs = [
+    new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.3 }),
+    new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.2 }),
+  ];
+
+  for (const options of configs) {
+    const detection = await faceapi.detectSingleFace(img, options).withFaceLandmarks(true).withFaceDescriptor();
+    if (detection) return detection;
+  }
+
+  return null;
 }
 
 export default function FaceVerification({
   residentName,
   referenceImageUrl,
   authSource,
+  facialRecognition,
   onSuccess,
   onCancel,
 }: FaceVerificationProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [facePresent, setFacePresent] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);
+  const [modelsReady, setModelsReady] = useState(false);
+  const [referenceReady, setReferenceReady] = useState(false);
+  const [referenceLabel, setReferenceLabel] = useState<string>("Resident");
+  const [liveDescriptor, setLiveDescriptor] = useState<Float32Array | null>(null);
+  const [referenceDescriptor, setReferenceDescriptor] = useState<Float32Array | null>(null);
+  const [matchState, setMatchState] = useState<"idle" | "matched" | "mismatch">("idle");
+  const autoVerifyRef = useRef(false);
+
+  const recognition = useMemo(() => getRecognitionObject(facialRecognition), [facialRecognition]);
 
   useEffect(() => {
-    const video = videoRef.current;
+    let cancelled = false;
 
     async function setupCamera() {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        if (video) {
-          video.srcObject = stream;
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: "user",
+          },
+          audio: false,
+        });
+        if (cancelled) {
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
+
+        streamRef.current?.getTracks().forEach((track) => track.stop());
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play().catch(() => undefined);
           setCameraReady(true);
         }
-      } catch {
-        setError("Could not access camera. Please check permissions.");
+      } catch (err) {
+        if (!cancelled) {
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Could not access camera. Please check permissions."
+          );
+        }
       }
     }
 
-    setupCamera();
+    void setupCamera();
 
     return () => {
-      if (video?.srcObject) {
-        const stream = video.srcObject as MediaStream;
-        stream.getTracks().forEach((track) => track.stop());
-      }
+      cancelled = true;
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
     };
   }, []);
 
   useEffect(() => {
-    if (!cameraReady) return;
+    let cancelled = false;
+
+    async function loadModels() {
+      try {
+        await Promise.all([
+          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+          faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL),
+          faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+          faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+        ]);
+        if (!cancelled) setModelsReady(true);
+      } catch {
+        if (!cancelled) {
+          setError("Face verification models could not be loaded.");
+          setModelsReady(false);
+        }
+      }
+    }
+
+    void loadModels();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!modelsReady) return;
 
     let cancelled = false;
-    let rafId = 0;
-    let intervalId: ReturnType<typeof setInterval> | null = null;
 
-    const detectFace = async () => {
+    async function loadReferenceDescriptor() {
+      try {
+        const savedDescriptor = recognition?.descriptor || recognition?.embedding || null;
+        if (savedDescriptor && savedDescriptor.length > 0) {
+          setReferenceDescriptor(toFloat32Array(savedDescriptor));
+          setReferenceLabel(residentName || "Resident");
+          setReferenceReady(true);
+          return;
+        }
+
+        const url = recognition?.referenceImageUrl || recognition?.selfieUrl || referenceImageUrl || null;
+        if (!url) {
+          setError("No facialRecognition descriptor or reference image is available for this resident.");
+          setReferenceReady(false);
+          return;
+        }
+
+        const img = await loadImage(url);
+        const detection = await detectReferenceFace(img);
+
+        if (!detection) {
+          throw new Error("No face found in the saved reference image.");
+        }
+
+        if (!cancelled) {
+          setReferenceDescriptor(detection.descriptor);
+          setReferenceLabel(residentName || "Resident");
+          setReferenceReady(true);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Unable to prepare face reference.");
+          setReferenceReady(false);
+        }
+      }
+    }
+
+    void loadReferenceDescriptor();
+    return () => {
+      cancelled = true;
+    };
+  }, [modelsReady, recognition, referenceImageUrl, residentName]);
+
+  useEffect(() => {
+    if (!cameraReady || !modelsReady || !referenceReady) return;
+
+    let cancelled = false;
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+    let rafId = 0;
+
+    const detectLiveFace = async () => {
       const video = videoRef.current;
       if (!video || video.readyState < 2) {
-        if (!cancelled) rafId = requestAnimationFrame(detectFace);
-        return;
-      }
-
-      const FaceDetectorCtor = (
-        window as Window & {
-          FaceDetector?: new (options?: { fastMode?: boolean }) => {
-            detect: (input: HTMLVideoElement) => Promise<Array<unknown>>;
-          };
-        }
-      ).FaceDetector;
-
-      if (!FaceDetectorCtor) {
-        if (!cancelled) setFacePresent(true);
+        if (!cancelled) rafId = requestAnimationFrame(detectLiveFace);
         return;
       }
 
       try {
-        const detector = new FaceDetectorCtor({ fastMode: true });
-        const faces = await detector.detect(video);
-        if (!cancelled) setFacePresent(faces.length > 0);
+        const result = await detectReferenceFace(video);
+
+        if (!cancelled) {
+          setLiveDescriptor(result?.descriptor || null);
+          setMatchState("idle");
+          autoVerifyRef.current = false;
+          if (!result) {
+            setError(null);
+          }
+        }
       } catch {
-        if (!cancelled) setFacePresent(true);
+        if (!cancelled) setLiveDescriptor(null);
       }
     };
 
-    rafId = requestAnimationFrame(detectFace);
+    rafId = requestAnimationFrame(detectLiveFace);
     intervalId = setInterval(() => {
-      void detectFace();
-    }, 1000);
+      void detectLiveFace();
+    }, 1200);
 
     return () => {
       cancelled = true;
       cancelAnimationFrame(rafId);
       if (intervalId) clearInterval(intervalId);
     };
-  }, [cameraReady]);
+  }, [cameraReady, modelsReady, referenceReady]);
 
-  const handleVerify = () => {
-    if (!facePresent) {
+  const handleVerify = useCallback(() => {
+    if (!modelsReady) {
+      setError("Face verification models are not ready yet.");
+      return;
+    }
+
+    if (!referenceReady || !referenceDescriptor) {
+      setError("No saved face reference is available for this resident.");
+      return;
+    }
+
+    if (!liveDescriptor) {
       setError("Please position your face inside the frame first.");
       return;
     }
 
+    if (referenceDescriptor.length !== liveDescriptor.length) {
+      setMatchState("mismatch");
+      setError(
+        `Face descriptor length mismatch (${liveDescriptor.length} live vs ${referenceDescriptor.length} saved). Please re-enroll this resident's facialRecognition data.`
+      );
+      return;
+    }
+
+    const matcher = new faceapi.FaceMatcher(
+      [new faceapi.LabeledFaceDescriptors(referenceLabel, [referenceDescriptor])],
+      MATCH_THRESHOLD
+    );
+    const bestMatch = matcher.findBestMatch(liveDescriptor);
+
+    if (bestMatch.label === "unknown") {
+      setMatchState("mismatch");
+      setError("Face does not match the saved resident record.");
+      return;
+    }
+
+    setMatchState("matched");
     setVerifying(true);
     setTimeout(() => {
       setVerifying(false);
       onSuccess();
-    }, 1200);
-  };
+    }, 900);
+  }, [liveDescriptor, modelsReady, onSuccess, referenceDescriptor, referenceLabel, referenceReady]);
+
+  useEffect(() => {
+    if (!modelsReady || !referenceReady || !referenceDescriptor || !liveDescriptor || verifying) return;
+    if (autoVerifyRef.current) return;
+
+    autoVerifyRef.current = true;
+    void handleVerify();
+  }, [handleVerify, liveDescriptor, modelsReady, referenceDescriptor, referenceReady, verifying]);
+
+  const faceStatus = !modelsReady
+    ? "Loading biometric models..."
+    : !referenceReady
+      ? "Preparing saved face reference..."
+      : matchState === "matched"
+        ? "Face matched against the saved record."
+        : matchState === "mismatch"
+          ? "Face does not match the saved resident record."
+          : liveDescriptor
+            ? "Face detected. Ready for verification."
+        : "Align your face within the circle to continue.";
 
   return (
     <div className="flex flex-col items-center py-8">
@@ -117,7 +334,7 @@ export default function FaceVerification({
         </p>
         <h3 className="mt-2 text-2xl font-bold text-white">{residentName || "Face Identity Check"}</h3>
         <p className="mt-2 max-w-sm text-sm text-white/60">
-          We will use the saved resident record as the reference for this verification step.
+          We compare your live face against the saved resident biometric record in the database.
         </p>
       </div>
 
@@ -127,7 +344,7 @@ export default function FaceVerification({
           autoPlay
           muted
           playsInline
-          className="h-full w-full object-cover grayscale"
+          className="h-full w-full object-cover"
         />
         <div className="absolute inset-0 border-[20px] border-transparent border-t-theme-secondary/30 animate-pulse" />
 
@@ -142,22 +359,16 @@ export default function FaceVerification({
         <div className="mb-6 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
           <div className="h-12 w-12 overflow-hidden rounded-full bg-black/40">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={referenceImageUrl}
-              alt="Resident reference"
-              className="h-full w-full object-cover"
-            />
+            <img src={referenceImageUrl} alt="Resident reference" className="h-full w-full object-cover" />
           </div>
           <div className="text-left">
             <p className="text-sm font-semibold text-white">Reference image loaded</p>
-            <p className="text-xs text-white/50">Saved profile photo will be used as the DB reference.</p>
+            <p className="text-xs text-white/50">Saved profile photo or embedding is used as the database reference.</p>
           </div>
         </div>
       ) : null}
 
-      <p className="mb-2 max-w-sm text-center text-white/60">
-        {facePresent ? "Face detected. You can continue." : "Align your face within the circle to continue."}
-      </p>
+      <p className="mb-2 max-w-sm text-center text-white/60">{faceStatus}</p>
 
       {error && <p className="mb-4 text-red-400">{error}</p>}
 
@@ -170,10 +381,10 @@ export default function FaceVerification({
         </button>
         <button
           onClick={handleVerify}
-          disabled={verifying || !facePresent}
+          disabled={verifying || !liveDescriptor || !referenceReady || !modelsReady}
           className="flex-[2] rounded-xl bg-theme-secondary py-3 font-bold text-white shadow-lg transition-transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
         >
-          {verifying ? "Scanning..." : "Verify Identity"}
+          {verifying ? "Auto-verifying..." : "Verify Identity"}
         </button>
       </div>
     </div>

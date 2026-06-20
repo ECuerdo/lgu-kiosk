@@ -20,8 +20,10 @@ import {
   Search,
   ChevronRight,
   UserCircle,
-  Volume2
+  Volume2,
+  X
 } from "lucide-react";
+import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -230,7 +232,55 @@ function DashboardContent() {
     idFrontUrl?: string;
     barangay?: string;
     email?: string;
+    contactNumber?: string;
+    municipality?: string;
   } | null>(null);
+
+  const [profileOpen, setProfileOpen] = useState(false);
+  const { theme, setTheme, resolvedTheme } = useTheme();
+  const [activeFontSize, setActiveFontSize] = useState<string>("md");
+
+  React.useEffect(() => {
+    try {
+      const saved = localStorage.getItem("kiosk_font_size");
+      if (saved) {
+        setActiveFontSize(saved);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    const sizeMap: Record<string, string> = {
+      sm: "14px",
+      md: "16px",
+      lg: "18px",
+      xl: "20px"
+    };
+    try {
+      document.documentElement.style.fontSize = sizeMap[activeFontSize] || "16px";
+    } catch (e) {
+      console.error(e);
+    }
+  }, [activeFontSize]);
+
+  const applyFontSize = (size: string) => {
+    try {
+      localStorage.setItem("kiosk_font_size", size);
+      setActiveFontSize(size);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const isDarkMode = (resolvedTheme || theme) === "dark";
+
+  const logout = () => {
+    sessionStorage.removeItem("active_resident");
+    window.speechSynthesis?.cancel();
+    router.replace("/");
+  };
 
   React.useEffect(() => {
     const saved = sessionStorage.getItem("active_resident");
@@ -513,27 +563,50 @@ function DashboardContent() {
               </div>
             </Button>
 
-            <div className="text-right hidden sm:block">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">{TRANSLATIONS[lang].authenticatedResident}</p>
-              <div className="flex items-center gap-2 justify-end">
-                <span className="text-lg font-black text-slate-800">
-                  {resident ? resident.fullName : TRANSLATIONS[lang].localCitizen}
-                </span>
-                <Badge variant="outline" className="text-theme-primary border-theme-secondary uppercase font-black text-[9px]">{TRANSLATIONS[lang].portal}</Badge>
+            {resident ? (
+              <button
+                type="button"
+                onClick={() => setProfileOpen(true)}
+                className="flex items-center gap-6 text-left hover:opacity-80 transition-opacity"
+              >
+                <div className="text-right hidden sm:block">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">{TRANSLATIONS[lang].authenticatedResident}</p>
+                  <div className="flex items-center gap-2 justify-end">
+                    <span className="text-lg font-black text-slate-800">
+                      {resident.fullName}
+                    </span>
+                    <Badge variant="outline" className="text-theme-primary border-theme-secondary uppercase font-black text-[9px]">{TRANSLATIONS[lang].portal}</Badge>
+                  </div>
+                </div>
+                <div className="w-16 h-16 rounded-[2rem] bg-slate-50 border border-slate-200 flex items-center justify-center overflow-hidden shadow-inner relative">
+                  {residentPhotoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={residentPhotoUrl}
+                      alt={resident.fullName}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <UserCircle className="w-10 h-10 text-slate-300" />
+                  )}
+                </div>
+              </button>
+            ) : (
+              <div className="flex items-center gap-6 text-left">
+                <div className="text-right hidden sm:block">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">{TRANSLATIONS[lang].authenticatedResident}</p>
+                  <div className="flex items-center gap-2 justify-end">
+                    <span className="text-lg font-black text-slate-800">
+                      {TRANSLATIONS[lang].localCitizen}
+                    </span>
+                    <Badge variant="outline" className="text-theme-primary border-theme-secondary uppercase font-black text-[9px]">{TRANSLATIONS[lang].portal}</Badge>
+                  </div>
+                </div>
+                <div className="w-16 h-16 rounded-[2rem] bg-slate-50 border border-slate-200 flex items-center justify-center overflow-hidden shadow-inner relative">
+                  <UserCircle className="w-10 h-10 text-slate-300" />
+                </div>
               </div>
-            </div>
-            <div className="w-16 h-16 rounded-[2rem] bg-slate-50 border border-slate-200 flex items-center justify-center overflow-hidden shadow-inner relative">
-              {residentPhotoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={residentPhotoUrl}
-                  alt={resident.fullName}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <UserCircle className="w-10 h-10 text-slate-300" />
-              )}
-            </div>
+            )}
           </div>
         </header>
 
@@ -655,7 +728,87 @@ function DashboardContent() {
             Municipality of Mapandan • © 2026
           </div>
         </footer>
+
+        {profileOpen && resident && (
+          <div className="fixed inset-0 z-[500] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+            <div className="w-full max-w-md rounded-[2rem] bg-white p-7 shadow-2xl transition-colors dark:bg-slate-950 dark:shadow-black/40 text-left">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[9px] font-black uppercase tracking-[0.25em] text-theme-primary">Resident Profile</p>
+                  <h2 className="mt-1 text-2xl font-black text-slate-900 dark:text-white">{resident.fullName}</h2>
+                </div>
+                <button type="button" onClick={() => setProfileOpen(false)} className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="mt-6 space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-5 text-sm dark:border-slate-800 dark:bg-slate-900/60">
+                <ProfileRow label="Email" value={resident.email} />
+                <ProfileRow label="Contact Number" value={resident.contactNumber} />
+                <ProfileRow label="Barangay" value={resident.barangay} />
+                <ProfileRow label="Municipality" value={resident.municipality || "Mapandan"} />
+              </div>
+
+              {/* Font Size Selector */}
+              <div className="mt-6 border-t border-slate-200 pt-5 dark:border-slate-800">
+                <span className="block text-[9px] font-black uppercase tracking-[0.25em] text-slate-400 dark:text-slate-500">Font Size</span>
+                <div className="mt-2 grid grid-cols-4 gap-2">
+                  {[
+                    { value: "sm", label: "Small", preview: "12px" },
+                    { value: "md", label: "Normal", preview: "16px" },
+                    { value: "lg", label: "Large", preview: "20px" },
+                    { value: "xl", label: "X-Large", preview: "24px" }
+                  ].map((sz) => (
+                    <button
+                      key={sz.value}
+                      type="button"
+                      onClick={() => applyFontSize(sz.value)}
+                      className={`flex flex-col items-center justify-center rounded-xl border py-2.5 transition-all ${
+                        activeFontSize === sz.value
+                          ? "border-theme-primary bg-emerald-50 text-theme-primary dark:border-theme-primary dark:bg-emerald-950/30 dark:text-emerald-300 font-bold"
+                          : "border-slate-200 bg-white text-slate-700 hover:border-emerald-300 hover:bg-emerald-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-emerald-700"
+                      }`}
+                    >
+                      <span style={{ fontSize: sz.preview }} className="leading-none font-sans">A</span>
+                      <span className="mt-1 text-[9px] font-black uppercase tracking-wider">{sz.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => setTheme(isDarkMode ? "light" : "dark")}
+                  className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 text-left transition hover:border-emerald-300 hover:bg-emerald-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-emerald-700 dark:hover:bg-slate-800"
+                >
+                  <span>
+                    <span className="block text-[9px] font-black uppercase tracking-[0.25em] text-slate-400 dark:text-slate-500">Theme</span>
+                    <span className="mt-1 block text-sm font-black text-slate-900 dark:text-white">
+                      {isDarkMode ? "Dark Mode" : "Light Mode"}
+                    </span>
+                  </span>
+                  <span className={`relative flex h-8 w-14 items-center rounded-full p-1 transition-colors ${isDarkMode ? "bg-theme-primary" : "bg-slate-200"}`}>
+                    <span className={`h-6 w-6 rounded-full bg-white shadow-md transition-transform ${isDarkMode ? "translate-x-6" : "translate-x-0"}`} />
+                  </span>
+                </button>
+                <button type="button" onClick={logout} className="flex items-center justify-center gap-2 rounded-xl bg-red-50 px-4 py-3 text-xs font-black uppercase tracking-widest text-red-600 transition hover:bg-red-100 dark:bg-red-950/30 dark:hover:bg-red-950/50">
+                  <LogOut className="h-4 w-4" />
+                  Logout
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
+    </div>
+  );
+}
+
+function ProfileRow({ label, value }: { label: string; value?: string }) {
+  return (
+    <div className="flex justify-between gap-4 border-b border-slate-200 pb-3 last:border-0 last:pb-0 dark:border-slate-800">
+      <span className="font-bold text-slate-400 dark:text-slate-500">{label}</span>
+      <span className="text-right font-black text-slate-700 dark:text-slate-100">{value || "Not provided"}</span>
     </div>
   );
 }
