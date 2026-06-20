@@ -12,20 +12,17 @@ import {
     Check,
     Home,
     Baby,
-    ArrowRight,
     Upload,
     Search,
     CheckCircle2,
     Users,
     AlertCircle,
-    FileWarning,
     Printer,
     ChevronRight,
     ChevronLeft
 } from "lucide-react";
 
 import DocumentViewerModal from "@/components/shared/DocumentViewerModal";
-import PremiumDocumentUpload from "@/components/shared/PremiumDocumentUpload";
 import QRCode from "qrcode";
 import SecureQrUploadModal from "@/components/shared/SecureQrUploadModal";
 import { Button } from "@/components/ui/button";
@@ -64,6 +61,11 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { saveDraftFile, getDraftFiles, clearDraftFiles } from "@/lib/draftDb";
 import { getSecureUploadUrlAction } from "./actions";
+import RequestList from "../_components/request-list";
+import InformantInfo from "../_components/informant-info";
+import ReviewAndSubmit from "../_components/review-and-submit";
+import RequiredDocuments, { DocumentItem } from "../_components/required-documents";
+import ReadOnlyDocumentPreview from "../_components/read-only-document-preview";
 
 
 const STORAGE_KEY = "lcr_birth_registration_draft";
@@ -71,7 +73,7 @@ const STORAGE_KEY = "lcr_birth_registration_draft";
 // --- UPLOAD FILE SECURELY VIA SIGNED UPLOAD URL ---
 async function uploadFileClientSide(file: File, fieldName: string, userId: string): Promise<string> {
     const fileExt = file.name.split('.').pop() || 'bin';
-    
+
     const res = await getSecureUploadUrlAction(fieldName, "lcr/birth_registration", fileExt, userId);
     if (!res.success || !res.signedUrl || !res.publicUrl) {
         throw new Error(res.error || "Failed to generate secure upload destination");
@@ -115,13 +117,14 @@ const EVIDENCE_OPTIONS = [
 
 // --- TYPES ---
 
-type Step = "EXISTING" | "IDENTITY" | "DETAILS" | "PARENTS" | "CONFIRM" | "SUBMIT";
+type Step = "EXISTING" | "IDENTITY" | "DETAILS" | "PARENTS" | "UPLOAD" | "CONFIRM" | "SUBMIT";
 
 const STEPS: { id: Step; label: string; icon: any }[] = [
     { id: "IDENTITY", label: "Informant Info", icon: User },
     { id: "DETAILS", label: "Child Details", icon: Search },
     { id: "PARENTS", label: "Parental Info", icon: Users },
-    { id: "CONFIRM", label: "Documents & Submit", icon: CheckCircle2 },
+    { id: "UPLOAD", label: "Upload Documents", icon: Upload },
+    { id: "CONFIRM", label: "Review & Submit", icon: CheckCircle2 },
 ];
 
 interface FormState {
@@ -307,13 +310,13 @@ export default function BirthRegistrationPage() {
             });
             const result = await response.json();
             if (!response.ok) throw new Error(result.error || "Unable to create QR upload session.");
-            
+
             const qrDataUrl = await QRCode.toDataURL(result.uploadUrl, {
                 width: 320,
                 margin: 2,
                 color: { dark: "#071c12", light: "#ffffff" },
             });
-            
+
             setHandoffToken(result.token);
             setHandoffSessionSlot(slot);
             setHandoffQrCode(qrDataUrl);
@@ -369,8 +372,8 @@ export default function BirthRegistrationPage() {
                     if (m < 0 || (m === 0 && todayNorm.getDate() < dobNorm.getDate())) {
                         age--;
                     }
-                    if (age >= 20) { lateDuration = "20+"; miscFee = 1015; }
-                    else if (age >= 10) { lateDuration = "10-20"; miscFee = 515; }
+                    if (age > 20) { lateDuration = "20+"; miscFee = 1015; }
+                    else if (age > 10) { lateDuration = "10-20"; miscFee = 515; }
                     else { lateDuration = "1-10"; miscFee = 315; }
                 } else {
                     lateDuration = "";
@@ -410,8 +413,8 @@ export default function BirthRegistrationPage() {
         const savedForm = sessionStorage.getItem("birth-reg-form");
 
         if (savedStep) {
-            if (savedStep === "STATUS") {
-                setCurrentStep("IDENTITY");
+            if (savedStep === "STATUS" || savedStep === "SUBMIT") {
+                setCurrentStep("EXISTING");
             } else {
                 setCurrentStep(savedStep as Step);
             }
@@ -638,13 +641,17 @@ export default function BirthRegistrationPage() {
                         // Let it default to savedStep or IDENTITY
                     } else {
                         const savedStep = sessionStorage.getItem("birth-reg-step");
-                        if (!savedStep) {
+                        if (savedStep && savedStep !== "SUBMIT") {
+                            setCurrentStep(savedStep as Step);
+                        } else {
                             setCurrentStep("EXISTING");
                         }
                     }
                 } else {
                     const savedStep = sessionStorage.getItem("birth-reg-step");
-                    if (!savedStep && !revId) {
+                    if (savedStep && savedStep !== "SUBMIT") {
+                        setCurrentStep(savedStep as Step);
+                    } else if (!revId) {
                         setCurrentStep("IDENTITY");
                     }
                 }
@@ -704,8 +711,8 @@ export default function BirthRegistrationPage() {
                 let age = todayNorm.getFullYear() - dobNorm.getFullYear();
                 const m = todayNorm.getMonth() - dobNorm.getMonth();
                 if (m < 0 || (m === 0 && todayNorm.getDate() < dobNorm.getDate())) age--;
-                if (age >= 20) { lateDuration = "20+"; miscFee = 1015; }
-                else if (age >= 10) { lateDuration = "10-20"; miscFee = 515; }
+                if (age > 20) { lateDuration = "20+"; miscFee = 1015; }
+                else if (age > 10) { lateDuration = "10-20"; miscFee = 515; }
                 else { lateDuration = "1-10"; miscFee = 315; }
             }
 
@@ -727,9 +734,9 @@ export default function BirthRegistrationPage() {
         toast.success("File removed successfully.");
     };
 
-    const renderDocCard = (doc: { key: string; label: string }) => {
-        const file = form.files[doc.key] || null;
-        const preview = form.previews[doc.key] || null;
+    const getDocItemConfig = (key: string, label: string): DocumentItem => {
+        const file = form.files[key] || null;
+        const preview = form.previews[key] || null;
 
         const infoMap: Record<string, string> = {
             marriageCertificate: "Marriage Certificate of Parents (PDF/Image)",
@@ -742,34 +749,81 @@ export default function BirthRegistrationPage() {
             supportingEvidence2: "Supporting Evidence 2 (Baptismal, School, etc.)"
         };
 
+        return {
+            key,
+            label,
+            file,
+            previewUrl: preview,
+            infoText: infoMap[key] || "PDF / IMAGE (MAX 5MB)",
+            error: !!errors.documents,
+            onFileSelect: async (newFile) => {
+                saveDraftFile(STORAGE_KEY, key, newFile).catch(err => console.error("Failed to save draft file to IndexedDB:", err));
+                try {
+                    toast.loading("Uploading document...", { id: `file-upload-${key}` });
+                    const sanitizedKey = key.replace(/[^a-zA-Z0-9_-]/g, '_');
+                    const publicUrl = await uploadFileClientSide(newFile, sanitizedKey, userId);
+                    setForm(prev => ({ ...prev, files: { ...prev.files, [key]: newFile }, previews: { ...prev.previews, [key]: publicUrl } }));
+                    toast.success("Document uploaded!", { id: `file-upload-${key}` });
+                } catch {
+                    toast.error("Upload failed. Local copy stored.", { id: `file-upload-${key}` });
+                    setForm(prev => ({ ...prev, files: { ...prev.files, [key]: newFile }, previews: { ...prev.previews, [key]: newFile.type.startsWith("image/") ? URL.createObjectURL(newFile) : null } }));
+                }
+                setErrors(prev => { if (!prev.documents) return prev; const copy = { ...prev }; delete copy.documents; return copy; });
+            },
+            onClickUpload: () => startHandoff(key),
+            onClear: () => handleRemoveFile(key),
+            onView: () => handleViewFile(file, preview, label)
+        };
+    };
+
+    const renderReadOnlyDocCard = (key: string, label: string) => {
+        const file = form.files[key] || null;
+        const preview = form.previews[key] || null;
+        if (!file && !preview) return null;
+
         return (
-            <PremiumDocumentUpload
-                key={doc.key}
-                label={doc.label}
-                required={true}
+            <ReadOnlyDocumentPreview
+                key={key}
                 file={file}
                 previewUrl={preview}
-                infoText={infoMap[doc.key] || "PDF / IMAGE (MAX 5MB)"}
-                error={!!errors.documents}
-                onFileSelect={async (newFile) => {
-                    saveDraftFile(STORAGE_KEY, doc.key, newFile).catch(err => console.error("Failed to save draft file to IndexedDB:", err));
-                    try {
-                        toast.loading("Uploading document...", { id: `file-upload-${doc.key}` });
-                        const sanitizedKey = doc.key.replace(/[^a-zA-Z0-9_-]/g, '_');
-                        const publicUrl = await uploadFileClientSide(newFile, sanitizedKey, userId);
-                        setForm(prev => ({ ...prev, files: { ...prev.files, [doc.key]: newFile }, previews: { ...prev.previews, [doc.key]: publicUrl } }));
-                        toast.success("Document uploaded!", { id: `file-upload-${doc.key}` });
-                    } catch {
-                        toast.error("Upload failed. Local copy stored.", { id: `file-upload-${doc.key}` });
-                        setForm(prev => ({ ...prev, files: { ...prev.files, [doc.key]: newFile }, previews: { ...prev.previews, [doc.key]: newFile.type.startsWith("image/") ? URL.createObjectURL(newFile) : null } }));
-                    }
-                    setErrors(prev => { if (!prev.documents) return prev; const copy = { ...prev }; delete copy.documents; return copy; });
-                }}
-                onClickUpload={() => startHandoff(doc.key)}
-                onClear={() => handleRemoveFile(doc.key)}
-                onView={() => handleViewFile(file, preview, doc.label)}
+                label={label}
+                onView={() => handleViewFile(file, preview, label)}
             />
         );
+    };
+
+    const getRequiredDocsList = (): DocumentItem[] => {
+        const list: DocumentItem[] = [];
+        if (form.registrationType === "STANDARD") {
+            if (form.parentsMarried) {
+                list.push(getDocItemConfig("marriageCertificate", "Marriage Certificate of Parents"));
+                list.push(getDocItemConfig("municipalForm102", "Municipal Form 102 (Certificate of Live Birth)"));
+            } else {
+                list.push(getDocItemConfig("communityTaxCertificate", "Community Tax Certificate (Cedula)"));
+            }
+        } else if (form.registrationType === "LATE") {
+            list.push(getDocItemConfig("negativePSA", "Negative Certification from PSA"));
+            list.push(getDocItemConfig("colb", "Certificate of Live Birth (COLB)"));
+            list.push(getDocItemConfig("affidavitDelayed", "Affidavit of Delayed Registration"));
+            if (form.parentsMarried) {
+                list.push(getDocItemConfig("marriageCertificate", "Marriage Certificate of Parents"));
+                list.push(getDocItemConfig("municipalForm102", "Municipal Form 102"));
+            } else {
+                list.push(getDocItemConfig("communityTaxCertificate", "Community Tax Certificate (Cedula)"));
+            }
+            if (form.supportingEvidence1Type) {
+                list.push(getDocItemConfig("supportingEvidence1", `Evidence 1: ${EVIDENCE_LABELS[form.supportingEvidence1Type] || form.supportingEvidence1Type}`));
+            }
+            if (form.supportingEvidence2Type) {
+                list.push(getDocItemConfig("supportingEvidence2", `Evidence 2: ${EVIDENCE_LABELS[form.supportingEvidence2Type] || form.supportingEvidence2Type}`));
+            }
+        }
+        return list;
+    };
+
+    const hasUploadedDocs = (): boolean => {
+        const keys = ["marriageCertificate", "municipalForm102", "communityTaxCertificate", "negativePSA", "colb", "affidavitDelayed", "supportingEvidence1", "supportingEvidence2"];
+        return keys.some(k => !!form.files[k] || !!form.previews[k]);
     };
 
     const toggleSupportingEvidence = (val: string) => {
@@ -785,7 +839,28 @@ export default function BirthRegistrationPage() {
                 }
                 next = [...current, val];
             }
-            return { ...prev, supportingEvidenceTypes: next, supportingEvidence1Type: next[0] || "", supportingEvidence2Type: next[1] || "" };
+
+            // Clear files and previews for supportingEvidence when types change to avoid mismatched files
+            const nextFiles = { ...prev.files };
+            const nextPreviews = { ...prev.previews };
+
+            delete nextFiles['supportingEvidence1'];
+            delete nextPreviews['supportingEvidence1'];
+            delete nextFiles['supportingEvidence2'];
+            delete nextPreviews['supportingEvidence2'];
+
+            // Also clean up database drafts
+            saveDraftFile(STORAGE_KEY, 'supportingEvidence1', null).catch(err => console.error(err));
+            saveDraftFile(STORAGE_KEY, 'supportingEvidence2', null).catch(err => console.error(err));
+
+            return {
+                ...prev,
+                supportingEvidenceTypes: next,
+                supportingEvidence1Type: next[0] || "",
+                supportingEvidence2Type: next[1] || "",
+                files: nextFiles,
+                previews: nextPreviews
+            };
         });
     };
 
@@ -845,6 +920,31 @@ export default function BirthRegistrationPage() {
             if (typeof form.parentsMarried === 'undefined') errs.parentsMarried = "Please indicate parents' marital status.";
             if (!form.motherFirstName?.trim()) errs.motherFirstName = "Please enter mother's first name.";
             if (!form.motherLastName?.trim()) errs.motherLastName = "Please enter mother's last name.";
+        }
+
+        if (step === "UPLOAD") {
+            if (form.registrationType === "STANDARD") {
+                if (form.parentsMarried) {
+                    if (!(form.files['marriageCertificate'] || form.previews['marriageCertificate'])) errs.marriageCertificate = "Required";
+                    if (!(form.files['municipalForm102'] || form.previews['municipalForm102'])) errs.municipalForm102 = "Required";
+                } else {
+                    if (!(form.files['communityTaxCertificate'] || form.previews['communityTaxCertificate'])) errs.communityTaxCertificate = "Required";
+                }
+            } else if (form.registrationType === "LATE") {
+                if (!form.supportingEvidenceTypes || form.supportingEvidenceTypes.length < 2) {
+                    errs.supportingEvidenceTypes = "Please select two supporting evidence types.";
+                } else {
+                    const lateReqs = ['negativePSA', 'colb', 'affidavitDelayed', 'supportingEvidence1', 'supportingEvidence2', ...(form.parentsMarried ? ['marriageCertificate', 'municipalForm102'] : ['communityTaxCertificate'])];
+                    lateReqs.forEach(k => {
+                        if (!(form.files[k] || form.previews[k])) {
+                            errs[k] = "Required";
+                        }
+                    });
+                }
+            }
+            if (Object.keys(errs).length > 0) {
+                errs.documents = "Please upload all required documents.";
+            }
         }
 
         setErrors(errs);
@@ -1167,23 +1267,15 @@ export default function BirthRegistrationPage() {
                         </div>
                     </div>
                     {currentStep === "EXISTING" && (
-                        <div className="flex gap-4">
-                            <Button
-                                onClick={() => router.push("/modules/civil-registry")}
-                                className="bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 font-bold uppercase tracking-wider rounded-2xl py-6 px-6 border border-slate-200 dark:border-white/10 active:scale-95 transition-all text-xs"
-                            >
-                                <ChevronLeft className="inline-block mr-1 w-4 h-4" /> Back to Hub
-                            </Button>
-                            <Button
-                                onClick={() => {
-                                    setSelectedApplication(null);
-                                    setCurrentStep("IDENTITY");
-                                }}
-                                className="bg-theme-primary hover:bg-theme-hover text-white font-bold uppercase tracking-wider rounded-2xl py-6 px-6 shadow-lg shadow-theme-primary/20 active:scale-95 transition-all text-xs"
-                            >
-                                New Registration
-                            </Button>
-                        </div>
+                        <Button
+                            onClick={() => {
+                                setSelectedApplication(null);
+                                setCurrentStep("IDENTITY");
+                            }}
+                            className="bg-theme-primary hover:bg-theme-hover text-white font-bold uppercase tracking-wider rounded-2xl py-6 px-6 shadow-lg shadow-theme-primary/20 active:scale-95 transition-all text-xs"
+                        >
+                            New Registration
+                        </Button>
                     )}
                 </div>
 
@@ -1201,8 +1293,8 @@ export default function BirthRegistrationPage() {
                                             <div className={cn(
                                                 "w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-300 border",
                                                 isActive ? "bg-slate-100/80 dark:bg-[#0d120f]/60 border-2 border-theme-primary shadow-[0_0_20px_color-mix(in_srgb,var(--primary-theme)_35%,transparent)] scale-110" :
-                                                isDone ? "bg-slate-50/50 dark:bg-white/[0.02] border border-slate-250/80 dark:border-white/10" :
-                                                "bg-transparent border border-slate-200/40 dark:border-white/5 opacity-40"
+                                                    isDone ? "bg-slate-50/50 dark:bg-white/[0.02] border border-slate-250/80 dark:border-white/10" :
+                                                        "bg-transparent border border-slate-200/40 dark:border-white/5 opacity-40"
                                             )}>
                                                 {isDone
                                                     ? <Check className="w-5 h-5 text-theme-primary stroke-[3]" />
@@ -1237,7 +1329,7 @@ export default function BirthRegistrationPage() {
                     >
                         {/* ============ STEP: EXISTING ============ */}
                         {currentStep === "EXISTING" && (
-                            <div className="space-y-8 animate-in fade-in duration-500">
+                            <Card className="bg-white/40 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-[2.5rem] p-8 md:p-12 shadow-2xl backdrop-blur-2xl transition-all duration-300 hover:border-theme-primary/30 space-y-8 flex-1 flex flex-col">
                                 <div className="text-center mb-8">
                                     <h2 className="text-3xl md:text-5xl font-black italic uppercase tracking-tighter leading-tight">
                                         Existing <span className="text-theme-primary">Registrations</span>
@@ -1247,65 +1339,35 @@ export default function BirthRegistrationPage() {
                                     </p>
                                 </div>
 
-                                {existingRequests.length === 0 ? (
-                                    <div className="text-center py-16 bg-white/40 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-[2rem] backdrop-blur-2xl shadow-xl">
-                                        <FileWarning className="w-16 h-16 text-slate-400 dark:text-slate-600 mx-auto mb-4" />
-                                        <p className="text-slate-400 font-bold uppercase tracking-widest text-sm">No records found</p>
-                                        <p className="text-slate-500 text-xs mt-1">Submit your first birth registration by clicking New Registration.</p>
-                                    </div>
-                                ) : (
-                                    <div className="grid gap-4">
-                                        {existingRequests.map((app, idx) => {
-                                            const addData = app.additionalData as any || {};
-                                            const subName = addData.subjectName || "Birth Registration";
-                                            return (
-                                                <div
-                                                    key={app.id || idx}
-                                                    onClick={() => {
-                                                        if (app.status === "EVALUATED" || app.status === "UNPAID") {
-                                                            router.push(`/checkout/${app.id}`);
-                                                        } else {
-                                                            setSelectedApplication(app);
-                                                            setCurrentStep("SUBMIT");
-                                                        }
-                                                    }}
-                                                    className="bg-white/40 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-3xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between cursor-pointer hover:border-theme-primary/50 hover:bg-slate-50/50 dark:hover:bg-theme-primary/[0.02] transition-all duration-300 gap-4 shadow-lg backdrop-blur-md"
-                                                >
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 text-white flex items-center justify-center shrink-0">
-                                                            <Baby className="w-7 h-7" />
-                                                        </div>
-                                                        <div>
-                                                            <div className="flex items-center gap-2 flex-wrap">
-                                                                <span className="text-lg font-black tracking-tight">{subName}</span>
-                                                                <span className={cn("text-[9px] font-black uppercase py-0.5 px-2 rounded-full border",
-                                                                    app.isCancelled ? "bg-red-500/20 text-red-400 border-red-500/30" :
-                                                                    app.status === "RELEASED" ? "bg-theme-primary/20 text-theme-primary border-theme-primary/30" :
-                                                                    app.status === "FOR_REVISION" ? "bg-amber-500/20 text-amber-400 border-amber-500/30" :
-                                                                    "bg-blue-500/20 text-blue-400 border-blue-500/30"
-                                                                )}>
-                                                                    {app.isCancelled ? "CANCELLED" : app.status}
-                                                                </span>
-                                                            </div>
-                                                            <p className="text-slate-400 font-bold text-[10px] uppercase tracking-wider mt-1">
-                                                                Date: {new Date(app.createdAt).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" })}
-                                                            </p>
-                                                            <p className="text-slate-500 text-[9px] uppercase tracking-widest font-black mt-0.5">
-                                                                ID: {app.id}
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
-                                                        <span className="text-[10px] font-black uppercase text-theme-primary tracking-widest group-hover:translate-x-1 transition-transform flex items-center gap-1">
-                                                            View Request <ChevronRight size={14} />
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                )}
-                            </div>
+                                <RequestList
+                                    requests={existingRequests}
+                                    onItemClick={(app) => {
+                                        if (app.status === "EVALUATED" || app.status === "UNPAID") {
+                                            router.push(`/checkout/${app.id}`);
+                                        } else {
+                                            setSelectedApplication(app);
+                                            setCurrentStep("SUBMIT");
+                                        }
+                                    }}
+                                    emptyMessage="No records found"
+                                    emptySubMessage="Submit your first birth registration by clicking New Registration."
+                                    getSubjectName={(app) => {
+                                        const addData = app.additionalData as any || {};
+                                        return addData.subjectName || "Birth Registration";
+                                    }}
+                                />
+
+                                {/* Navigation buttons at bottom of card */}
+                                <div className="flex pt-8 mt-auto border-t border-slate-200 dark:border-white/10">
+                                    <Button
+                                        type="button"
+                                        onClick={() => router.push("/modules/civil-registry")}
+                                        className="rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 px-8 py-5 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 transition-all"
+                                    >
+                                        <ChevronLeft className="inline-block mr-1 w-4 h-4" /> Back to Hub
+                                    </Button>
+                                </div>
+                            </Card>
                         )}
 
                         {/* ============ STEP: SUBMIT (Receipt/Summary view) ============ */}
@@ -1340,9 +1402,9 @@ export default function BirthRegistrationPage() {
                                             <div className="text-right">
                                                 <span className={cn("text-[9px] font-black px-4 py-2 rounded-full uppercase tracking-widest border",
                                                     selectedApplication.isCancelled ? "bg-red-500/20 text-red-400 border-red-500/30" :
-                                                    selectedApplication.status === "RELEASED" ? "bg-theme-primary/20 text-theme-primary border-theme-primary/30" :
-                                                    selectedApplication.status === "FOR_REVISION" ? "bg-amber-500/20 text-amber-400 border-amber-500/30" :
-                                                    "bg-blue-500/20 text-blue-400 border-blue-500/30"
+                                                        selectedApplication.status === "RELEASED" ? "bg-theme-primary/20 text-theme-primary border-theme-primary/30" :
+                                                            selectedApplication.status === "FOR_REVISION" ? "bg-amber-500/20 text-amber-400 border-amber-500/30" :
+                                                                "bg-blue-500/20 text-blue-400 border-blue-500/30"
                                                 )}>
                                                     {selectedApplication.isCancelled ? "CANCELLED" : selectedApplication.status}
                                                 </span>
@@ -1461,114 +1523,45 @@ export default function BirthRegistrationPage() {
 
                         {/* ============ STEP: IDENTITY ============ */}
                         {currentStep === "IDENTITY" && (
-                            <Card className="bg-white/40 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-[2.5rem] p-8 md:p-12 shadow-2xl backdrop-blur-2xl transition-all duration-300 hover:border-theme-primary/30 space-y-8 overflow-visible">
-                                <div className="flex items-center gap-4 mb-2">
-                                    <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
-                                        <User className="w-8 h-8 text-white" />
-                                    </div>
-                                    <div>
-                                        <h2 className="text-2xl md:text-3xl font-black uppercase italic tracking-tight text-slate-900 dark:text-white">Informant Information</h2>
-                                        <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Person filing this registration</p>
-                                    </div>
-                                </div>
-
-                                {/* Informant Details (Relationship + Name fields) */}
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                    {/* Relationship */}
-                                    <div className="space-y-2 col-span-2">
-                                        <Label className="text-[10px] md:text-xs font-black uppercase tracking-wider italic text-slate-400 dark:text-slate-500">Relationship to Child <span className="text-red-500">*</span></Label>
-                                        <Select value={form.relationship} onValueChange={(val) => { setForm(prev => ({ ...prev, relationship: val })); setErrors(prev => { const c = { ...prev }; delete c.relationship; return c; }); }}>
-                                            <SelectTrigger className={cn("rounded-2xl border-slate-200 dark:border-white/10 h-12 text-slate-900 dark:text-white font-black uppercase italic bg-slate-50/20 dark:bg-black/20 backdrop-blur-md transition-all hover:border-theme-primary/45 focus:border-theme-primary focus:ring-4 focus:ring-theme-primary/15 shadow-sm", errors.relationship && "border-red-500 focus:border-red-500 focus:ring-red-500/20")}>
-                                                <SelectValue placeholder="Select relationship..." />
-                                            </SelectTrigger>
-                                            <SelectContent className="bg-white/95 dark:bg-[#0d120f]/95 border-slate-200/85 dark:border-white/10 rounded-2xl shadow-2xl backdrop-blur-2xl mt-2 max-h-60 overflow-y-auto">
-                                                {["FATHER", "MOTHER", "SELF", "GUARDIAN", "OTHER"].map(r => (
-                                                    <SelectItem key={r} value={r} className="hover:bg-theme-primary/10 dark:hover:bg-theme-primary/15 font-black uppercase text-xs tracking-wider transition-colors">{r.charAt(0) + r.slice(1).toLowerCase()}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        {errors.relationship && <p className="text-xs text-red-500 font-semibold">{errors.relationship}</p>}
-                                    </div>
-
-                                    {form.relationship === "OTHER" ? (
-                                        <div className="space-y-2 col-span-2 animate-in fade-in duration-200">
-                                            <Label className="text-[10px] md:text-xs font-black uppercase tracking-wider italic text-slate-400 dark:text-slate-500">Specify Relationship <span className="text-red-500">*</span></Label>
-                                            <Input
-                                                value={form.relationshipSpecify || ""}
-                                                onChange={e => { setForm(prev => ({ ...prev, relationshipSpecify: e.target.value })); setErrors(prev => { const c = { ...prev }; delete c.relationshipSpecify; return c; }); }}
-                                                placeholder="E.g., Grandparent, Sibling..."
-                                                className={cn("rounded-2xl border-slate-200 dark:border-white/10 h-12 text-slate-900 dark:text-white font-black uppercase italic bg-slate-50/20 dark:bg-black/20 backdrop-blur-md transition-all hover:border-theme-primary/45 focus-visible:border-theme-primary focus-visible:ring-theme-primary/25 focus-visible:ring-[3px] shadow-sm", errors.relationshipSpecify && "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/20")}
-                                            />
-                                            {errors.relationshipSpecify && <p className="text-xs text-red-500 font-semibold">{errors.relationshipSpecify}</p>}
-                                        </div>
-                                    ) : (
-                                        <div className="hidden md:block col-span-2" />
-                                    )}
-
-                                    {/* Informant Name (pre-filled, read-only) */}
-                                    {[
-                                        { field: "informantFirstName", label: "First Name" },
-                                        { field: "informantMiddleName", label: "Middle Name" },
-                                        { field: "informantLastName", label: "Last Name" },
-                                        { field: "informantSuffix", label: "Suffix" },
-                                    ].map(({ field, label }) => (
-                                        <div key={field} className="space-y-2 col-span-1">
-                                            <Label className="text-[10px] md:text-xs font-black uppercase tracking-wider italic text-slate-400 dark:text-slate-500">{label}</Label>
-                                            <Input
-                                                value={(form as any)[field] || ""}
-                                                readOnly
-                                                className="bg-slate-50/10 dark:bg-white/[0.02] border-slate-200/50 dark:border-white/5 text-slate-400 dark:text-slate-500 font-bold uppercase italic rounded-2xl h-12 cursor-not-allowed opacity-60"
-                                            />
-                                        </div>
-                                    ))}
-                                </div>
-
-                                {/* Additional Informant Details */}
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                    {[
-                                        { field: "informantBirthDate", label: "Birth Date" },
-                                        { field: "informantAge", label: "Age" },
-                                        { field: "informantCivilStatus", label: "Civil Status" },
-                                        { field: "informantCitizenship", label: "Citizenship" },
-                                    ].map(({ field, label }) => (
-                                        <div key={field} className="space-y-2">
-                                            <Label className="text-[10px] md:text-xs font-black uppercase tracking-wider italic text-slate-400 dark:text-slate-500">{label}</Label>
-                                            <Input
-                                                value={(form as any)[field] || ""}
-                                                readOnly
-                                                className="bg-slate-50/10 dark:bg-white/[0.02] border-slate-200/50 dark:border-white/5 text-slate-400 dark:text-slate-500 font-bold uppercase italic rounded-2xl h-12 cursor-not-allowed opacity-60"
-                                            />
-                                        </div>
-                                    ))}
-                                </div>
-
-                                {/* Occupation & Contact Number */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="space-y-2">
-                                        <Label className="text-[10px] md:text-xs font-black uppercase tracking-wider italic text-slate-400 dark:text-slate-500">Occupation</Label>
-                                        <Input
-                                            value={form.informantOccupation}
-                                            onChange={e => setForm(prev => ({ ...prev, informantOccupation: e.target.value }))}
-                                            className="rounded-2xl border-slate-200 dark:border-white/10 h-12 text-slate-900 dark:text-white font-black uppercase italic bg-slate-50/20 dark:bg-black/20 backdrop-blur-md transition-all hover:border-theme-primary/45 focus-visible:border-theme-primary focus-visible:ring-theme-primary/25 focus-visible:ring-[3px] shadow-sm"
-                                        />
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <Label className="text-[10px] md:text-xs font-black uppercase tracking-wider italic text-slate-400 dark:text-slate-500">Contact Number <span className="text-red-500">*</span></Label>
-                                        <Input
-                                            name="contactNumber"
-                                            value={form.contactNumber}
-                                            onChange={e => { setForm(prev => ({ ...prev, contactNumber: e.target.value })); setErrors(prev => { const c = { ...prev }; delete c.contactNumber; return c; }); }}
-                                            placeholder="E.g., 09XXXXXXXXX"
-                                            className={cn("rounded-2xl border-slate-200 dark:border-white/10 h-12 text-slate-900 dark:text-white font-black uppercase italic bg-slate-50/20 dark:bg-black/20 backdrop-blur-md transition-all hover:border-theme-primary/45 focus-visible:border-theme-primary focus-visible:ring-theme-primary/25 focus-visible:ring-[3px] shadow-sm", errors.contactNumber && "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/20")}
-                                        />
-                                        {errors.contactNumber && <p className="text-xs text-red-500 font-semibold">{errors.contactNumber}</p>}
-                                        <p className="text-[9px] md:text-[10px] font-black uppercase tracking-wider italic text-amber-500 mt-2 leading-normal">
-                                            * NOTE: PLEASE USE YOUR ACTIVE CONTACT NUMBER. THIS WILL BE USED TO CONTACT YOU REGARDING YOUR TRANSACTION.
-                                        </p>
-                                    </div>
-                                </div>
-                            </Card>
+                            <InformantInfo
+                                firstName={form.informantFirstName}
+                                middleName={form.informantMiddleName}
+                                lastName={form.informantLastName}
+                                suffix={form.informantSuffix}
+                                birthDate={form.informantBirthDate}
+                                age={form.informantAge}
+                                civilStatus={form.informantCivilStatus}
+                                citizenship={form.informantCitizenship}
+                                relationship={form.relationship}
+                                relationshipSpecify={form.relationshipSpecify}
+                                occupation={form.informantOccupation}
+                                contactNumber={form.contactNumber}
+                                onRelationshipChange={(val) => {
+                                    setForm(prev => ({ ...prev, relationship: val }));
+                                    setErrors(prev => { const c = { ...prev }; delete c.relationship; return c; });
+                                }}
+                                onRelationshipSpecifyChange={(val) => {
+                                    setForm(prev => ({ ...prev, relationshipSpecify: val }));
+                                    setErrors(prev => { const c = { ...prev }; delete c.relationshipSpecify; return c; });
+                                }}
+                                onOccupationChange={(val) => setForm(prev => ({ ...prev, informantOccupation: val }))}
+                                onContactNumberChange={(val) => {
+                                    setForm(prev => ({ ...prev, contactNumber: val }));
+                                    setErrors(prev => { const c = { ...prev }; delete c.contactNumber; return c; });
+                                }}
+                                relationshipOptions={[
+                                    { value: "FATHER", label: "Father" },
+                                    { value: "MOTHER", label: "Mother" },
+                                    { value: "SELF", label: "Self" },
+                                    { value: "GUARDIAN", label: "Guardian" },
+                                    { value: "OTHER", label: "Other" }
+                                ]}
+                                errors={errors}
+                                showErrors={true}
+                                isCardWrapped={true}
+                                cardTitle="Informant Information"
+                                cardSubtitle="Person filing this registration"
+                            />
                         )}                        {/* ============ STEP: DETAILS ============ */}
                         {currentStep === "DETAILS" && (
                             <Card className="bg-white/40 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-[2.5rem] p-8 md:p-12 shadow-2xl backdrop-blur-2xl transition-all duration-300 hover:border-theme-primary/30 space-y-8 overflow-visible">
@@ -1618,6 +1611,7 @@ export default function BirthRegistrationPage() {
                                                         {label} {field !== "middleName" && field !== "suffix" && <span className="text-red-500">*</span>}
                                                     </Label>
                                                     <Input
+                                                        id={`children.${idx}.${field}`}
                                                         name={`children.${idx}.${field}`}
                                                         value={(child as any)[field]}
                                                         onChange={e => handleChildNameChange(idx, field as any, e.target.value)}
@@ -1632,7 +1626,7 @@ export default function BirthRegistrationPage() {
                                             <div className="space-y-2">
                                                 <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Sex <span className="text-red-500">*</span></Label>
                                                 <Select value={child.sex} onValueChange={val => handleChildNameChange(idx, "sex", val)}>
-                                                    <SelectTrigger className={cn("rounded-2xl border-slate-200 dark:border-white/10 h-12 text-slate-900 dark:text-white font-black uppercase italic bg-slate-50/20 dark:bg-black/20 backdrop-blur-md transition-all hover:border-theme-primary/45 focus:border-theme-primary focus:ring-4 focus:ring-theme-primary/15 shadow-sm", errors[`children.${idx}.sex`] && "border-red-500 focus:border-red-500 focus:ring-red-500/20")}>
+                                                    <SelectTrigger id={`children.${idx}.sex`} className={cn("rounded-2xl border-slate-200 dark:border-white/10 h-12 text-slate-900 dark:text-white font-black uppercase italic bg-slate-50/20 dark:bg-black/20 backdrop-blur-md transition-all hover:border-theme-primary/45 focus:border-theme-primary focus:ring-4 focus:ring-theme-primary/15 shadow-sm", errors[`children.${idx}.sex`] && "border-red-500 focus:border-red-500 focus:ring-red-500/20")}>
                                                         <SelectValue placeholder="Select..." />
                                                     </SelectTrigger>
                                                     <SelectContent className="bg-white/95 dark:bg-[#0d120f]/95 border-slate-200/85 dark:border-white/10 rounded-2xl shadow-2xl backdrop-blur-2xl mt-2 max-h-60 overflow-y-auto">
@@ -1646,6 +1640,7 @@ export default function BirthRegistrationPage() {
                                                 <div className="space-y-2">
                                                     <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Time of Birth <span className="text-red-500">*</span></Label>
                                                     <Input
+                                                        id={`children.${idx}.birthTime`}
                                                         type="time"
                                                         value={child.birthTime}
                                                         onChange={e => handleChildNameChange(idx, "birthTime", e.target.value)}
@@ -1663,6 +1658,7 @@ export default function BirthRegistrationPage() {
                                     <div className="space-y-2">
                                         <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Date of Birth <span className="text-red-500">*</span></Label>
                                         <Input
+                                            id="dateOfEvent"
                                             type="date"
                                             name="dateOfEvent"
                                             value={form.dateOfEvent}
@@ -1684,7 +1680,7 @@ export default function BirthRegistrationPage() {
                                                 setErrors(prev => { const c = { ...prev }; delete c.placeOfEvent; return c; });
                                             }}
                                         >
-                                            <SelectTrigger className={cn("rounded-2xl border-slate-200 dark:border-white/10 h-12 text-slate-900 dark:text-white font-black uppercase italic bg-slate-50/20 dark:bg-black/20 backdrop-blur-md transition-all hover:border-theme-primary/45 focus:border-theme-primary focus:ring-4 focus:ring-theme-primary/15 shadow-sm", errors.placeOfEvent && "border-red-500 focus:border-red-500 focus:ring-red-500/20")}>
+                                            <SelectTrigger id="placeOfEvent" className={cn("rounded-2xl border-slate-200 dark:border-white/10 h-12 text-slate-900 dark:text-white font-black uppercase italic bg-slate-50/20 dark:bg-black/20 backdrop-blur-md transition-all hover:border-theme-primary/45 focus:border-theme-primary focus:ring-4 focus:ring-theme-primary/15 shadow-sm", errors.placeOfEvent && "border-red-500 focus:border-red-500 focus:ring-red-500/20")}>
                                                 <SelectValue placeholder="SELECT BARANGAY..." />
                                             </SelectTrigger>
                                             <SelectContent className="bg-white/95 dark:bg-[#0d120f]/95 border-slate-200/85 dark:border-white/10 rounded-2xl shadow-2xl backdrop-blur-2xl mt-2 max-h-60 overflow-y-auto">
@@ -1748,6 +1744,7 @@ export default function BirthRegistrationPage() {
                                             <div key={field} className="space-y-2">
                                                 <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500">{label} {req && <span className="text-red-500">*</span>}</Label>
                                                 <Input
+                                                    id={field}
                                                     name={field}
                                                     value={(form as any)[field] || ""}
                                                     onChange={e => { setForm(prev => ({ ...prev, [field]: e.target.value.toUpperCase() })); setErrors(prev => { const c = { ...prev }; delete c[field]; return c; }); }}
@@ -1772,6 +1769,7 @@ export default function BirthRegistrationPage() {
                                             <div key={field} className="space-y-2">
                                                 <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500">{label} {req && <span className="text-red-500">*</span>}</Label>
                                                 <Input
+                                                    id={field}
                                                     name={field}
                                                     value={(form as any)[field] || ""}
                                                     onChange={e => { setForm(prev => ({ ...prev, [field]: e.target.value.toUpperCase() })); setErrors(prev => { const c = { ...prev }; delete c[field]; return c; }); }}
@@ -1786,189 +1784,270 @@ export default function BirthRegistrationPage() {
                             </Card>
                         )}
 
-                        {/* ============ STEP: CONFIRM (Documents & Submit) ============ */}
-                        {currentStep === "CONFIRM" && (
-                            <div className="space-y-8">
-                                {/* Fee Summary */}
-                                <Card className="bg-white/40 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-[2.5rem] p-8 shadow-2xl backdrop-blur-2xl transition-all duration-300 hover:border-theme-primary/30 relative overflow-hidden">
-                                    <div className="flex items-center gap-3 mb-6">
-                                        <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white">
-                                            <CheckCircle2 size={18} className="stroke-[2.5]" />
-                                        </div>
-                                        <h3 className="text-sm font-black uppercase tracking-widest text-slate-800 dark:text-slate-200">Fee Summary</h3>
-                                    </div>
-                                    <div className="space-y-3 text-xs md:text-sm font-bold">
-                                        <div className="flex justify-between items-center border-b border-dashed border-slate-200 dark:border-white/10 pb-3">
-                                            <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Registration Type</span>
-                                            <span className={cn("text-xs font-black uppercase px-2.5 py-1 rounded-full border",
-                                                form.registrationType === "LATE" 
-                                                    ? "bg-amber-500/20 text-amber-400 border-amber-500/30" 
-                                                    : "bg-theme-primary/20 text-theme-primary border-theme-primary/30"
-                                            )}>
-                                                {form.registrationType === "LATE" ? `Delayed (${form.lateDuration} yrs)` : "Timely"}
-                                            </span>
-                                        </div>
-                                        <div className="flex justify-between items-center border-b border-dashed border-slate-200 dark:border-white/10 pb-3">
-                                            <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Base Fee</span>
-                                            <span className="text-slate-700 dark:text-slate-350">₱{baseFee.toFixed(2)}</span>
-                                        </div>
-                                        <div className="flex justify-between items-center border-b border-dashed border-slate-200 dark:border-white/10 pb-3">
-                                            <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Processing & e-Copy Fee</span>
-                                            <span className="text-slate-700 dark:text-slate-350">₱215.00</span>
-                                        </div>
-                                        
-                                        {/* Total Receipt Row */}
-                                        <div className="flex justify-between items-center bg-gradient-to-r from-theme-primary to-theme-secondary/85 text-white rounded-2xl p-4 md:p-6 shadow-xl shadow-theme-primary/10 mt-6">
-                                            <span className="font-black uppercase tracking-widest text-[10px] md:text-xs">Total Amount Due</span>
-                                            <span className="font-black text-xl md:text-2xl tracking-tight">₱{totalAmount.toFixed(2)}</span>
-                                        </div>
-                                    </div>
-                                </Card>
-
-                                {/* Documents */}
-                                <Card id="documents-section" className="bg-white/40 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-[2.5rem] p-8 shadow-2xl backdrop-blur-2xl transition-all duration-300 hover:border-theme-primary/30 space-y-6">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white">
-                                            <Upload size={18} className="stroke-[2.5]" />
-                                        </div>
-                                        <h3 className="text-sm font-black uppercase tracking-widest text-slate-800 dark:text-slate-200">Required Documents</h3>
-                                    </div>
-
-                                    {errors.documents && (
-                                        <div className="p-3 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-xs font-semibold text-red-700 dark:text-red-400 flex gap-2">
-                                            <AlertCircle className="w-4 h-4 shrink-0" />
-                                            {errors.documents}
-                                        </div>
-                                    )}
-
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        {form.registrationType === "STANDARD" ? (
-                                            <>
-                                                {form.parentsMarried && renderDocCard({ key: "marriageCertificate", label: "Marriage Certificate of Parents" })}
-                                                {form.parentsMarried && renderDocCard({ key: "municipalForm102", label: "Municipal Form 102 (Certificate of Live Birth)" })}
-                                                {!form.parentsMarried && renderDocCard({ key: "communityTaxCertificate", label: "Community Tax Certificate (Cedula)" })}
-                                            </>
-                                        ) : (
-                                            <>
-                                                {renderDocCard({ key: "negativePSA", label: "Negative Certification from PSA" })}
-                                                {renderDocCard({ key: "colb", label: "Certificate of Live Birth (COLB)" })}
-                                                {renderDocCard({ key: "affidavitDelayed", label: "Affidavit of Delayed Registration" })}
-                                                {form.parentsMarried && renderDocCard({ key: "marriageCertificate", label: "Marriage Certificate of Parents" })}
-                                                {form.parentsMarried && renderDocCard({ key: "municipalForm102", label: "Municipal Form 102" })}
-                                                {!form.parentsMarried && renderDocCard({ key: "communityTaxCertificate", label: "Community Tax Certificate (Cedula)" })}
-                                            </>
-                                        )}
-                                    </div>
-
-                                    {/* Supporting Evidence for Late Registration */}
-                                    {form.registrationType === "LATE" && (
-                                        <div id="supporting-evidence-section" className="space-y-4 pt-4 border-t border-slate-100 dark:border-white/10">
-                                            <div className="space-y-3">
-                                                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Supporting Evidence Types (Select 2) <span className="text-red-500">*</span></Label>
-                                                <div className="grid grid-cols-1 gap-2">
-                                                    {EVIDENCE_OPTIONS.map(opt => {
-                                                        const isChecked = form.supportingEvidenceTypes.includes(opt.value);
-                                                        const isDisabled = !isChecked && form.supportingEvidenceTypes.length >= 2;
-                                                        return (
-                                                            <label
-                                                                key={opt.value}
-                                                                className={cn(
-                                                                    "flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all",
-                                                                    isChecked ? "border-theme-primary bg-theme-primary/10" :
-                                                                    isDisabled ? "border-slate-100 dark:border-white/5 opacity-40 cursor-not-allowed" :
-                                                                    "border-slate-200 dark:border-white/10 hover:border-theme-primary/40"
-                                                                )}
-                                                            >
-                                                                <input
-                                                                    type="checkbox"
-                                                                    className="accent-theme-primary w-4 h-4 shrink-0"
-                                                                    checked={isChecked}
-                                                                    disabled={isDisabled}
-                                                                    onChange={() => toggleSupportingEvidence(opt.value)}
-                                                                />
-                                                                <span className={cn("text-xs font-semibold", isChecked ? "text-theme-primary" : "text-slate-600 dark:text-slate-300")}>
-                                                                    {opt.label}
-                                                                </span>
-                                                                {isChecked && <Check className="w-4 h-4 text-theme-primary ml-auto shrink-0" />}
-                                                            </label>
-                                                        );
-                                                    })}
+                        {/* ============ STEP: UPLOAD ============ */}
+                        {currentStep === "UPLOAD" && (
+                            <Card className="bg-white/40 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-[2.5rem] p-8 md:p-12 shadow-2xl backdrop-blur-2xl transition-all duration-300 hover:border-theme-primary/30 space-y-8 flex-1 flex flex-col">
+                                <RequiredDocuments
+                                    title="Upload Documents"
+                                    subtitle="Please upload the required files to proceed with your birth registration"
+                                    warningBanner={
+                                        form.registrationType === "LATE" ? (
+                                            <div className="p-4 rounded-2xl bg-amber-50/50 dark:bg-amber-500/5 border border-amber-200/60 dark:border-amber-500/20">
+                                                <div className="flex items-start gap-3">
+                                                    <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                                                    <div>
+                                                        <p className="text-[10px] font-black uppercase tracking-widest text-amber-700 dark:text-amber-300">Delayed Registration Evidence Required</p>
+                                                        <p className="text-[9px] text-amber-600/80 dark:text-amber-400/80 italic mt-1 leading-relaxed">
+                                                            You must select two supporting evidence documents (e.g., Baptismal Certificate, School Records, Medical Records) and upload them along with the negative PSA cert and late affidavit.
+                                                        </p>
+                                                    </div>
                                                 </div>
-                                                <p className="text-[10px] text-slate-500 font-semibold">
-                                                    Selected: {form.supportingEvidenceTypes.length}/2
-                                                </p>
                                             </div>
-
-                                            {form.supportingEvidence1Type && (
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                    {renderDocCard({ key: "supportingEvidence1", label: `Evidence 1: ${EVIDENCE_LABELS[form.supportingEvidence1Type] || form.supportingEvidence1Type}` })}
-                                                    {form.supportingEvidence2Type && renderDocCard({ key: "supportingEvidence2", label: `Evidence 2: ${EVIDENCE_LABELS[form.supportingEvidence2Type] || form.supportingEvidence2Type}` })}
+                                        ) : (
+                                            <div className="p-4 rounded-2xl bg-theme-primary/5 border border-theme-primary/10">
+                                                <div className="flex items-start gap-3">
+                                                    <CheckCircle2 className="w-4 h-4 text-theme-primary shrink-0 mt-0.5" />
+                                                    <div>
+                                                        <p className="text-[10px] font-black uppercase tracking-widest text-theme-primary">Timely Registration Uploads</p>
+                                                        <p className="text-[9px] text-slate-500 italic mt-1 leading-relaxed">
+                                                            Please upload the parent's marriage certificate and Municipal Form 102 (for married parents) or community tax certificate (for unmarried mother).
+                                                        </p>
+                                                    </div>
                                                 </div>
+                                            </div>
+                                        )
+                                    }
+                                    errorText={errors.documents}
+                                    documents={getRequiredDocsList()}
+                                >
+                                    {form.registrationType === "LATE" && (
+                                        <div id="supporting-evidence-section" className="space-y-4 p-6 rounded-[2rem] bg-slate-50/50 dark:bg-slate-800/10 border border-slate-200 dark:border-white/5 mt-6">
+                                            <div>
+                                                <h3 className="text-xs font-black uppercase tracking-widest text-slate-800 dark:text-slate-200 italic">Select Supporting Evidence Types</h3>
+                                                <p className="text-[10px] text-slate-500 italic mt-1 font-semibold">Choose exactly two (2) types of supporting documents to upload</p>
+                                            </div>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+                                                {EVIDENCE_OPTIONS.map((opt) => {
+                                                    const isSelected = form.supportingEvidenceTypes?.includes(opt.value);
+                                                    return (
+                                                        <button
+                                                            key={opt.value}
+                                                            type="button"
+                                                            onClick={() => toggleSupportingEvidence(opt.value)}
+                                                            className={cn(
+                                                                "flex items-center justify-between text-left p-4 rounded-xl border-2 transition-all font-black text-xs uppercase tracking-wide cursor-pointer",
+                                                                isSelected
+                                                                    ? "border-theme-primary bg-theme-primary/10 text-theme-primary"
+                                                                    : "border-slate-200 dark:border-white/10 text-slate-650 dark:text-slate-350 hover:border-theme-primary/30"
+                                                            )}
+                                                        >
+                                                            <span className="truncate pr-2">{opt.label}</span>
+                                                            <div className={cn(
+                                                                "w-5 h-5 rounded-md border flex items-center justify-center shrink-0 transition-colors",
+                                                                isSelected ? "bg-theme-primary border-theme-primary text-white" : "border-slate-300 dark:border-white/20 bg-white dark:bg-black/20"
+                                                            )}>
+                                                                {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                                                            </div>
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                            {errors.supportingEvidenceTypes && (
+                                                <p className="text-xs text-red-500 font-semibold mt-2">{errors.supportingEvidenceTypes}</p>
                                             )}
                                         </div>
                                     )}
-                                </Card>
+                                </RequiredDocuments>
+                            </Card>
+                        )}
 
-                                {/* Privacy Policy */}
-                                <div className="space-y-2">
-                                    <div 
-                                        onClick={() => setPolicyOpen(true)}
-                                        className={cn(
-                                            "p-6 md:p-8 rounded-3xl bg-slate-50/50 dark:bg-[#151821]/85 border transition-all flex items-center gap-6 cursor-pointer hover:bg-slate-100/30 dark:hover:bg-[#1a1e2c] shadow-lg",
-                                            errors.policyAccepted ? "border-red-500/50" : "border-slate-200/80 dark:border-[#202534]"
-                                        )}
-                                    >
-                                        <div className={cn(
-                                            "w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 transition-all",
-                                            policyAccepted 
-                                                ? "border-theme-primary bg-theme-primary text-white" 
-                                                : (errors.policyAccepted ? "border-red-500" : "border-slate-400 dark:border-slate-600 bg-transparent")
-                                        )}>
-                                            {policyAccepted && <Check className="w-5 h-5 stroke-[3]" />}
-                                        </div>
-                                        <div className="space-y-1">
-                                            <h3 className="text-xs md:text-sm font-black uppercase tracking-wider italic text-slate-800 dark:text-slate-200">
-                                                Data Privacy and Terms Agreement
+                        {/* ============ STEP: CONFIRM (Documents & Submit) ============ */}
+                        {currentStep === "CONFIRM" && (
+                            <ReviewAndSubmit
+                                title="Review & Confirm"
+                                subtitle="Please review your details and uploaded documents before final submission"
+                                policyAccepted={policyAccepted}
+                                onPolicyAcceptedChange={setPolicyAccepted}
+                                onReviewPolicy={() => setPolicyOpen(true)}
+                                showErrors={!!errors.policyAccepted}
+                                policyErrorText={errors.policyAccepted}
+                                submitting={submitting}
+                                submitLabel="Submit Application"
+                                onSubmit={handleSubmit}
+                                onBack={goPrev}
+                                backLabel="Previous"
+                                detailsCards={
+                                    <div className="grid md:grid-cols-2 gap-6">
+                                        {/* Card 1: Child Details */}
+                                        <Card className="bg-slate-50/50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/5 p-6 rounded-3xl space-y-4">
+                                            <h3 className="text-sm font-black uppercase tracking-widest text-theme-primary flex items-center gap-2">
+                                                <Baby size={16} /> Child Details
                                             </h3>
-                                            <p className="text-[9px] md:text-[10px] font-black uppercase tracking-wider italic text-slate-500 dark:text-slate-400 leading-normal">
-                                                I authorize the LGU to process my personal information in accordance with the Data Privacy Act. I confirm all info is true and correct. Click to review agreement.
-                                            </p>
-                                        </div>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="col-span-2">
+                                                    <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Full Name</span>
+                                                    <span className="text-slate-900 dark:text-white text-sm font-bold uppercase">
+                                                        {form.children.map(c => [c.firstName, c.middleName, c.lastName, c.suffix].filter(Boolean).join(" ")).join(", ")}
+                                                    </span>
+                                                </div>
+                                                <div>
+                                                    <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Gender</span>
+                                                    <span className="text-slate-900 dark:text-white text-sm font-bold uppercase">{form.children[0]?.sex || "N/A"}</span>
+                                                </div>
+                                                <div>
+                                                    <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Date of Birth</span>
+                                                    <span className="text-slate-900 dark:text-white text-sm font-bold">
+                                                        {form.dateOfEvent ? new Date(form.dateOfEvent).toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" }) : "N/A"}
+                                                    </span>
+                                                </div>
+                                                <div className="col-span-2">
+                                                    <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Place of Birth</span>
+                                                    <span className="text-slate-900 dark:text-white text-sm font-bold uppercase">{form.placeOfEvent || "N/A"}</span>
+                                                </div>
+                                            </div>
+                                        </Card>
+
+                                        {/* Card 2: Parental Info */}
+                                        <Card className="bg-slate-50/50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/5 p-6 rounded-3xl space-y-4">
+                                            <h3 className="text-sm font-black uppercase tracking-widest text-theme-primary flex items-center gap-2">
+                                                <Users size={16} /> Parents Information
+                                            </h3>
+                                            <div className="space-y-3">
+                                                <div>
+                                                    <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Father's Full Name</span>
+                                                    <span className="text-slate-900 dark:text-white text-sm font-bold uppercase">
+                                                        {[form.fatherFirstName, form.fatherMiddleName, form.fatherLastName].filter(Boolean).join(" ") || "N/A"}
+                                                    </span>
+                                                </div>
+                                                <div>
+                                                    <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Mother's Maiden Name</span>
+                                                    <span className="text-slate-900 dark:text-white text-sm font-bold uppercase">
+                                                        {[form.motherFirstName, form.motherMiddleName, form.motherLastName].filter(Boolean).join(" ") || "N/A"}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </Card>
+
+                                        {/* Card 3: Informant details */}
+                                        <Card className="bg-slate-50/50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/5 p-6 rounded-3xl space-y-4 md:col-span-2">
+                                            <h3 className="text-sm font-black uppercase tracking-widest text-theme-primary flex items-center gap-2">
+                                                <User size={16} /> Informant & Contact Info
+                                            </h3>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div>
+                                                    <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Relationship</span>
+                                                    <span className="text-slate-900 dark:text-white text-sm font-bold uppercase">
+                                                        {form.relationship === "OTHER" ? form.relationshipSpecify : form.relationship}
+                                                    </span>
+                                                </div>
+                                                <div>
+                                                    <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Contact Number</span>
+                                                    <span className="text-slate-900 dark:text-white text-sm font-bold">{form.contactNumber || "N/A"}</span>
+                                                </div>
+                                                <div className="col-span-2">
+                                                    <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Email Address</span>
+                                                    <span className="text-slate-900 dark:text-white text-sm font-bold">{form.email || "N/A"}</span>
+                                                </div>
+                                            </div>
+                                        </Card>
                                     </div>
-                                    {errors.policyAccepted && <p className="text-xs text-red-500 font-semibold mt-1 px-4">{errors.policyAccepted}</p>}
-                                </div>
-                            </div>
+                                }
+                                documentsSection={
+                                    hasUploadedDocs() ? (
+                                        <div className="bg-white/40 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-[2.5rem] p-8 shadow-2xl backdrop-blur-2xl transition-all duration-300 hover:border-theme-primary/30 space-y-6">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white">
+                                                    <Upload size={18} className="stroke-[2.5]" />
+                                                </div>
+                                                <h3 className="text-sm font-black uppercase tracking-widest text-slate-800 dark:text-slate-200">Uploaded Documents</h3>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                {form.registrationType === "STANDARD" ? (
+                                                    <>
+                                                        {form.parentsMarried && renderReadOnlyDocCard("marriageCertificate", "Marriage Certificate of Parents")}
+                                                        {form.parentsMarried && renderReadOnlyDocCard("municipalForm102", "Municipal Form 102 (Certificate of Live Birth)")}
+                                                        {!form.parentsMarried && renderReadOnlyDocCard("communityTaxCertificate", "Community Tax Certificate (Cedula)")}
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        {renderReadOnlyDocCard("negativePSA", "Negative Certification from PSA")}
+                                                        {renderReadOnlyDocCard("colb", "Certificate of Live Birth (COLB)")}
+                                                        {renderReadOnlyDocCard("affidavitDelayed", "Affidavit of Delayed Registration")}
+                                                        {form.parentsMarried && renderReadOnlyDocCard("marriageCertificate", "Marriage Certificate of Parents")}
+                                                        {form.parentsMarried && renderReadOnlyDocCard("municipalForm102", "Municipal Form 102")}
+                                                        {!form.parentsMarried && renderReadOnlyDocCard("communityTaxCertificate", "Community Tax Certificate (Cedula)")}
+                                                    </>
+                                                )}
+                                                {form.registrationType === "LATE" && (
+                                                    <>
+                                                        {form.supportingEvidence1Type && renderReadOnlyDocCard("supportingEvidence1", `Evidence 1: ${EVIDENCE_LABELS[form.supportingEvidence1Type] || form.supportingEvidence1Type}`)}
+                                                        {form.supportingEvidence2Type && renderReadOnlyDocCard("supportingEvidence2", `Evidence 2: ${EVIDENCE_LABELS[form.supportingEvidence2Type] || form.supportingEvidence2Type}`)}
+                                                    </>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ) : null
+                                }
+                                feeSummary={
+                                    <Card className="bg-white/40 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-[2.5rem] p-8 shadow-2xl backdrop-blur-2xl transition-all duration-300 hover:border-theme-primary/30 relative overflow-hidden">
+                                        <div className="flex items-center gap-3 mb-6">
+                                            <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white">
+                                                <CheckCircle2 size={18} className="stroke-[2.5]" />
+                                            </div>
+                                            <h3 className="text-sm font-black uppercase tracking-widest text-slate-800 dark:text-slate-200">Fee Summary</h3>
+                                        </div>
+                                        <div className="space-y-3 text-xs md:text-sm font-bold">
+                                            <div className="flex justify-between items-center border-b border-dashed border-slate-200 dark:border-white/10 pb-3">
+                                                <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Registration Type</span>
+                                                <span className={cn("text-xs font-black uppercase px-2.5 py-1 rounded-full border",
+                                                    form.registrationType === "LATE"
+                                                        ? "bg-amber-500/20 text-amber-400 border-amber-500/30"
+                                                        : "bg-theme-primary/20 text-theme-primary border-theme-primary/30"
+                                                )}>
+                                                    {form.registrationType === "LATE" ? `Delayed (${form.lateDuration} yrs)` : "Timely"}
+                                                </span>
+                                            </div>
+                                            <div className="flex justify-between items-center border-b border-dashed border-slate-200 dark:border-white/10 pb-3">
+                                                <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Base Fee</span>
+                                                <span className="text-slate-700 dark:text-slate-350">₱{baseFee.toFixed(2)}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center border-b border-dashed border-slate-200 dark:border-white/10 pb-3">
+                                                <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Processing & e-Copy Fee</span>
+                                                <span className="text-slate-700 dark:text-slate-350">₱215.00</span>
+                                            </div>
+
+                                            {/* Total Receipt Row */}
+                                            <div className="flex justify-between items-center bg-gradient-to-r from-theme-primary to-theme-secondary/85 text-white rounded-2xl p-4 md:p-6 shadow-xl shadow-theme-primary/10 mt-6">
+                                                <span className="font-black uppercase tracking-widest text-[10px] md:text-xs">Total Amount Due</span>
+                                                <span className="font-black text-xl md:text-2xl tracking-tight">₱{totalAmount.toFixed(2)}</span>
+                                            </div>
+                                        </div>
+                                    </Card>
+                                }
+                            />
                         )}
                     </motion.div>
                 </AnimatePresence>
 
                 {/* Navigation Buttons */}
-                {currentStep !== "EXISTING" && currentStep !== "SUBMIT" && (
+                {currentStep !== "EXISTING" && currentStep !== "SUBMIT" && currentStep !== "CONFIRM" && (
                     <div className="flex items-center justify-between mt-8 pt-6 border-t border-slate-200 dark:border-white/10">
                         <Button
                             variant="outline"
                             onClick={stepIndex === 0 ? (existingRequests.length > 0 ? () => setCurrentStep("EXISTING") : () => router.push("/modules/civil-registry")) : goPrev}
-                            className="border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 font-bold uppercase tracking-wider text-xs px-6 py-5"
+                            className="border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 font-bold uppercase tracking-wider text-xs px-6 py-5 rounded-2xl transition-all"
                         >
-                            {stepIndex === 0 ? (existingRequests.length > 0 ? "← Back to List" : "← Back to Hub") : "← Previous"}
+                            <ChevronLeft className="inline-block mr-1 w-4 h-4" />
+                            {stepIndex === 0 ? (existingRequests.length > 0 ? "Back to List" : "Back to Hub") : "Previous"}
                         </Button>
 
-                        {currentStep !== "CONFIRM" ? (
-                            <Button
-                                onClick={goNext}
-                                className="bg-theme-primary hover:bg-theme-hover text-white font-black uppercase tracking-wider text-xs px-8 py-5 shadow-lg shadow-theme-primary/20 cursor-pointer"
-                            >
-                                Next Step <ArrowRight className="w-4 h-4 ml-2" />
-                            </Button>
-                        ) : (
-                            <Button
-                                onClick={handleSubmit}
-                                disabled={submitting}
-                                className="bg-theme-primary hover:bg-theme-hover text-white font-black uppercase tracking-wider text-xs px-8 py-5 shadow-lg shadow-theme-primary/20 disabled:opacity-60 cursor-pointer"
-                            >
-                                {submitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Submitting...</> : <><Check className="w-4 h-4 mr-2" />Submit Application</>}
-                            </Button>
-                        )}
+                        <Button
+                            onClick={goNext}
+                            className="bg-theme-primary hover:bg-theme-hover text-white font-black uppercase tracking-wider text-xs px-8 py-5 shadow-lg shadow-theme-primary/20 cursor-pointer rounded-2xl transition-all"
+                        >
+                            Next Step <ChevronRight className="inline-block ml-1 w-4 h-4" />
+                        </Button>
                     </div>
                 )}
             </div>

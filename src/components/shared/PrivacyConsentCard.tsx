@@ -61,7 +61,7 @@ export const PrivacyConsentCard = forwardRef<HTMLDivElement, PrivacyConsentCardP
             <p className="text-xs font-black italic uppercase tracking-tight text-slate-900">
               Data Privacy and Terms Agreement
             </p>
-            <p className="text-[8px] text-slate-500 font-bold leading-relaxed italic uppercase tracking-widest">
+            <p className="text-[8px] text-slate-500 font-bold leading-relaxed italic uppercase tracking-widest line-clamp-2 md:line-clamp-none">
               I authorize the LGU to process my personal information in accordance with the Data Privacy Act. I confirm all info is true and correct. Click to review agreement.
             </p>
           </div>

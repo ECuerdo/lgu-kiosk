@@ -94,7 +94,8 @@ const CIVIL_REGISTRY_SERVICES: RegistryService[] = [
       ilo: "Agdawat ti endorso ti lokal a sertipiko ti pannakayanak iti PSA."
     },
     icon: <FileCheck className="w-8 h-8 text-theme-primary" />,
-    status: "COMING_SOON",
+    status: "ACTIVE",
+    path: "/modules/civil-registry/birth-psa-endorsement",
     estimatedTime: "3-5 Business Days",
     baseFee: "₱150.00",
     requirements: {
@@ -128,7 +129,8 @@ const CIVIL_REGISTRY_SERVICES: RegistryService[] = [
       ilo: "Iparehistro ti ipupusay wenno agdawat ti sertipiko ti natay."
     },
     icon: <Skull className="w-8 h-8 text-theme-primary" />,
-    status: "COMING_SOON",
+    status: "ACTIVE",
+    path: "/modules/civil-registry/death-registration",
     estimatedTime: "Same Day Processing",
     baseFee: "Free",
     requirements: {

@@ -3,7 +3,26 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+async function getAuthUserId(): Promise<string | null> {
+    try {
+        const cookieStore = await cookies();
+        const sessionCookie = cookieStore.get("next-auth.session-token") || cookieStore.get("__Secure-next-auth.session-token");
+        if (!sessionCookie) return null;
+        const session = await prisma.session.findUnique({
+            where: { sessionToken: sessionCookie.value },
+            select: { userId: true }
+        });
+        return session?.userId ?? null;
+    } catch {
+        return null;
+    }
+}
 
 // ─── Get Current Resident ────────────────────────────────────────────────────
 
@@ -66,11 +85,27 @@ export async function getTransactionById(id: string, userId: string) {
     }
 }
 
+// ─── Get Barangays List ──────────────────────────────────────────────────────
+
+export async function getBarangaysList() {
+    try {
+        const barangays = await prisma.barangayInfo.findMany({
+            select: { name: true },
+            orderBy: { name: "asc" }
+        });
+        return { success: true, data: barangays.map((b) => b.name) };
+    } catch (error) {
+        console.error("Get barangays error:", error);
+        return { success: false, data: [] as string[] };
+    }
+}
+
 // ─── Ensure Civil Registry Transaction Types Exist ───────────────────────────
 
 export async function ensureCivilRegistryTransactionTypes() {
     const types = [
-        { code: "LCR_PSA_ENDORSEMENT", name: "Birth PSA Endorsement", category: "Civil Registry", baseFee: 150 },
+        { code: "LCR_DEATH_REG", name: "Death Registration", category: "Civil Registry", baseFee: 0 },
+        { code: "LCR_DEATH", name: "Death Certificate Request (True Copy)", category: "Civil Registry", baseFee: 100 },
     ];
 
     for (const t of types) {
@@ -104,6 +139,7 @@ export async function submitCivilRegistryTransaction(formData: FormData, userId:
         const totalAmount = additionalData.totalAmount ?? transactionType.baseFee ?? 0;
 
         if (revisionId) {
+            // Update existing transaction for revision
             const existing = await prisma.transaction.findUnique({ where: { id: revisionId } });
             if (!existing || existing.userId !== userId) {
                 return { success: false, error: "Transaction not found or unauthorized" };
@@ -121,9 +157,10 @@ export async function submitCivilRegistryTransaction(formData: FormData, userId:
             });
 
             revalidatePath("/dashboard");
-            return { success: true, data: { id: revisionId } };
+            return { success: true, transactionId: revisionId, redirectUrl: "/dashboard" };
         }
 
+        // Create new transaction
         const tx = await prisma.transaction.create({
             data: {
                 userId,
@@ -136,7 +173,7 @@ export async function submitCivilRegistryTransaction(formData: FormData, userId:
         });
 
         revalidatePath("/dashboard");
-        return { success: true, data: { id: tx.id } };
+        return { success: true, transactionId: tx.id, redirectUrl: "/dashboard" };
 
     } catch (error) {
         console.error("Submit civil registry transaction error:", error);
@@ -174,64 +211,14 @@ export async function getSecureUploadUrlAction(fieldName: string, folder: string
     }
 }
 
-// ─── Get Latest Form 1A For Current User ───────────────────────────────────────
+// ─── Get Existing Death Registrations ────────────────────────────────────────
 
-export async function getLatestForm1AForCurrentUser(userId: string) {
-    try {
-        if (!userId) return { success: false, error: "Unauthorized" };
-
-        const transactions = await prisma.transaction.findMany({
-            where: {
-                userId: userId,
-                type: {
-                    code: {
-                        in: ["LCR_BIRTH", "LCR_BIRTH_REG"]
-                    }
-                }
-            },
-            include: {
-                type: true
-            },
-            orderBy: {
-                createdAt: "desc"
-            }
-        });
-
-        for (const tx of transactions) {
-            const addData = (tx.additionalData as any) || {};
-            if (addData.registryBookVerification === "FORM_1A") {
-                const docUrl = addData.scannedDocUrl || addData.verificationDocUrl || tx.eCopyUrl;
-                if (docUrl) {
-                    const snap = (tx.residentSnapshot as any) || {};
-                    return {
-                        success: true,
-                        data: {
-                            transactionId: tx.id,
-                            docUrl: docUrl,
-                            subjectName: addData.subjectName || addData.fullName || (snap.firstName ? `${snap.firstName} ${snap.lastName}` : null),
-                            dateOfBirth: addData.dateOfBirth || addData.dateOfEvent || snap.dateOfBirth || null,
-                            mothersMaidenName: addData.mothersMaidenName || addData.motherName || addData.mother || null
-                        }
-                    };
-                }
-            }
-        }
-
-        return { success: false, error: "No issued Form 1A found for the user" };
-    } catch (error) {
-        console.error("getLatestForm1AForCurrentUser error:", error);
-        return { success: false, error: "Failed to fetch latest Form 1A" };
-    }
-}
-
-// ─── Get Existing PSA Endorsement Requests ───────────────────────────────────
-
-export async function getExistingPsaEndorsements(userId: string) {
+export async function getExistingDeathRegistrations(userId: string) {
     try {
         if (!userId) return { success: false, data: [] };
 
         const type = await prisma.transactionType.findFirst({
-            where: { code: "LCR_PSA_ENDORSEMENT" }
+            where: { code: "LCR_DEATH_REG" }
         });
 
         if (!type) return { success: false, data: [] };
@@ -246,8 +233,75 @@ export async function getExistingPsaEndorsements(userId: string) {
 
         return { success: true, data: transactions };
     } catch (error) {
-        console.error("Error fetching existing PSA endorsements:", error);
+        console.error("Error fetching existing death registrations:", error);
         return { success: false, data: [] };
+    }
+}
+
+// ─── Cancel Death Registration ───────────────────────────────────────────────
+
+export async function cancelDeathRegistration(id: string, userId: string) {
+    try {
+        if (!userId) return { success: false, error: "Unauthorized" };
+
+        const tx = await prisma.transaction.findUnique({
+            where: { id }
+        });
+
+        if (!tx) return { success: false, error: "Transaction not found" };
+        if (tx.userId !== userId) return { success: false, error: "Forbidden" };
+        if (tx.isCancelled) return { success: false, error: "This request is already cancelled." };
+
+        const restrictedStatuses = [
+            "FOR_PROCESSING",
+            "EVALUATED",
+            "FOR_CLAIM",
+            "FOR_PICKING",
+            "IN_ROUTE",
+            "DELIVERED",
+            "PAID",
+            "RELEASED",
+            "REJECTED"
+        ];
+        if (restrictedStatuses.includes(tx.status)) {
+            return { success: false, error: "Cannot cancel transaction at this stage. Please contact support." };
+        }
+
+        await prisma.transaction.update({
+            where: { id },
+            data: { isCancelled: true }
+        });
+
+        revalidatePath("/modules/civil-registry/death-registration");
+        revalidatePath("/dashboard");
+        return { success: true };
+    } catch (error) {
+        console.error("Cancel transaction error:", error);
+        return { success: false, error: "Failed to cancel transaction" };
+    }
+}
+
+export async function searchResidentsAction(query: string) {
+    try {
+        if (!query || query.trim().length < 2) return { success: true, data: [] };
+
+        const normalizedQuery = query.trim();
+
+        const residents = await prisma.resident.findMany({
+            where: {
+                OR: [
+                    { firstName: { contains: normalizedQuery, mode: "insensitive" } },
+                    { middleName: { contains: normalizedQuery, mode: "insensitive" } },
+                    { lastName: { contains: normalizedQuery, mode: "insensitive" } },
+                ]
+            },
+            take: 10
+        });
+
+        return { success: true, data: residents };
+    } catch (error) {
+        console.error("Search residents error:", error);
+        return { success: false, error: "Failed to search residents" };
     }
 }
 
