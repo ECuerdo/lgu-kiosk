@@ -1010,8 +1010,8 @@ export default function DeathRegistrationPage() {
         {currentStep === "DECEASED" && (
           <Card className="bg-white/40 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-[2.5rem] p-8 md:p-12 shadow-2xl backdrop-blur-2xl transition-all duration-300 hover:border-theme-primary/30 space-y-8 overflow-visible">
             <div className="flex items-center gap-4 mb-2">
-              <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
-                <Skull className="w-8 h-8 text-white" />
+              <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center">
+                <Skull className="w-8 h-8 text-slate-900 dark:text-white" />
               </div>
               <div>
                 <h2 className="text-2xl md:text-3xl font-black uppercase italic tracking-tight text-slate-900 dark:text-white">Deceased Details</h2>
@@ -1379,7 +1379,7 @@ export default function DeathRegistrationPage() {
               (files.deathCertificate || previews.deathCertificate) ? (
                 <div className="bg-white/40 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-[2.5rem] p-8 shadow-2xl backdrop-blur-2xl transition-all duration-300 hover:border-theme-primary/30 space-y-6">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white">
+                    <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center text-slate-900 dark:text-white">
                       <Upload size={18} className="stroke-[2.5]" />
                     </div>
                     <h3 className="text-sm font-black uppercase tracking-widest text-slate-800 dark:text-slate-200">Uploaded Documents</h3>

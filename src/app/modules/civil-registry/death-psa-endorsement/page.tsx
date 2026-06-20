@@ -1,8 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/exhaustive-deps */
 "use client";
 
-
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import SecureIdleTimer from "@/components/shared/SecureIdleTimer";
 import PrivacyTermsModal from "@/components/shared/PrivacyTermsModal";
 import DocumentViewerModal from "@/components/shared/DocumentViewerModal";
@@ -18,7 +17,7 @@ import {
     CheckCircle2,
     ChevronLeft,
     Printer,
-    Baby,
+    Skull,
     Home
 } from "lucide-react";
 import Link from "next/link";
@@ -40,7 +39,7 @@ import {
     ensureCivilRegistryTransactionTypes,
     submitCivilRegistryTransaction,
     getTransactionTypes,
-    getLatestForm1AForCurrentUser,
+    getLatestForm2AForCurrentUser,
     getTransactionById,
     getSecureUploadUrlAction,
     getExistingPsaEndorsements
@@ -54,13 +53,11 @@ import ReviewAndSubmit from "../_components/review-and-submit";
 import RequiredDocuments from "../_components/required-documents";
 import ReadOnlyDocumentPreview from "../_components/read-only-document-preview";
 
-
-
 // --- UPLOAD FILE SECURELY VIA SIGNED UPLOAD URL ---
 async function uploadFileClientSide(file: File, fieldName: string, userId: string): Promise<string> {
     const fileExt = file.name.split('.').pop() || 'bin';
 
-    const res = await getSecureUploadUrlAction(fieldName, "lcr/birth_psa_endorsement", fileExt, userId);
+    const res = await getSecureUploadUrlAction(fieldName, "lcr/death_psa_endorsement", fileExt, userId);
     if (!res.success || !res.signedUrl || !res.publicUrl) {
         throw new Error(res.error || "Failed to generate secure upload destination");
     }
@@ -90,19 +87,18 @@ function getMimeType(ext: string) {
     return `application/${ext}`;
 }
 
-
-const STORAGE_KEY = "lcr_birth_psa_endorsement_draft";
+const STORAGE_KEY = "lcr_death_psa_endorsement_draft";
 
 type Step = "EXISTING" | "INFORMANT" | "SUBJECT" | "UPLOAD" | "REVIEW" | "SUBMIT";
 
 const STEPS: { id: "INFORMANT" | "SUBJECT" | "UPLOAD" | "REVIEW"; label: string; icon: any }[] = [
     { id: "INFORMANT", label: "Informant Info", icon: User },
-    { id: "SUBJECT", label: "Subject Details", icon: User },
+    { id: "SUBJECT", label: "Deceased Details", icon: Skull },
     { id: "UPLOAD", label: "Upload Documents", icon: Upload },
     { id: "REVIEW", label: "Review & Submit", icon: CheckCircle2 },
 ];
 
-export default function BirthPsaEndorsementPage() {
+export default function DeathPsaEndorsementPage() {
     const router = useRouter();
     const [userId, setUserId] = useState<string>("");
     const [currentStep, setCurrentStep] = useState<Step>("EXISTING");
@@ -122,6 +118,13 @@ export default function BirthPsaEndorsementPage() {
     const [viewerTitle, setViewerTitle] = useState("");
     const [previews, setPreviews] = useState<Record<string, string | null>>({});
 
+    const handleOpenViewer = (file: File | null, title: string, url: string | null = null) => {
+        setViewerFile(file);
+        setViewerUrl(url);
+        setViewerTitle(title);
+        setViewerOpen(true);
+    };
+
     // QR Upload Handoff State
     const [handoffToken, setHandoffToken] = useState("");
     const [handoffQrCode, setHandoffQrCode] = useState("");
@@ -129,6 +132,43 @@ export default function BirthPsaEndorsementPage() {
     const [handoffExpiresAt, setHandoffExpiresAt] = useState(0);
     const [isHandoffOpen, setIsHandoffOpen] = useState(false);
     const [isCreatingHandoff, setIsCreatingHandoff] = useState(false);
+
+    // Form State
+    const [formData, setFormData] = useState({
+        relationship: "",
+        relationshipOther: "",
+        email: "",
+        contactNumber: "",
+        informantFirstName: "",
+        informantMiddleName: "",
+        informantLastName: "",
+        informantSuffix: "",
+        informantBirthDate: "",
+        informantAge: "",
+        informantCivilStatus: "",
+        informantCitizenship: "",
+        informantOccupation: "",
+        informantAddress: "",
+        // Subject fields
+        subjectFullName: "",
+        subjectDateOfDeath: "",
+        mothersMaidenName: "",
+        fathersName: "",
+        placeOfDeath: "",
+        causeOfDeath: ""
+    });
+
+    const [files, setFiles] = useState<Record<string, File | null>>({
+        psaNegativeCert: null,
+        form2a: null,
+    });
+
+    // Privacy / Terms modal state
+    const [policyOpen, setPolicyOpen] = useState(false);
+    const [policyAccepted, setPolicyAccepted] = useState(false);
+
+    const handleAcceptPolicy = () => { setPolicyOpen(false); setPolicyAccepted(true); };
+
 
     // QR Handoff Polling Effect
     useEffect(() => {
@@ -141,10 +181,10 @@ export default function BirthPsaEndorsementPage() {
                 const result = await response.json();
                 if (result.status === "uploaded") {
                     const uploadedFiles = result.files || [];
-                    if (handoffSessionSlot === "lcr_birth_psa") {
+                    if (handoffSessionSlot === "lcr_death_psa") {
                         let updated = false;
                         const psaFile = uploadedFiles.find((f: any) => f.slot === "psaNegativeCert");
-                        const form1aFile = uploadedFiles.find((f: any) => f.slot === "form1a");
+                        const form2aFile = uploadedFiles.find((f: any) => f.slot === "form2a");
 
                         if (psaFile && previews.psaNegativeCert !== psaFile.url) {
                             const fileExt = psaFile.url.split('.').pop() || 'bin';
@@ -155,12 +195,12 @@ export default function BirthPsaEndorsementPage() {
                             updated = true;
                         }
 
-                        if (form1aFile && previews.form1a !== form1aFile.url) {
-                            const fileExt = form1aFile.url.split('.').pop() || 'bin';
-                            const fakeFile = new File([], form1aFile.fileName, { type: getMimeType(fileExt) });
-                            setFiles(prev => ({ ...prev, form1a: fakeFile }));
-                            setPreviews(prev => ({ ...prev, form1a: form1aFile.url }));
-                            saveDraftFile(STORAGE_KEY, "form1a", fakeFile).catch(err => console.error("Failed to save draft file in IndexedDB:", err));
+                        if (form2aFile && previews.form2a !== form2aFile.url) {
+                            const fileExt = form2aFile.url.split('.').pop() || 'bin';
+                            const fakeFile = new File([], form2aFile.fileName, { type: getMimeType(fileExt) });
+                            setFiles(prev => ({ ...prev, form2a: fakeFile }));
+                            setPreviews(prev => ({ ...prev, form2a: form2aFile.url }));
+                            saveDraftFile(STORAGE_KEY, "form2a", fakeFile).catch(err => console.error("Failed to save draft file in IndexedDB:", err));
                             updated = true;
                         }
 
@@ -168,7 +208,7 @@ export default function BirthPsaEndorsementPage() {
                             toast.success("Document uploaded successfully from mobile device!");
                         }
 
-                        if (psaFile && form1aFile) {
+                        if (psaFile && form2aFile) {
                             setIsHandoffOpen(false);
                             setHandoffToken("");
                             toast.success("Both documents uploaded successfully!");
@@ -236,62 +276,20 @@ export default function BirthPsaEndorsementPage() {
     const getHandoffSlotLabel = () => {
         const map: Record<string, string> = {
             lcr_psaNegativeCert: "PSA Negative Certification",
-            lcr_form1a: "Form 1A (Local Registry Copy)",
-            lcr_birth_psa: "PSA Negative & Form 1A Documents"
+            lcr_form2a: "Form 2A (Local Registry Copy)",
+            lcr_death_psa: "PSA Negative & Form 2A Documents"
         };
         return map[handoffSessionSlot] || "Document";
     };
-
-    const handleOpenViewer = (file: File | null, title: string, url: string | null = null) => {
-        setViewerFile(file);
-        setViewerUrl(url);
-        setViewerTitle(title);
-        setViewerOpen(true);
-    };
-
-    // Form State
-    const [formData, setFormData] = useState({
-        relationship: "",
-        email: "",
-        contactNumber: "",
-        informantFirstName: "",
-        informantMiddleName: "",
-        informantLastName: "",
-        informantSuffix: "",
-        informantBirthDate: "",
-        informantAge: "",
-        informantCivilStatus: "",
-        informantCitizenship: "",
-        informantOccupation: "",
-        informantAddress: "",
-        // Subject fields
-        subjectFullName: "",
-        subjectDateOfBirth: "",
-        mothersMaidenName: "",
-    });
-
-    const [files, setFiles] = useState<Record<string, File | null>>({
-        psaNegativeCert: null,
-        form1a: null,
-    });
-
-    // Privacy / Terms modal state
-    const [policyOpen, setPolicyOpen] = useState(false);
-    const [policyAccepted, setPolicyAccepted] = useState(false);
-
-    const handleAcceptPolicy = () => { setPolicyOpen(false); setPolicyAccepted(true); };
-
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const _isRestoredRef = useRef(false);
 
     // Restore progress from session storage & IndexedDB
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get("revisionId")) return;
 
-        const savedStep = sessionStorage.getItem("psa-endorsement-step");
-        const savedForm = sessionStorage.getItem("psa-endorsement-form");
-        const savedPreviews = sessionStorage.getItem("psa-endorsement-previews");
+        const savedStep = sessionStorage.getItem("death-psa-step");
+        const savedForm = sessionStorage.getItem("death-psa-form");
+        const savedPreviews = sessionStorage.getItem("death-psa-previews");
 
         if (savedStep) {
             if (savedStep === "STATUS" || savedStep === "SUBMIT") {
@@ -333,7 +331,6 @@ export default function BirthPsaEndorsementPage() {
                         ...draftFiles
                     }));
 
-                    // Also regenerate blob preview URLs for real local files
                     const newPreviews: Record<string, string | null> = {};
                     Object.entries(draftFiles).forEach(([key, fileObj]) => {
                         if (fileObj && fileObj instanceof File && fileObj.size > 0) {
@@ -360,17 +357,16 @@ export default function BirthPsaEndorsementPage() {
 
     useEffect(() => {
         if (!loading && !revisionId) {
-            sessionStorage.setItem("psa-endorsement-step", currentStep);
-            sessionStorage.setItem("psa-endorsement-form", JSON.stringify(formData));
+            sessionStorage.setItem("death-psa-step", currentStep);
+            sessionStorage.setItem("death-psa-form", JSON.stringify(formData));
 
-            // Save non-blob preview URLs (like remote Supabase URLs)
             const remotePreviews: Record<string, string> = {};
             Object.entries(previews).forEach(([key, val]) => {
                 if (val && val.startsWith("http")) {
                     remotePreviews[key] = val;
                 }
             });
-            sessionStorage.setItem("psa-endorsement-previews", JSON.stringify(remotePreviews));
+            sessionStorage.setItem("death-psa-previews", JSON.stringify(remotePreviews));
         }
     }, [currentStep, formData, previews, loading, revisionId]);
 
@@ -434,7 +430,7 @@ export default function BirthPsaEndorsementPage() {
                         const resSnapshot = txData.residentSnapshot as any || r || {};
 
                         const previews: Record<string, string | null> = {};
-                        const fileKeys = ["psaNegativeCert", "form1a"];
+                        const fileKeys = ["psaNegativeCert", "form2a"];
                         fileKeys.forEach(k => {
                             if (addData[k] && typeof addData[k] === "string" && addData[k].startsWith("http")) {
                                 previews[k] = addData[k];
@@ -443,7 +439,8 @@ export default function BirthPsaEndorsementPage() {
 
                         setFormData(prev => ({
                             ...prev,
-                            relationship: addData.relationship || prev.relationship,
+                            relationship: addData.relationship && addData.relationship.startsWith("OTHER:") ? "OTHER" : (addData.relationship || prev.relationship),
+                            relationshipOther: addData.relationship && addData.relationship.startsWith("OTHER:") ? addData.relationship.replace(/^OTHER:\s*/i, "") : "",
                             email: addData.email || resSnapshot.email || prev.email,
                             contactNumber: addData.contactNumber || resSnapshot.contactNumber || prev.contactNumber,
                             informantFirstName: addData.informantFirstName || resSnapshot.firstName || prev.informantFirstName,
@@ -457,8 +454,11 @@ export default function BirthPsaEndorsementPage() {
                             informantOccupation: addData.informantOccupation || prev.informantOccupation,
                             informantAddress: addData.informantAddress || prev.informantAddress,
                             subjectFullName: addData.subjectFullName || "",
-                            subjectDateOfBirth: addData.subjectDateOfBirth || "",
+                            subjectDateOfDeath: addData.subjectDateOfDeath || "",
                             mothersMaidenName: addData.mothersMaidenName || "",
+                            fathersName: addData.fathersName || "",
+                            placeOfDeath: addData.placeOfDeath || "",
+                            causeOfDeath: addData.causeOfDeath || ""
                         }));
                         setPreviews(previews);
                     } else {
@@ -481,7 +481,7 @@ export default function BirthPsaEndorsementPage() {
                 }
 
                 if (typesResult.success && typesResult.data) {
-                    const psaType = typesResult.data.find((t: any) => t.code === "LCR_PSA_ENDORSEMENT");
+                    const psaType = typesResult.data.find((t: any) => t.code === "LCR_DEATH_PSA_ENDORSEMENT");
                     if (psaType) {
                         setTypeId(psaType.id);
                     }
@@ -497,9 +497,9 @@ export default function BirthPsaEndorsementPage() {
                         setSelectedApplication(returnedApplication);
                         setCurrentStep("SUBMIT");
                     } else if (revId) {
-                        // Let it default to savedStep or INFORMANT
+                        // Keep steps
                     } else {
-                        const savedStep = sessionStorage.getItem("psa-endorsement-step");
+                        const savedStep = sessionStorage.getItem("death-psa-step");
                         if (savedStep && savedStep !== "SUBMIT") {
                             setCurrentStep(savedStep as Step);
                         } else {
@@ -507,7 +507,7 @@ export default function BirthPsaEndorsementPage() {
                         }
                     }
                 } else {
-                    const savedStep = sessionStorage.getItem("psa-endorsement-step");
+                    const savedStep = sessionStorage.getItem("death-psa-step");
                     if (savedStep && savedStep !== "SUBMIT") {
                         setCurrentStep(savedStep as Step);
                     } else if (!revId) {
@@ -529,74 +529,50 @@ export default function BirthPsaEndorsementPage() {
     };
 
     const handleSelectChange = (name: string, value: string) => {
-        setFormData(prev => {
-            const next = { ...prev, [name]: value };
-            if (name === "relationship") {
-                if (value === "SELF" && resident) {
-                    const sName = [resident.firstName, resident.middleName, resident.lastName].filter(Boolean).join(" ") + (resident.suffix ? " " + resident.suffix : "");
-                    const sDob = resident.dateOfBirth ? new Date(resident.dateOfBirth).toISOString().split('T')[0] : "";
-                    const mName = [resident.motherFirstName, resident.motherMiddleName, resident.motherLastName].filter(Boolean).join(" ");
+        setFormData(prev => ({ ...prev, [name]: value }));
 
-                    next.subjectFullName = sName.toUpperCase();
-                    next.subjectDateOfBirth = sDob;
-                    next.mothersMaidenName = mName.toUpperCase();
-                } else {
-                    next.subjectFullName = "";
-                    next.subjectDateOfBirth = "";
-                    next.mothersMaidenName = "";
-                }
-            }
-            return next;
-        });
-
-        if (name === "relationship" && value !== "SELF") {
-            setFiles(prev => ({ ...prev, form1a: null }));
-            saveDraftFile(STORAGE_KEY, "form1a", null).catch(err => {
-                console.error("Failed to delete draft Form 1A file from IndexedDB:", err);
+        if (name === "relationship") {
+            setFiles(prev => ({ ...prev, form2a: null }));
+            saveDraftFile(STORAGE_KEY, "form2a", null).catch(err => {
+                console.error("Failed to delete draft Form 2A file:", err);
             });
-        }
 
-        if (name === "relationship" && value === "SELF") {
             const promise = (async () => {
-                const res = await getLatestForm1AForCurrentUser(userId);
+                const res = await getLatestForm2AForCurrentUser(userId);
                 if (res.success && res.data) {
-                    const { docUrl, subjectName, dateOfBirth, mothersMaidenName } = res.data;
+                    const { docUrl, subjectName, dateOfDeath, mothersMaidenName, fathersName, placeOfDeath, causeOfDeath } = res.data;
 
                     setFormData(prev => ({
                         ...prev,
                         subjectFullName: subjectName ? subjectName.toUpperCase() : prev.subjectFullName,
-                        subjectDateOfBirth: dateOfBirth ? new Date(dateOfBirth).toISOString().split('T')[0] : prev.subjectDateOfBirth,
-                        mothersMaidenName: mothersMaidenName ? mothersMaidenName.toUpperCase() : prev.mothersMaidenName
+                        subjectDateOfDeath: dateOfDeath ? new Date(dateOfDeath).toISOString().split('T')[0] : prev.subjectDateOfDeath,
+                        mothersMaidenName: mothersMaidenName ? mothersMaidenName.toUpperCase() : prev.mothersMaidenName,
+                        fathersName: fathersName ? fathersName.toUpperCase() : prev.fathersName,
+                        placeOfDeath: placeOfDeath ? placeOfDeath.toUpperCase() : prev.placeOfDeath,
+                        causeOfDeath: causeOfDeath ? causeOfDeath.toUpperCase() : prev.causeOfDeath
                     }));
 
                     if (docUrl) {
                         try {
                             const response = await fetch(docUrl);
                             const blob = await response.blob();
-                            const filename = docUrl.split('/').pop() || "form_1a.pdf";
+                            const filename = docUrl.split('/').pop() || "form_2a.pdf";
                             const file = new File([blob], filename, { type: blob.type });
 
-                            setFiles(prev => ({
-                                ...prev,
-                                form1a: file
-                            }));
-                            setPreviews(prev => ({
-                                ...prev,
-                                form1a: docUrl
-                            }));
-
-                            await saveDraftFile(STORAGE_KEY, "form1a", file);
-                            toast.success("Latest Form 1A found and automatically attached from your transactions!");
+                            setFiles(prev => ({ ...prev, form2a: file }));
+                            setPreviews(prev => ({ ...prev, form2a: docUrl }));
+                            await saveDraftFile(STORAGE_KEY, "form2a", file);
+                            toast.success("Latest Form 2A found and automatically attached from your transactions!");
                         } catch (err) {
-                            console.error("Failed to download Form 1A file:", err);
+                            console.error("Failed to download Form 2A file:", err);
                         }
                     }
                 }
             })();
             toast.promise(promise, {
-                loading: "Checking for your latest issued Form 1A in transactions...",
-                success: "Form 1A status checked.",
-                error: "Failed to check or fetch Form 1A document."
+                loading: "Searching for your latest Form 2A record...",
+                success: "Form 2A check complete.",
+                error: "Error checking latest Form 2A."
             });
         }
     };
@@ -606,13 +582,16 @@ export default function BirthPsaEndorsementPage() {
         if (step === "INFORMANT") {
             if (!formData.relationship) errs.relationship = "Required";
             if (!formData.contactNumber) errs.contactNumber = "Required";
+            if (formData.relationship === "OTHER" && !formData.relationshipOther?.trim()) {
+                errs.relationshipSpecify = "Required";
+            }
         } else if (step === "SUBJECT") {
             if (!formData.subjectFullName?.trim()) errs.subjectFullName = "Required";
-            if (!formData.subjectDateOfBirth) errs.subjectDateOfBirth = "Required";
+            if (!formData.subjectDateOfDeath) errs.subjectDateOfDeath = "Required";
             if (!formData.mothersMaidenName?.trim()) errs.mothersMaidenName = "Required";
         } else if (step === "UPLOAD") {
             if (!files.psaNegativeCert && !previews.psaNegativeCert) errs.psaNegativeCert = "Required";
-            if (!files.form1a && !previews.form1a) errs.form1a = "Required";
+            if (!files.form2a && !previews.form2a) errs.form2a = "Required";
         }
 
         const valid = Object.keys(errs).length === 0;
@@ -623,10 +602,10 @@ export default function BirthPsaEndorsementPage() {
             if (step === "INFORMANT") {
                 toast.error("Please fill in all required informant details.");
             } else if (step === "SUBJECT") {
-                toast.error("Please fill in all subject details.");
+                toast.error("Please fill in all deceased details.");
             } else if (step === "UPLOAD") {
                 if (errs.psaNegativeCert) toast.error("Please upload PSA Negative Certification.");
-                else if (errs.form1a) toast.error("Please upload Form 1A (Local Registry Copy).");
+                else if (errs.form2a) toast.error("Please upload Form 2A (Local Registry Copy).");
             }
 
             setTimeout(() => {
@@ -665,7 +644,7 @@ export default function BirthPsaEndorsementPage() {
         try {
             const data = new FormData();
             data.append("typeId", typeId);
-            data.append("registryType", "BIRTH_PSA_ENDORSEMENT");
+            data.append("registryType", "DEATH_PSA_ENDORSEMENT");
             if (revisionId) {
                 data.append("revisionId", revisionId);
             }
@@ -685,7 +664,6 @@ export default function BirthPsaEndorsementPage() {
 
             const fileUrls: Record<string, string> = {};
 
-            // First, copy any existing public URLs from previews
             Object.entries(previews || {}).forEach(([key, url]) => {
                 if (url && typeof url === "string" && url.startsWith("http")) {
                     fileUrls[key] = url;
@@ -699,7 +677,6 @@ export default function BirthPsaEndorsementPage() {
                 const sanitizedKey = key.replace(/[^a-zA-Z0-9_-]/g, '_');
 
                 if (fileUrls[key]) {
-                    console.log(`[ClientUpload] Reusing existing public URL for ${key}:`, fileUrls[key]);
                     continue;
                 }
 
@@ -716,10 +693,16 @@ export default function BirthPsaEndorsementPage() {
             }
             toast.dismiss("upload-toast");
 
+            const finalRelationship = formData.relationship === "OTHER"
+                ? `OTHER: ${formData.relationshipOther.toUpperCase()}`
+                : formData.relationship;
+
             const additionalData = {
                 ...formData,
+                relationship: finalRelationship,
                 subjectName: formData.subjectFullName,
-                psaEndorsementFee: 200,
+                psaEndorsementFee: 150,
+                totalAmount: 150,
                 ...fileUrls
             };
             data.append("additionalData", JSON.stringify(additionalData));
@@ -727,9 +710,9 @@ export default function BirthPsaEndorsementPage() {
             const res = await submitCivilRegistryTransaction(data, userId);
 
             if (res.success && res.data) {
-                toast.success(revisionId ? "Revision resubmitted successfully!" : "Birth PSA Endorsement submitted successfully!");
-                sessionStorage.removeItem("psa-endorsement-step");
-                sessionStorage.removeItem("psa-endorsement-form");
+                toast.success(revisionId ? "Revision resubmitted successfully!" : "Death PSA Endorsement submitted successfully!");
+                sessionStorage.removeItem("death-psa-step");
+                sessionStorage.removeItem("death-psa-form");
                 await clearDraftFiles(STORAGE_KEY);
 
                 const updated = await getExistingPsaEndorsements(userId);
@@ -819,7 +802,7 @@ export default function BirthPsaEndorsementPage() {
                         <BreadcrumbSeparator />
                         <BreadcrumbItem>
                             <BreadcrumbPage className="text-xs font-black uppercase tracking-widest text-theme-primary">
-                                Birth PSA Endorsement
+                                Death PSA Endorsement
                             </BreadcrumbPage>
                         </BreadcrumbItem>
                     </BreadcrumbList>
@@ -831,7 +814,7 @@ export default function BirthPsaEndorsementPage() {
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6 px-1 md:px-0">
                     <div className="space-y-1 md:space-y-2">
                         <h1 className="text-4xl md:text-7xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter leading-none select-none">
-                            BIRTH <span className="text-theme-primary underline decoration-[6px] md:decoration-8 decoration-theme-primary/20 underline-offset-[6px] md:underline-offset-[12px]">PSA ENDORSEMENT</span>
+                            DEATH <span className="text-theme-primary underline decoration-[6px] md:decoration-8 decoration-theme-primary/20 underline-offset-[6px] md:underline-offset-[12px]">PSA ENDORSEMENT</span>
                         </h1>
                         <p className="text-[9px] md:text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-[0.4em] ml-1 md:ml-2 italic">LCR Civil Registry Request Portal</p>
                     </div>
@@ -864,7 +847,7 @@ export default function BirthPsaEndorsementPage() {
             {/* Progress Stepper */}
             {currentStep !== "EXISTING" && currentStep !== "SUBMIT" && (
                 <div className="mx-auto max-w-7xl mb-10">
-                    <div className="grid grid-cols-3 gap-1 md:gap-4 relative px-1 md:px-2">
+                    <div className="grid grid-cols-4 gap-1 md:gap-4 relative px-1 md:px-2">
                         {STEPS.map((step, idx) => {
                             const isActive = currentStep === step.id;
                             const stepIdx = STEPS.findIndex(s => s.id === currentStep);
@@ -937,11 +920,10 @@ export default function BirthPsaEndorsementPage() {
                                 emptySubMessage="Submit your first endorsement request by clicking New Endorsement Request."
                                 getSubjectName={(app) => {
                                     const addData = app.additionalData as any || {};
-                                    return addData.subjectName || "Birth PSA Endorsement";
+                                    return addData.subjectName || "Death PSA Endorsement";
                                 }}
                             />
 
-                            {/* Navigation buttons at bottom of list */}
                             <div className="flex pt-8 mt-auto border-t border-slate-200 dark:border-white/10">
                                 <Button
                                     type="button"
@@ -977,10 +959,9 @@ export default function BirthPsaEndorsementPage() {
                                     </p>
                                 </div>
 
-                                {/* Printable Receipt Frame */}
                                 <div className="max-w-2xl mx-auto w-full bg-white/40 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-[2.5rem] p-8 space-y-6 shadow-2xl relative overflow-hidden text-slate-900 dark:text-white backdrop-blur-2xl">
                                     <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
-                                        <Baby size={160} />
+                                        <Skull size={160} />
                                     </div>
 
                                     <div className="flex justify-between items-start gap-4 flex-wrap border-b border-slate-200 dark:border-white/10 pb-6">
@@ -1007,14 +988,14 @@ export default function BirthPsaEndorsementPage() {
                                                 <span className="text-xs font-black">{selectedApplication.id}</span>
                                             </div>
                                             <div>
-                                                <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Subject&apos;s Name</span>
+                                                <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Deceased Subject&apos;s Name</span>
                                                 <span className="uppercase font-black text-theme-primary">{addData.subjectName || "N/A"}</span>
                                             </div>
                                             <div>
-                                                <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Date of Birth</span>
+                                                <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Date of Death</span>
                                                 <span className="font-black">
-                                                    {addData.subjectDateOfBirth
-                                                        ? new Date(addData.subjectDateOfBirth).toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" })
+                                                    {addData.subjectDateOfDeath
+                                                        ? new Date(addData.subjectDateOfDeath).toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" })
                                                         : "N/A"}
                                                 </span>
                                             </div>
@@ -1046,7 +1027,7 @@ export default function BirthPsaEndorsementPage() {
                                     <div className="border-t border-slate-200 dark:border-white/10 pt-4">
                                         <div className="flex justify-between text-xs font-black uppercase tracking-wider">
                                             <span className="text-slate-400">Total Application Fee</span>
-                                            <span className="text-theme-primary text-sm">₱{(selectedApplication.totalAmount || 200).toFixed(2)}</span>
+                                            <span className="text-theme-primary text-sm">₱{(selectedApplication.totalAmount || 150).toFixed(2)}</span>
                                         </div>
                                     </div>
 
@@ -1063,7 +1044,7 @@ export default function BirthPsaEndorsementPage() {
                                     ) : (
                                         <div className="p-4 rounded-xl bg-theme-primary/10 border border-theme-primary/20 flex gap-3 text-xs text-theme-primary font-semibold leading-relaxed">
                                             <CheckCircle2 className="w-5 h-5 shrink-0" />
-                                            <span>Your PSA endorsement request has been received. Our Civil Registry officers will verify the uploaded negative certification and Form 1A registry copy. You will be updated of the status.</span>
+                                            <span>Your PSA endorsement request has been received. Our Civil Registry officers will verify the uploaded negative certification and Form 2A registry copy. You will be updated of the status.</span>
                                         </div>
                                     )}
                                 </div>
@@ -1086,7 +1067,7 @@ export default function BirthPsaEndorsementPage() {
                                     {selectedApplication.status === "FOR_REVISION" && !selectedApplication.isCancelled && (
                                         <Button
                                             type="button"
-                                            onClick={() => router.push(`/modules/civil-registry/birth-psa-endorsement?revisionId=${selectedApplication.id}`)}
+                                            onClick={() => router.push(`/modules/civil-registry/death-psa-endorsement?revisionId=${selectedApplication.id}`)}
                                             className="rounded-2xl bg-amber-600 hover:bg-amber-700 text-white px-8 py-5 text-xs font-black uppercase tracking-widest shadow-lg"
                                         >
                                             Revise Details
@@ -1134,22 +1115,26 @@ export default function BirthPsaEndorsementPage() {
                                 citizenship={formData.informantCitizenship}
                                 address={formData.informantAddress}
                                 relationship={formData.relationship}
+                                relationshipSpecify={formData.relationshipOther}
                                 occupation={formData.informantOccupation}
                                 contactNumber={formData.contactNumber}
                                 onRelationshipChange={(val) => handleSelectChange("relationship", val)}
+                                onRelationshipSpecifyChange={(val) => setFormData(prev => ({ ...prev, relationshipOther: val }))}
                                 onOccupationChange={(val) => setFormData(prev => ({ ...prev, informantOccupation: val }))}
                                 onContactNumberChange={(val) => setFormData(prev => ({ ...prev, contactNumber: val }))}
                                 relationshipOptions={[
-                                    { value: "SELF", label: "SELF (I AM THE SUBJECT)" },
+                                    { value: "SPOUSE", label: "SPOUSE" },
                                     { value: "CHILD", label: "CHILD" },
                                     { value: "PARENT", label: "PARENT" },
                                     { value: "SIBLING", label: "SIBLING" },
                                     { value: "RELATIVE", label: "OTHER RELATIVE" },
-                                    { value: "REPRESENTATIVE", label: "AUTHORIZED REPRESENTATIVE" }
+                                    { value: "REPRESENTATIVE", label: "AUTHORIZED REPRESENTATIVE" },
+                                    { value: "OTHER", label: "OTHER" }
                                 ]}
                                 errors={{
                                     relationship: !formData.relationship ? "Required" : "",
-                                    contactNumber: !formData.contactNumber ? "Required" : ""
+                                    contactNumber: !formData.contactNumber ? "Required" : "",
+                                    relationshipSpecify: (formData.relationship === "OTHER" && !formData.relationshipOther) ? "Required" : ""
                                 }}
                                 showErrors={showErrors}
                                 isCardWrapped={false}
@@ -1178,7 +1163,7 @@ export default function BirthPsaEndorsementPage() {
                         </motion.div>
                     )}
 
-                    {/* ===== STEP 2: SUBJECT DETAILS ===== */}
+                    {/* ===== STEP 2: DECEASED DETAILS ===== */}
                     {currentStep === "SUBJECT" && (
                         <motion.div
                             key="subject-step"
@@ -1189,22 +1174,22 @@ export default function BirthPsaEndorsementPage() {
                         >
                             <div className="space-y-2">
                                 <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase italic tracking-tight flex items-center gap-2">
-                                    Subject Details
+                                    Deceased Details
                                 </h2>
-                                <p className="text-xs text-slate-500 font-medium italic">Provide the details of the person whose birth record needs PSA endorsement</p>
+                                <p className="text-xs text-slate-500 font-medium italic">Provide the details of the deceased person whose record needs PSA endorsement</p>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="md:col-span-2 space-y-2">
-                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500 italic ml-1">Subject&apos;s Full Name <span className="text-red-500">*</span></Label>
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500 italic ml-1">Deceased&apos;s Full Name <span className="text-red-500">*</span></Label>
                                     <Input
                                         id="subjectFullName"
                                         name="subjectFullName"
-                                        placeholder="ENTER FULL NAME OF SUBJECT"
+                                        placeholder="ENTER FULL NAME OF DECEASED"
                                         value={formData.subjectFullName}
                                         onChange={handleInputChange}
                                         className={cn(
-                                            "rounded-xl bg-white dark:bg-slate-900 h-12 transition-all uppercase font-black text-slate-955 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-600",
+                                            "rounded-xl bg-white dark:bg-slate-900 h-12 transition-all uppercase font-black text-slate-950 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-600",
                                             (showErrors && !formData.subjectFullName) ? "border-2 border-red-500" : "border border-slate-200 dark:border-white/10"
                                         )}
                                     />
@@ -1213,19 +1198,19 @@ export default function BirthPsaEndorsementPage() {
                                     )}
                                 </div>
                                 <div className="space-y-2">
-                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500 italic ml-1">Date of Birth <span className="text-red-500">*</span></Label>
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500 italic ml-1">Date of Death <span className="text-red-500">*</span></Label>
                                     <Input
-                                        id="subjectDateOfBirth"
+                                        id="subjectDateOfDeath"
                                         type="date"
-                                        name="subjectDateOfBirth"
-                                        value={formData.subjectDateOfBirth}
+                                        name="subjectDateOfDeath"
+                                        value={formData.subjectDateOfDeath}
                                         onChange={handleInputChange}
                                         className={cn(
-                                            "rounded-xl bg-white dark:bg-slate-900 h-12 transition-all font-black text-slate-955 dark:text-white dark:[color-scheme:dark]",
-                                            (showErrors && !formData.subjectDateOfBirth) ? "border-2 border-red-500" : "border border-slate-200 dark:border-white/10"
+                                            "rounded-xl bg-white dark:bg-slate-900 h-12 transition-all font-black text-slate-950 dark:text-white dark:[color-scheme:dark]",
+                                            (showErrors && !formData.subjectDateOfDeath) ? "border-2 border-red-500" : "border border-slate-200 dark:border-white/10"
                                         )}
                                     />
-                                    {(showErrors && !formData.subjectDateOfBirth) && (
+                                    {(showErrors && !formData.subjectDateOfDeath) && (
                                         <p className="text-[9px] font-black text-red-500 uppercase italic tracking-widest ml-1 animate-pulse">Required</p>
                                     )}
                                 </div>
@@ -1238,13 +1223,46 @@ export default function BirthPsaEndorsementPage() {
                                         value={formData.mothersMaidenName}
                                         onChange={handleInputChange}
                                         className={cn(
-                                            "rounded-xl bg-white dark:bg-slate-900 h-12 transition-all uppercase font-black text-slate-955 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-600",
+                                            "rounded-xl bg-white dark:bg-slate-900 h-12 transition-all uppercase font-black text-slate-950 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-600",
                                             (showErrors && !formData.mothersMaidenName) ? "border-2 border-red-500" : "border border-slate-200 dark:border-white/10"
                                         )}
                                     />
                                     {(showErrors && !formData.mothersMaidenName) && (
                                         <p className="text-[9px] font-black text-red-500 uppercase italic tracking-widest ml-1 animate-pulse">Required</p>
                                     )}
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500 italic ml-1">Father&apos;s Full Name</Label>
+                                    <Input
+                                        id="fathersName"
+                                        name="fathersName"
+                                        placeholder="ENTER FATHER'S FULL NAME"
+                                        value={formData.fathersName}
+                                        onChange={handleInputChange}
+                                        className="rounded-xl bg-white dark:bg-slate-900 h-12 border border-slate-200 dark:border-white/10 transition-all uppercase font-black text-slate-950 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-600"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500 italic ml-1">Place of Death</Label>
+                                    <Input
+                                        id="placeOfDeath"
+                                        name="placeOfDeath"
+                                        placeholder="ENTER PLACE OF DEATH"
+                                        value={formData.placeOfDeath}
+                                        onChange={handleInputChange}
+                                        className="rounded-xl bg-white dark:bg-slate-900 h-12 border border-slate-200 dark:border-white/10 transition-all uppercase font-black text-slate-950 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-600"
+                                    />
+                                </div>
+                                <div className="space-y-2 md:col-span-2">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500 italic ml-1">Cause of Death</Label>
+                                    <Input
+                                        id="causeOfDeath"
+                                        name="causeOfDeath"
+                                        placeholder="ENTER CAUSE OF DEATH"
+                                        value={formData.causeOfDeath}
+                                        onChange={handleInputChange}
+                                        className="rounded-xl bg-white dark:bg-slate-900 h-12 border border-slate-200 dark:border-white/10 transition-all uppercase font-black text-slate-950 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-600"
+                                    />
                                 </div>
                             </div>
 
@@ -1302,7 +1320,7 @@ export default function BirthPsaEndorsementPage() {
                                         label: "PSA Negative Certification",
                                         file: files.psaNegativeCert,
                                         previewUrl: previews.psaNegativeCert,
-                                        infoText: "PSA Negative Certification of Birth",
+                                        infoText: "PSA Negative Certification of Death",
                                         error: showErrors && !files.psaNegativeCert && !previews.psaNegativeCert,
                                         onFileSelect: async (newFile) => {
                                             saveDraftFile(STORAGE_KEY, "psaNegativeCert", newFile).catch(err => console.error("Failed to save draft file in IndexedDB:", err));
@@ -1328,34 +1346,34 @@ export default function BirthPsaEndorsementPage() {
                                         onView: () => handleOpenViewer(files.psaNegativeCert, "PSA Negative Certification", previews.psaNegativeCert),
                                     },
                                     {
-                                        key: "form1a",
-                                        label: "Form 1A (Local Registry Copy)",
-                                        file: files.form1a,
-                                        previewUrl: previews.form1a,
-                                        infoText: "Form 1A / Local Registry Copy",
-                                        error: showErrors && !files.form1a && !previews.form1a,
+                                        key: "form2a",
+                                        label: "Form 2A (Local Registry Copy)",
+                                        file: files.form2a,
+                                        previewUrl: previews.form2a,
+                                        infoText: "Form 2A / Local Registry Copy",
+                                        error: showErrors && !files.form2a && !previews.form2a,
                                         onFileSelect: async (newFile) => {
-                                            saveDraftFile(STORAGE_KEY, "form1a", newFile).catch(err => console.error("Failed to save draft file in IndexedDB:", err));
+                                            saveDraftFile(STORAGE_KEY, "form2a", newFile).catch(err => console.error("Failed to save draft file in IndexedDB:", err));
                                             try {
-                                                toast.loading("Uploading document...", { id: "file-upload-form1a" });
-                                                const publicUrl = await uploadFileClientSide(newFile, "form1a", userId);
-                                                setFiles(prev => ({ ...prev, form1a: newFile }));
-                                                setPreviews(prev => ({ ...prev, form1a: publicUrl }));
-                                                toast.success("Document uploaded!", { id: "file-upload-form1a" });
+                                                toast.loading("Uploading document...", { id: "file-upload-form2a" });
+                                                const publicUrl = await uploadFileClientSide(newFile, "form2a", userId);
+                                                setFiles(prev => ({ ...prev, form2a: newFile }));
+                                                setPreviews(prev => ({ ...prev, form2a: publicUrl }));
+                                                toast.success("Document uploaded!", { id: "file-upload-form2a" });
                                             } catch {
-                                                toast.error("Upload failed. Local copy stored.", { id: "file-upload-form1a" });
-                                                setFiles(prev => ({ ...prev, form1a: newFile }));
-                                                setPreviews(prev => ({ ...prev, form1a: newFile.type.startsWith("image/") ? URL.createObjectURL(newFile) : null }));
+                                                toast.error("Upload failed. Local copy stored.", { id: "file-upload-form2a" });
+                                                setFiles(prev => ({ ...prev, form2a: newFile }));
+                                                setPreviews(prev => ({ ...prev, form2a: newFile.type.startsWith("image/") ? URL.createObjectURL(newFile) : null }));
                                             }
                                         },
-                                        onClickUpload: () => startHandoff("form1a"),
+                                        onClickUpload: () => startHandoff("form2a"),
                                         onClear: async () => {
-                                            setFiles(prev => ({ ...prev, form1a: null }));
-                                            setPreviews(prev => ({ ...prev, form1a: null }));
-                                            await saveDraftFile(STORAGE_KEY, "form1a", null);
-                                            toast.success("Form 1A copy removed.");
+                                            setFiles(prev => ({ ...prev, form2a: null }));
+                                            setPreviews(prev => ({ ...prev, form2a: null }));
+                                            await saveDraftFile(STORAGE_KEY, "form2a", null);
+                                            toast.success("Form 2A copy removed.");
                                         },
-                                        onView: () => handleOpenViewer(files.form1a, "Form 1A (Local Copy)", previews.form1a),
+                                        onView: () => handleOpenViewer(files.form2a, "Form 2A (Local Copy)", previews.form2a),
                                     }
                                 ]}
                             />
@@ -1383,7 +1401,7 @@ export default function BirthPsaEndorsementPage() {
                         </motion.div>
                     )}
 
-                    {/* ===== STEP 3: REVIEW & SUBMIT ===== */}
+                    {/* ===== STEP: REVIEW & SUBMIT ===== */}
                     {currentStep === "REVIEW" && (
                         <ReviewAndSubmit
                             title="Endorsement Review"
@@ -1393,8 +1411,8 @@ export default function BirthPsaEndorsementPage() {
                             onReviewPolicy={() => setPolicyOpen(true)}
                             showErrors={showErrors}
                             submitting={submitting}
-                            submitLabel="Submit Birth PSA Endorsement Application"
-                            submitDisabled={(!files.psaNegativeCert && !previews.psaNegativeCert) || (!files.form1a && !previews.form1a)}
+                            submitLabel="Submit Death PSA Endorsement Application"
+                            submitDisabled={(!files.psaNegativeCert && !previews.psaNegativeCert) || (!files.form2a && !previews.form2a)}
                             onSubmit={handleSubmit}
                             onBack={() => setCurrentStep("UPLOAD")}
                             backLabel="Modify Details"
@@ -1403,7 +1421,7 @@ export default function BirthPsaEndorsementPage() {
                                     <div className="grid grid-cols-2 gap-6">
                                         <div className="space-y-1">
                                             <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 italic">Informant</span>
-                                            <p className="font-black text-slate-900 dark:text-white italic uppercase">{resident?.firstName} {resident?.lastName} ({formData.relationship})</p>
+                                            <p className="font-black text-slate-900 dark:text-white italic uppercase">{resident?.firstName} {resident?.lastName} ({formData.relationship === "OTHER" ? formData.relationshipOther : formData.relationship})</p>
                                         </div>
                                         <div className="space-y-1">
                                             <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 italic">Contact</span>
@@ -1414,17 +1432,31 @@ export default function BirthPsaEndorsementPage() {
                                             <p className="font-black text-slate-900 dark:text-white italic uppercase">{formData.informantAddress}</p>
                                         </div>
                                         <div className="col-span-2 border-t border-slate-200 dark:border-white/5 pt-4 space-y-1">
-                                            <span className="text-[9px] font-black uppercase tracking-widest text-theme-primary italic">Subject Name (To Endorse)</span>
+                                            <span className="text-[9px] font-black uppercase tracking-widest text-theme-primary italic">Deceased Subject (To Endorse)</span>
                                             <p className="font-black text-slate-900 dark:text-white italic uppercase text-lg">{formData.subjectFullName}</p>
                                         </div>
                                         <div className="space-y-1">
-                                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 italic">Date of Birth</span>
-                                            <p className="font-black text-slate-900 dark:text-white italic">{formData.subjectDateOfBirth}</p>
+                                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 italic">Date of Death</span>
+                                            <p className="font-black text-slate-900 dark:text-white italic">{formData.subjectDateOfDeath}</p>
                                         </div>
                                         <div className="space-y-1">
                                             <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 italic">Mother&apos;s Maiden Name</span>
                                             <p className="font-black text-slate-900 dark:text-white italic uppercase">{formData.mothersMaidenName}</p>
                                         </div>
+                                        <div className="space-y-1">
+                                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 italic">Father&apos;s Name</span>
+                                            <p className="font-black text-slate-900 dark:text-white italic uppercase">{formData.fathersName || "N/A"}</p>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 italic">Place of Death</span>
+                                            <p className="font-black text-slate-900 dark:text-white italic uppercase">{formData.placeOfDeath || "N/A"}</p>
+                                        </div>
+                                        {formData.causeOfDeath && (
+                                            <div className="space-y-1 col-span-2">
+                                                <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 italic">Cause of Death</span>
+                                                <p className="font-black text-slate-900 dark:text-white italic uppercase">{formData.causeOfDeath}</p>
+                                            </div>
+                                        )}
                                     </div>
 
                                     {/* Fee Display */}
@@ -1434,13 +1466,13 @@ export default function BirthPsaEndorsementPage() {
                                             <p className="text-[9px] text-slate-400 italic mt-0.5">Standard processing fee for PSA endorsement</p>
                                         </div>
                                         <div className="text-right">
-                                            <span className="text-lg font-black text-theme-primary tracking-tight">₱200.00</span>
+                                            <span className="text-lg font-black text-theme-primary tracking-tight">₱150.00</span>
                                         </div>
                                     </div>
                                 </Card>
                             }
                             documentsSection={
-                                (files.psaNegativeCert || previews.psaNegativeCert || files.form1a || previews.form1a) ? (
+                                (files.psaNegativeCert || previews.psaNegativeCert || files.form2a || previews.form2a) ? (
                                     <div className="bg-white/40 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-[2.5rem] p-8 shadow-2xl backdrop-blur-2xl transition-all duration-300 hover:border-theme-primary/30 space-y-6">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center text-slate-900 dark:text-white">
@@ -1459,11 +1491,11 @@ export default function BirthPsaEndorsementPage() {
                                             />
 
                                             <ReadOnlyDocumentPreview
-                                                file={files.form1a}
-                                                previewUrl={previews.form1a}
-                                                label="Form 1A"
-                                                fileName={files.form1a ? files.form1a.name : previews.form1a ? "Attached from previous draft" : "Not uploaded"}
-                                                onView={() => handleOpenViewer(files.form1a, "Form 1A (Local Copy)", previews.form1a)}
+                                                file={files.form2a}
+                                                previewUrl={previews.form2a}
+                                                label="Form 2A"
+                                                fileName={files.form2a ? files.form2a.name : previews.form2a ? "Attached from previous draft" : "Not uploaded"}
+                                                onView={() => handleOpenViewer(files.form2a, "Form 2A (Local Copy)", previews.form2a)}
                                             />
                                         </div>
                                     </div>

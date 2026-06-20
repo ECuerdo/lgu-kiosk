@@ -26,6 +26,21 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning className={cn("font-sans", geist.variable)}>
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  const saved = localStorage.getItem('kiosk_font_size');
+                  if (saved) {
+                    const sizeMap = { sm: '14px', md: '16px', lg: '18px', xl: '20px' };
+                    document.documentElement.style.fontSize = sizeMap[saved] || '16px';
+                  }
+                } catch (e) {}
+              })();
+            `,
+          }}
+        />
       </head>
       <body className={cn(hideKioskCursor && "hide-kiosk-cursor")}>
         <ThemeProvider>
