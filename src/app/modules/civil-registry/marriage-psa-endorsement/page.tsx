@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/exhaustive-deps */
 "use client";
 
-
 import React, { useState, useEffect, useRef } from "react";
 import SecureIdleTimer from "@/components/shared/SecureIdleTimer";
 import PrivacyTermsModal from "@/components/shared/PrivacyTermsModal";
@@ -18,7 +17,7 @@ import {
     CheckCircle2,
     ChevronLeft,
     Printer,
-    Baby,
+    Heart,
     Home
 } from "lucide-react";
 import Link from "next/link";
@@ -40,7 +39,7 @@ import {
     ensureCivilRegistryTransactionTypes,
     submitCivilRegistryTransaction,
     getTransactionTypes,
-    getLatestForm1AForCurrentUser,
+    getLatestForm3AForCurrentUser,
     getTransactionById,
     getSecureUploadUrlAction,
     getExistingPsaEndorsements
@@ -54,13 +53,11 @@ import ReviewAndSubmit from "../_components/review-and-submit";
 import RequiredDocuments from "../_components/required-documents";
 import ReadOnlyDocumentPreview from "../_components/read-only-document-preview";
 
-
-
 // --- UPLOAD FILE SECURELY VIA SIGNED UPLOAD URL ---
 async function uploadFileClientSide(file: File, fieldName: string, userId: string): Promise<string> {
     const fileExt = file.name.split('.').pop() || 'bin';
 
-    const res = await getSecureUploadUrlAction(fieldName, "lcr/birth_psa_endorsement", fileExt, userId);
+    const res = await getSecureUploadUrlAction(fieldName, "lcr/marriage_psa_endorsement", fileExt, userId);
     if (!res.success || !res.signedUrl || !res.publicUrl) {
         throw new Error(res.error || "Failed to generate secure upload destination");
     }
@@ -90,19 +87,28 @@ function getMimeType(ext: string) {
     return `application/${ext}`;
 }
 
-
-const STORAGE_KEY = "lcr_birth_psa_endorsement_draft";
+const STORAGE_KEY = "lcr_marriage_psa_endorsement_draft";
 
 type Step = "EXISTING" | "INFORMANT" | "SUBJECT" | "UPLOAD" | "REVIEW" | "SUBMIT";
 
 const STEPS: { id: "INFORMANT" | "SUBJECT" | "UPLOAD" | "REVIEW"; label: string; icon: any }[] = [
     { id: "INFORMANT", label: "Informant Info", icon: User },
-    { id: "SUBJECT", label: "Subject Details", icon: User },
+    { id: "SUBJECT", label: "Marriage Details", icon: Heart },
     { id: "UPLOAD", label: "Upload Documents", icon: Upload },
     { id: "REVIEW", label: "Review & Submit", icon: CheckCircle2 },
 ];
 
-export default function BirthPsaEndorsementPage() {
+const RELATIONSHIP_OPTIONS = [
+    { value: "SPOUSE", label: "Spouse (Asawa)" },
+    { value: "SON", label: "Son (Anak na Lalaki)" },
+    { value: "DAUGHTER", label: "Daughter (Anak na Babae)" },
+    { value: "MOTHER", label: "Mother (Ina)" },
+    { value: "FATHER", label: "Father (Ama)" },
+    { value: "SIBLING", label: "Sibling (Kapatid)" },
+    { value: "OTHER", label: "Other (Iba pa)" }
+];
+
+export default function MarriagePsaEndorsementPage() {
     const router = useRouter();
     const [userId, setUserId] = useState<string>("");
     const [currentStep, setCurrentStep] = useState<Step>("EXISTING");
@@ -122,6 +128,13 @@ export default function BirthPsaEndorsementPage() {
     const [viewerTitle, setViewerTitle] = useState("");
     const [previews, setPreviews] = useState<Record<string, string | null>>({});
 
+    const handleOpenViewer = (file: File | null, title: string, url: string | null = null) => {
+        setViewerFile(file);
+        setViewerUrl(url);
+        setViewerTitle(title);
+        setViewerOpen(true);
+    };
+
     // QR Upload Handoff State
     const [handoffToken, setHandoffToken] = useState("");
     const [handoffQrCode, setHandoffQrCode] = useState("");
@@ -129,6 +142,43 @@ export default function BirthPsaEndorsementPage() {
     const [handoffExpiresAt, setHandoffExpiresAt] = useState(0);
     const [isHandoffOpen, setIsHandoffOpen] = useState(false);
     const [isCreatingHandoff, setIsCreatingHandoff] = useState(false);
+
+    // Form State
+    const [formData, setFormData] = useState({
+        relationship: "",
+        relationshipOther: "",
+        email: "",
+        contactNumber: "",
+        informantFirstName: "",
+        informantMiddleName: "",
+        informantLastName: "",
+        informantSuffix: "",
+        informantBirthDate: "",
+        informantAge: "",
+        informantCivilStatus: "",
+        informantCitizenship: "",
+        informantOccupation: "",
+        informantAddress: "",
+        // Subject fields
+        husbandFullName: "",
+        wifeFullName: "",
+        dateOfMarriage: "",
+        placeOfMarriage: "",
+    });
+
+    const [files, setFiles] = useState<Record<string, File | null>>({
+        psaNegativeCert: null,
+        form3a: null,
+    });
+
+    // Privacy / Terms modal state
+    const [policyOpen, setPolicyOpen] = useState(false);
+    const [policyAccepted, setPolicyAccepted] = useState(false);
+
+    const handleAcceptPolicy = () => { setPolicyOpen(false); setPolicyAccepted(true); };
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const _isRestoredRef = useRef(false);
 
     // QR Handoff Polling Effect
     useEffect(() => {
@@ -141,10 +191,10 @@ export default function BirthPsaEndorsementPage() {
                 const result = await response.json();
                 if (result.status === "uploaded") {
                     const uploadedFiles = result.files || [];
-                    if (handoffSessionSlot === "lcr_birth_psa") {
+                    if (handoffSessionSlot === "lcr_marriage_psa") {
                         let updated = false;
                         const psaFile = uploadedFiles.find((f: any) => f.slot === "psaNegativeCert");
-                        const form1aFile = uploadedFiles.find((f: any) => f.slot === "form1a");
+                        const form3aFile = uploadedFiles.find((f: any) => f.slot === "form3a");
 
                         if (psaFile && previews.psaNegativeCert !== psaFile.url) {
                             const fileExt = psaFile.url.split('.').pop() || 'bin';
@@ -155,12 +205,12 @@ export default function BirthPsaEndorsementPage() {
                             updated = true;
                         }
 
-                        if (form1aFile && previews.form1a !== form1aFile.url) {
-                            const fileExt = form1aFile.url.split('.').pop() || 'bin';
-                            const fakeFile = new File([], form1aFile.fileName, { type: getMimeType(fileExt) });
-                            setFiles(prev => ({ ...prev, form1a: fakeFile }));
-                            setPreviews(prev => ({ ...prev, form1a: form1aFile.url }));
-                            saveDraftFile(STORAGE_KEY, "form1a", fakeFile).catch(err => console.error("Failed to save draft file in IndexedDB:", err));
+                        if (form3aFile && previews.form3a !== form3aFile.url) {
+                            const fileExt = form3aFile.url.split('.').pop() || 'bin';
+                            const fakeFile = new File([], form3aFile.fileName, { type: getMimeType(fileExt) });
+                            setFiles(prev => ({ ...prev, form3a: fakeFile }));
+                            setPreviews(prev => ({ ...prev, form3a: form3aFile.url }));
+                            saveDraftFile(STORAGE_KEY, "form3a", fakeFile).catch(err => console.error("Failed to save draft file in IndexedDB:", err));
                             updated = true;
                         }
 
@@ -168,7 +218,7 @@ export default function BirthPsaEndorsementPage() {
                             toast.success("Document uploaded successfully from mobile device!");
                         }
 
-                        if (psaFile && form1aFile) {
+                        if (psaFile && form3aFile) {
                             setIsHandoffOpen(false);
                             setHandoffToken("");
                             toast.success("Both documents uploaded successfully!");
@@ -236,62 +286,20 @@ export default function BirthPsaEndorsementPage() {
     const getHandoffSlotLabel = () => {
         const map: Record<string, string> = {
             lcr_psaNegativeCert: "PSA Negative Certification",
-            lcr_form1a: "Form 1A (Local Registry Copy)",
-            lcr_birth_psa: "PSA Negative & Form 1A Documents"
+            lcr_form3a: "Form 3A (Local Registry Copy)",
+            lcr_marriage_psa: "PSA Negative & Form 3A Documents"
         };
         return map[handoffSessionSlot] || "Document";
     };
-
-    const handleOpenViewer = (file: File | null, title: string, url: string | null = null) => {
-        setViewerFile(file);
-        setViewerUrl(url);
-        setViewerTitle(title);
-        setViewerOpen(true);
-    };
-
-    // Form State
-    const [formData, setFormData] = useState({
-        relationship: "",
-        email: "",
-        contactNumber: "",
-        informantFirstName: "",
-        informantMiddleName: "",
-        informantLastName: "",
-        informantSuffix: "",
-        informantBirthDate: "",
-        informantAge: "",
-        informantCivilStatus: "",
-        informantCitizenship: "",
-        informantOccupation: "",
-        informantAddress: "",
-        // Subject fields
-        subjectFullName: "",
-        subjectDateOfBirth: "",
-        mothersMaidenName: "",
-    });
-
-    const [files, setFiles] = useState<Record<string, File | null>>({
-        psaNegativeCert: null,
-        form1a: null,
-    });
-
-    // Privacy / Terms modal state
-    const [policyOpen, setPolicyOpen] = useState(false);
-    const [policyAccepted, setPolicyAccepted] = useState(false);
-
-    const handleAcceptPolicy = () => { setPolicyOpen(false); setPolicyAccepted(true); };
-
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const _isRestoredRef = useRef(false);
 
     // Restore progress from session storage & IndexedDB
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get("revisionId")) return;
 
-        const savedStep = sessionStorage.getItem("psa-endorsement-step");
-        const savedForm = sessionStorage.getItem("psa-endorsement-form");
-        const savedPreviews = sessionStorage.getItem("psa-endorsement-previews");
+        const savedStep = sessionStorage.getItem("marriage-psa-step");
+        const savedForm = sessionStorage.getItem("marriage-psa-form");
+        const savedPreviews = sessionStorage.getItem("marriage-psa-previews");
 
         if (savedStep) {
             if (savedStep === "STATUS" || savedStep === "SUBMIT") {
@@ -333,7 +341,6 @@ export default function BirthPsaEndorsementPage() {
                         ...draftFiles
                     }));
 
-                    // Also regenerate blob preview URLs for real local files
                     const newPreviews: Record<string, string | null> = {};
                     Object.entries(draftFiles).forEach(([key, fileObj]) => {
                         if (fileObj && fileObj instanceof File && fileObj.size > 0) {
@@ -360,17 +367,16 @@ export default function BirthPsaEndorsementPage() {
 
     useEffect(() => {
         if (!loading && !revisionId) {
-            sessionStorage.setItem("psa-endorsement-step", currentStep);
-            sessionStorage.setItem("psa-endorsement-form", JSON.stringify(formData));
+            sessionStorage.setItem("marriage-psa-step", currentStep);
+            sessionStorage.setItem("marriage-psa-form", JSON.stringify(formData));
 
-            // Save non-blob preview URLs (like remote Supabase URLs)
             const remotePreviews: Record<string, string> = {};
             Object.entries(previews).forEach(([key, val]) => {
                 if (val && val.startsWith("http")) {
                     remotePreviews[key] = val;
                 }
             });
-            sessionStorage.setItem("psa-endorsement-previews", JSON.stringify(remotePreviews));
+            sessionStorage.setItem("marriage-psa-previews", JSON.stringify(remotePreviews));
         }
     }, [currentStep, formData, previews, loading, revisionId]);
 
@@ -434,7 +440,7 @@ export default function BirthPsaEndorsementPage() {
                         const resSnapshot = txData.residentSnapshot as any || r || {};
 
                         const previews: Record<string, string | null> = {};
-                        const fileKeys = ["psaNegativeCert", "form1a"];
+                        const fileKeys = ["psaNegativeCert", "form3a"];
                         fileKeys.forEach(k => {
                             if (addData[k] && typeof addData[k] === "string" && addData[k].startsWith("http")) {
                                 previews[k] = addData[k];
@@ -443,7 +449,8 @@ export default function BirthPsaEndorsementPage() {
 
                         setFormData(prev => ({
                             ...prev,
-                            relationship: addData.relationship || prev.relationship,
+                            relationship: addData.relationship && addData.relationship.startsWith("OTHER:") ? "OTHER" : (addData.relationship || prev.relationship),
+                            relationshipOther: addData.relationship && addData.relationship.startsWith("OTHER:") ? addData.relationship.replace(/^OTHER:\s*/i, "") : "",
                             email: addData.email || resSnapshot.email || prev.email,
                             contactNumber: addData.contactNumber || resSnapshot.contactNumber || prev.contactNumber,
                             informantFirstName: addData.informantFirstName || resSnapshot.firstName || prev.informantFirstName,
@@ -456,9 +463,10 @@ export default function BirthPsaEndorsementPage() {
                             informantCitizenship: addData.informantCitizenship || prev.informantCitizenship,
                             informantOccupation: addData.informantOccupation || prev.informantOccupation,
                             informantAddress: addData.informantAddress || prev.informantAddress,
-                            subjectFullName: addData.subjectFullName || "",
-                            subjectDateOfBirth: addData.subjectDateOfBirth || "",
-                            mothersMaidenName: addData.mothersMaidenName || "",
+                            husbandFullName: addData.husbandFullName || "",
+                            wifeFullName: addData.wifeFullName || "",
+                            dateOfMarriage: addData.dateOfMarriage || "",
+                            placeOfMarriage: addData.placeOfMarriage || "",
                         }));
                         setPreviews(previews);
                     } else {
@@ -481,7 +489,7 @@ export default function BirthPsaEndorsementPage() {
                 }
 
                 if (typesResult.success && typesResult.data) {
-                    const psaType = typesResult.data.find((t: any) => t.code === "LCR_PSA_ENDORSEMENT");
+                    const psaType = typesResult.data.find((t: any) => t.code === "LCR_MARRIAGE_PSA_ENDORSEMENT");
                     if (psaType) {
                         setTypeId(psaType.id);
                     }
@@ -497,9 +505,9 @@ export default function BirthPsaEndorsementPage() {
                         setSelectedApplication(returnedApplication);
                         setCurrentStep("SUBMIT");
                     } else if (revId) {
-                        // Let it default to savedStep or INFORMANT
+                        // Let it default
                     } else {
-                        const savedStep = sessionStorage.getItem("psa-endorsement-step");
+                        const savedStep = sessionStorage.getItem("marriage-psa-step");
                         if (savedStep && savedStep !== "SUBMIT") {
                             setCurrentStep(savedStep as Step);
                         } else {
@@ -507,7 +515,7 @@ export default function BirthPsaEndorsementPage() {
                         }
                     }
                 } else {
-                    const savedStep = sessionStorage.getItem("psa-endorsement-step");
+                    const savedStep = sessionStorage.getItem("marriage-psa-step");
                     if (savedStep && savedStep !== "SUBMIT") {
                         setCurrentStep(savedStep as Step);
                     } else if (!revId) {
@@ -529,74 +537,48 @@ export default function BirthPsaEndorsementPage() {
     };
 
     const handleSelectChange = (name: string, value: string) => {
-        setFormData(prev => {
-            const next = { ...prev, [name]: value };
-            if (name === "relationship") {
-                if (value === "SELF" && resident) {
-                    const sName = [resident.firstName, resident.middleName, resident.lastName].filter(Boolean).join(" ") + (resident.suffix ? " " + resident.suffix : "");
-                    const sDob = resident.dateOfBirth ? new Date(resident.dateOfBirth).toISOString().split('T')[0] : "";
-                    const mName = [resident.motherFirstName, resident.motherMiddleName, resident.motherLastName].filter(Boolean).join(" ");
+        setFormData(prev => ({ ...prev, [name]: value }));
 
-                    next.subjectFullName = sName.toUpperCase();
-                    next.subjectDateOfBirth = sDob;
-                    next.mothersMaidenName = mName.toUpperCase();
-                } else {
-                    next.subjectFullName = "";
-                    next.subjectDateOfBirth = "";
-                    next.mothersMaidenName = "";
-                }
-            }
-            return next;
-        });
-
-        if (name === "relationship" && value !== "SELF") {
-            setFiles(prev => ({ ...prev, form1a: null }));
-            saveDraftFile(STORAGE_KEY, "form1a", null).catch(err => {
-                console.error("Failed to delete draft Form 1A file from IndexedDB:", err);
+        if (name === "relationship") {
+            setFiles(prev => ({ ...prev, form3a: null }));
+            saveDraftFile(STORAGE_KEY, "form3a", null).catch(err => {
+                console.error("Failed to delete draft Form 3A file from IndexedDB:", err);
             });
-        }
 
-        if (name === "relationship" && value === "SELF") {
             const promise = (async () => {
-                const res = await getLatestForm1AForCurrentUser(userId);
+                const res = await getLatestForm3AForCurrentUser(userId);
                 if (res.success && res.data) {
-                    const { docUrl, subjectName, dateOfBirth, mothersMaidenName } = res.data;
+                    const { docUrl, husbandName, wifeName, dateOfMarriage, placeOfMarriage } = res.data;
 
                     setFormData(prev => ({
                         ...prev,
-                        subjectFullName: subjectName ? subjectName.toUpperCase() : prev.subjectFullName,
-                        subjectDateOfBirth: dateOfBirth ? new Date(dateOfBirth).toISOString().split('T')[0] : prev.subjectDateOfBirth,
-                        mothersMaidenName: mothersMaidenName ? mothersMaidenName.toUpperCase() : prev.mothersMaidenName
+                        husbandFullName: husbandName ? husbandName.toUpperCase() : prev.husbandFullName,
+                        wifeFullName: wifeName ? wifeName.toUpperCase() : prev.wifeFullName,
+                        dateOfMarriage: dateOfMarriage ? new Date(dateOfMarriage).toISOString().split('T')[0] : prev.dateOfMarriage,
+                        placeOfMarriage: placeOfMarriage ? placeOfMarriage.toUpperCase() : prev.placeOfMarriage
                     }));
 
                     if (docUrl) {
                         try {
                             const response = await fetch(docUrl);
                             const blob = await response.blob();
-                            const filename = docUrl.split('/').pop() || "form_1a.pdf";
+                            const filename = docUrl.split('/').pop() || "form_3a.pdf";
                             const file = new File([blob], filename, { type: blob.type });
 
-                            setFiles(prev => ({
-                                ...prev,
-                                form1a: file
-                            }));
-                            setPreviews(prev => ({
-                                ...prev,
-                                form1a: docUrl
-                            }));
-
-                            await saveDraftFile(STORAGE_KEY, "form1a", file);
-                            toast.success("Latest Form 1A found and automatically attached from your transactions!");
+                            setFiles(prev => ({ ...prev, form3a: file }));
+                            setPreviews(prev => ({ ...prev, form3a: docUrl }));
+                            await saveDraftFile(STORAGE_KEY, "form3a", file);
+                            toast.success("Latest Form 3A found and automatically attached from your transactions!");
                         } catch (err) {
-                            console.error("Failed to download Form 1A file:", err);
+                            console.error("Failed to download Form 3A file:", err);
                         }
                     }
                 }
             })();
             toast.promise(promise, {
-                loading: "Checking for your latest issued Form 1A in transactions...",
-                success: "Form 1A status checked.",
-                error: "Failed to check or fetch Form 1A document."
+                loading: "Checking for your latest issued Form 3A in transactions...",
+                success: "Form 3A status checked.",
+                error: "Failed to check or fetch Form 3A document."
             });
         }
     };
@@ -606,13 +588,17 @@ export default function BirthPsaEndorsementPage() {
         if (step === "INFORMANT") {
             if (!formData.relationship) errs.relationship = "Required";
             if (!formData.contactNumber) errs.contactNumber = "Required";
+            if (formData.relationship === "OTHER" && !formData.relationshipOther?.trim()) {
+                errs.relationshipSpecify = "Required";
+            }
         } else if (step === "SUBJECT") {
-            if (!formData.subjectFullName?.trim()) errs.subjectFullName = "Required";
-            if (!formData.subjectDateOfBirth) errs.subjectDateOfBirth = "Required";
-            if (!formData.mothersMaidenName?.trim()) errs.mothersMaidenName = "Required";
+            if (!formData.husbandFullName?.trim()) errs.husbandFullName = "Required";
+            if (!formData.wifeFullName?.trim()) errs.wifeFullName = "Required";
+            if (!formData.dateOfMarriage) errs.dateOfMarriage = "Required";
+            if (!formData.placeOfMarriage?.trim()) errs.placeOfMarriage = "Required";
         } else if (step === "UPLOAD") {
             if (!files.psaNegativeCert && !previews.psaNegativeCert) errs.psaNegativeCert = "Required";
-            if (!files.form1a && !previews.form1a) errs.form1a = "Required";
+            if (!files.form3a && !previews.form3a) errs.form3a = "Required";
         }
 
         const valid = Object.keys(errs).length === 0;
@@ -623,10 +609,10 @@ export default function BirthPsaEndorsementPage() {
             if (step === "INFORMANT") {
                 toast.error("Please fill in all required informant details.");
             } else if (step === "SUBJECT") {
-                toast.error("Please fill in all subject details.");
+                toast.error("Please fill in all marriage details.");
             } else if (step === "UPLOAD") {
                 if (errs.psaNegativeCert) toast.error("Please upload PSA Negative Certification.");
-                else if (errs.form1a) toast.error("Please upload Form 1A (Local Registry Copy).");
+                else if (errs.form3a) toast.error("Please upload Form 3A (Local Registry Copy).");
             }
 
             setTimeout(() => {
@@ -665,7 +651,7 @@ export default function BirthPsaEndorsementPage() {
         try {
             const data = new FormData();
             data.append("typeId", typeId);
-            data.append("registryType", "BIRTH_PSA_ENDORSEMENT");
+            data.append("registryType", "MARRIAGE_PSA_ENDORSEMENT");
             if (revisionId) {
                 data.append("revisionId", revisionId);
             }
@@ -685,7 +671,6 @@ export default function BirthPsaEndorsementPage() {
 
             const fileUrls: Record<string, string> = {};
 
-            // First, copy any existing public URLs from previews
             Object.entries(previews || {}).forEach(([key, url]) => {
                 if (url && typeof url === "string" && url.startsWith("http")) {
                     fileUrls[key] = url;
@@ -699,7 +684,6 @@ export default function BirthPsaEndorsementPage() {
                 const sanitizedKey = key.replace(/[^a-zA-Z0-9_-]/g, '_');
 
                 if (fileUrls[key]) {
-                    console.log(`[ClientUpload] Reusing existing public URL for ${key}:`, fileUrls[key]);
                     continue;
                 }
 
@@ -716,10 +700,16 @@ export default function BirthPsaEndorsementPage() {
             }
             toast.dismiss("upload-toast");
 
+            const finalRelationship = formData.relationship === "OTHER"
+                ? `OTHER: ${formData.relationshipOther.toUpperCase()}`
+                : formData.relationship;
+
             const additionalData = {
                 ...formData,
-                subjectName: formData.subjectFullName,
-                psaEndorsementFee: 200,
+                relationship: finalRelationship,
+                subjectName: `${formData.husbandFullName} & ${formData.wifeFullName}`,
+                psaEndorsementFee: 150,
+                totalAmount: 150,
                 ...fileUrls
             };
             data.append("additionalData", JSON.stringify(additionalData));
@@ -727,9 +717,9 @@ export default function BirthPsaEndorsementPage() {
             const res = await submitCivilRegistryTransaction(data, userId);
 
             if (res.success && res.data) {
-                toast.success(revisionId ? "Revision resubmitted successfully!" : "Birth PSA Endorsement submitted successfully!");
-                sessionStorage.removeItem("psa-endorsement-step");
-                sessionStorage.removeItem("psa-endorsement-form");
+                toast.success(revisionId ? "Revision resubmitted successfully!" : "Marriage PSA Endorsement submitted successfully!");
+                sessionStorage.removeItem("marriage-psa-step");
+                sessionStorage.removeItem("marriage-psa-form");
                 await clearDraftFiles(STORAGE_KEY);
 
                 const updated = await getExistingPsaEndorsements(userId);
@@ -769,7 +759,71 @@ export default function BirthPsaEndorsementPage() {
     }
 
     return (
-        <div className="h-full overflow-y-auto px-4 py-8 md:px-12 md:py-12 bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-white">
+        <div className="h-full overflow-y-auto px-4 py-8 md:px-12 md:py-12 bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-white transition-colors duration-300">
+            <style dangerouslySetInnerHTML={{
+                __html: `
+                /* Ambient Accent and Theme Overrides */
+                .text-rose-500, [class*="text-rose-500"]:not(input):not(select):not(textarea) {
+                    color: var(--primary-theme) !important;
+                }
+                .text-rose-600, [class*="text-rose-600"]:not(input):not(select):not(textarea) {
+                    color: var(--primary-theme) !important;
+                }
+                .bg-rose-500, [class*="bg-rose-500"] {
+                    background-color: var(--primary-theme) !important;
+                }
+                .bg-rose-600, [class*="bg-rose-600"] {
+                    background-color: var(--primary-theme) !important;
+                }
+                .border-rose-500, [class*="border-rose-500"] {
+                    border-color: var(--primary-theme) !important;
+                }
+                .border-rose-600, [class*="border-rose-600"] {
+                    border-color: var(--primary-theme) !important;
+                }
+                
+                /* Ensure all inputs, select, and textarea text is dark in light mode, light in dark mode */
+                input:not([type="button"]):not([type="submit"]), select, textarea {
+                    color: #0f172a !important;
+                }
+                input:not([type="button"]):not([type="submit"]):disabled, select:disabled, textarea:disabled,
+                input:not([type="button"]):not([type="submit"])[readonly], select[readonly], textarea[readonly] {
+                    color: #1e293b !important;
+                    -webkit-text-fill-color: #1e293b !important;
+                    opacity: 0.9 !important;
+                }
+                .dark input:not([type="button"]):not([type="submit"]), .dark select, .dark textarea {
+                    color: #f8fafc !important;
+                }
+                .dark input:not([type="button"]):not([type="submit"]):disabled, .dark select:disabled, .dark textarea:disabled,
+                .dark input:not([type="button"]):not([type="submit"])[readonly], .dark select[readonly], .dark textarea[readonly] {
+                    color: #cbd5e1 !important;
+                    -webkit-text-fill-color: #cbd5e1 !important;
+                    opacity: 0.8 !important;
+                }
+
+                /* High contrast text color rules for light mode to meet user guidelines */
+                html:not(.dark) .text-slate-400,
+                html:not(.dark) .text-slate-500 {
+                    color: #475569 !important;
+                }
+                html:not(.dark) .text-slate-300,
+                html:not(.dark) .text-slate-200 {
+                    color: #1e293b !important;
+                }
+                html:not(.dark) .text-slate-600 {
+                    color: #0f172a !important;
+                }
+
+                /* Dark mode fallback values */
+                .dark .text-slate-400 {
+                    color: #94a3b8 !important;
+                }
+                .dark .text-slate-500 {
+                    color: #cbd5e1 !important;
+                }
+                `
+            }} />
             <SecureIdleTimer />
             <PrivacyTermsModal
                 isOpen={policyOpen}
@@ -819,7 +873,7 @@ export default function BirthPsaEndorsementPage() {
                         <BreadcrumbSeparator />
                         <BreadcrumbItem>
                             <BreadcrumbPage className="text-xs font-black uppercase tracking-widest text-theme-primary">
-                                Birth PSA Endorsement
+                                Marriage PSA Endorsement
                             </BreadcrumbPage>
                         </BreadcrumbItem>
                     </BreadcrumbList>
@@ -830,8 +884,8 @@ export default function BirthPsaEndorsementPage() {
             <div className="mx-auto max-w-7xl mb-8">
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6 px-1 md:px-0">
                     <div className="space-y-1 md:space-y-2">
-                        <h1 className="text-4xl md:text-7xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter leading-none select-none">
-                            BIRTH <span className="text-theme-primary underline decoration-[6px] md:decoration-8 decoration-theme-primary/20 underline-offset-[6px] md:underline-offset-[12px]">PSA ENDORSEMENT</span>
+                        <h1 className="text-4xl md:text-7xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter leading-none select-none animate-in fade-in slide-in-from-left-4 duration-500">
+                            MARRIAGE <span className="text-theme-primary underline decoration-[6px] md:decoration-8 decoration-theme-primary/20 underline-offset-[6px] md:underline-offset-[12px]">PSA ENDORSEMENT</span>
                         </h1>
                         <p className="text-[9px] md:text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-[0.4em] ml-1 md:ml-2 italic">LCR Civil Registry Request Portal</p>
                     </div>
@@ -864,7 +918,7 @@ export default function BirthPsaEndorsementPage() {
             {/* Progress Stepper */}
             {currentStep !== "EXISTING" && currentStep !== "SUBMIT" && (
                 <div className="mx-auto max-w-7xl mb-10">
-                    <div className="grid grid-cols-3 gap-1 md:gap-4 relative px-1 md:px-2">
+                    <div className="grid grid-cols-4 gap-1 md:gap-4 relative px-1 md:px-2">
                         {STEPS.map((step, idx) => {
                             const isActive = currentStep === step.id;
                             const stepIdx = STEPS.findIndex(s => s.id === currentStep);
@@ -907,7 +961,7 @@ export default function BirthPsaEndorsementPage() {
                 </div>
             )}
 
-            <div className="mx-auto max-w-7xl bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-white/10 rounded-[2.5rem] p-6 md:p-12 shadow-2xl relative min-h-[500px] flex flex-col text-slate-900 dark:text-white">
+            <div className="mx-auto max-w-7xl bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-white/10 rounded-[2.5rem] p-6 md:p-12 shadow-2xl relative min-h-[500px] flex flex-col text-slate-900 dark:text-white transition-colors duration-300">
                 <AnimatePresence mode="wait">
                     {/* ============ STEP: EXISTING ============ */}
                     {currentStep === "EXISTING" && (
@@ -919,7 +973,7 @@ export default function BirthPsaEndorsementPage() {
                             className="space-y-8 flex-1 flex flex-col"
                         >
                             <div className="text-center mb-8">
-                                <h2 className="text-3xl md:text-5xl font-black italic uppercase tracking-tighter leading-tight">
+                                <h2 className="text-3xl md:text-5xl font-black italic uppercase tracking-tighter leading-tight text-slate-900 dark:text-white">
                                     Existing <span className="text-theme-primary">Endorsements</span>
                                 </h2>
                                 <p className="text-slate-500 dark:text-slate-400 font-medium italic text-xs md:text-lg uppercase tracking-widest max-w-2xl mx-auto mt-2">
@@ -937,11 +991,10 @@ export default function BirthPsaEndorsementPage() {
                                 emptySubMessage="Submit your first endorsement request by clicking New Endorsement Request."
                                 getSubjectName={(app) => {
                                     const addData = app.additionalData as any || {};
-                                    return addData.subjectName || "Birth PSA Endorsement";
+                                    return addData.subjectName || "Marriage PSA Endorsement";
                                 }}
                             />
 
-                            {/* Navigation buttons at bottom of list */}
                             <div className="flex pt-8 mt-auto border-t border-slate-200 dark:border-white/10">
                                 <Button
                                     type="button"
@@ -965,11 +1018,11 @@ export default function BirthPsaEndorsementPage() {
                                 exit={{ opacity: 0, scale: 1.05 }}
                                 className="space-y-8 flex-1 flex flex-col"
                             >
-                                <div className="text-center">
+                                <div className="text-center animate-in fade-in duration-300">
                                     <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white flex items-center justify-center mx-auto mb-4 animate-bounce">
-                                        <CheckCircle2 className="w-10 h-10" />
+                                        <CheckCircle2 className="w-10 h-10 text-theme-primary" />
                                     </div>
-                                    <h2 className="text-3xl md:text-5xl font-black italic uppercase tracking-tighter leading-tight">
+                                    <h2 className="text-3xl md:text-5xl font-black italic uppercase tracking-tighter leading-tight text-slate-900 dark:text-white">
                                         Application <span className="text-theme-primary">Summary</span>
                                     </h2>
                                     <p className="text-slate-500 dark:text-slate-400 font-medium italic text-xs md:text-lg uppercase tracking-widest max-w-2xl mx-auto mt-2">
@@ -977,15 +1030,14 @@ export default function BirthPsaEndorsementPage() {
                                     </p>
                                 </div>
 
-                                {/* Printable Receipt Frame */}
                                 <div className="max-w-2xl mx-auto w-full bg-white/40 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-[2.5rem] p-8 space-y-6 shadow-2xl relative overflow-hidden text-slate-900 dark:text-white backdrop-blur-2xl">
                                     <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
-                                        <Baby size={160} />
+                                        <Heart size={160} className="text-theme-primary" />
                                     </div>
 
                                     <div className="flex justify-between items-start gap-4 flex-wrap border-b border-slate-200 dark:border-white/10 pb-6">
                                         <div>
-                                            <h3 className="text-lg font-black uppercase tracking-tight">MUNICIPAL CIVIL REGISTRY</h3>
+                                            <h3 className="text-lg font-black uppercase tracking-tight text-slate-900 dark:text-white">MUNICIPAL CIVIL REGISTRY</h3>
                                             <p className="text-[9px] font-black uppercase tracking-[0.25em] text-theme-primary">Municipality of Mapandan, Pangasinan</p>
                                         </div>
                                         <div className="text-right">
@@ -1004,26 +1056,22 @@ export default function BirthPsaEndorsementPage() {
                                         <div className="space-y-4">
                                             <div>
                                                 <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Transaction ID</span>
-                                                <span className="text-xs font-black">{selectedApplication.id}</span>
+                                                <span className="text-xs font-black text-slate-900 dark:text-white">{selectedApplication.id}</span>
                                             </div>
                                             <div>
-                                                <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Subject&apos;s Name</span>
-                                                <span className="uppercase font-black text-theme-primary">{addData.subjectName || "N/A"}</span>
+                                                <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Husband Name</span>
+                                                <span className="uppercase font-black text-slate-900 dark:text-white">{addData.husbandFullName || "N/A"}</span>
                                             </div>
                                             <div>
-                                                <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Date of Birth</span>
-                                                <span className="font-black">
-                                                    {addData.subjectDateOfBirth
-                                                        ? new Date(addData.subjectDateOfBirth).toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" })
-                                                        : "N/A"}
-                                                </span>
+                                                <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Wife Maiden Name</span>
+                                                <span className="uppercase font-black text-slate-900 dark:text-white">{addData.wifeFullName || "N/A"}</span>
                                             </div>
                                         </div>
 
                                         <div className="space-y-4">
                                             <div>
                                                 <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Informant</span>
-                                                <span className="uppercase font-black">
+                                                <span className="uppercase font-black text-slate-900 dark:text-white">
                                                     {selectedApplication.residentSnapshot?.firstName
                                                         ? `${selectedApplication.residentSnapshot.firstName} ${selectedApplication.residentSnapshot.lastName}`
                                                         : addData.informantFirstName
@@ -1033,12 +1081,16 @@ export default function BirthPsaEndorsementPage() {
                                                 </span>
                                             </div>
                                             <div>
-                                                <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Relationship to Subject</span>
-                                                <span className="uppercase font-bold">{addData.relationship || "N/A"}</span>
+                                                <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Relationship to Couple</span>
+                                                <span className="uppercase font-bold text-slate-900 dark:text-white">{addData.relationship || "N/A"}</span>
                                             </div>
                                             <div>
-                                                <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Mother&apos;s Maiden Name</span>
-                                                <span className="uppercase font-bold">{addData.mothersMaidenName || "N/A"}</span>
+                                                <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Date of Marriage</span>
+                                                <span className="font-black text-slate-900 dark:text-white">
+                                                    {addData.dateOfMarriage
+                                                        ? new Date(addData.dateOfMarriage).toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" })
+                                                        : "N/A"}
+                                                </span>
                                             </div>
                                         </div>
                                     </div>
@@ -1046,7 +1098,7 @@ export default function BirthPsaEndorsementPage() {
                                     <div className="border-t border-slate-200 dark:border-white/10 pt-4">
                                         <div className="flex justify-between text-xs font-black uppercase tracking-wider">
                                             <span className="text-slate-400">Total Application Fee</span>
-                                            <span className="text-theme-primary text-sm">₱{(selectedApplication.totalAmount || 200).toFixed(2)}</span>
+                                            <span className="text-theme-primary text-sm">₱{(selectedApplication.totalAmount || 150).toFixed(2)}</span>
                                         </div>
                                     </div>
 
@@ -1062,8 +1114,8 @@ export default function BirthPsaEndorsementPage() {
                                         </div>
                                     ) : (
                                         <div className="p-4 rounded-xl bg-theme-primary/10 border border-theme-primary/20 flex gap-3 text-xs text-theme-primary font-semibold leading-relaxed">
-                                            <CheckCircle2 className="w-5 h-5 shrink-0" />
-                                            <span>Your PSA endorsement request has been received. Our Civil Registry officers will verify the uploaded negative certification and Form 1A registry copy. You will be updated of the status.</span>
+                                            <CheckCircle2 className="w-5 h-5 shrink-0 text-theme-primary" />
+                                            <span>Your PSA endorsement request has been received. Our Civil Registry officers will verify the uploaded negative certification and Form 3A registry copy. You will be updated on the status.</span>
                                         </div>
                                     )}
                                 </div>
@@ -1086,7 +1138,7 @@ export default function BirthPsaEndorsementPage() {
                                     {selectedApplication.status === "FOR_REVISION" && !selectedApplication.isCancelled && (
                                         <Button
                                             type="button"
-                                            onClick={() => router.push(`/modules/civil-registry/birth-psa-endorsement?revisionId=${selectedApplication.id}`)}
+                                            onClick={() => router.push(`/modules/civil-registry/marriage-psa-endorsement?revisionId=${selectedApplication.id}`)}
                                             className="rounded-2xl bg-amber-600 hover:bg-amber-700 text-white px-8 py-5 text-xs font-black uppercase tracking-widest shadow-lg"
                                         >
                                             Revise Details
@@ -1117,62 +1169,61 @@ export default function BirthPsaEndorsementPage() {
                                     <div className="text-left space-y-1">
                                         <p className="text-[10px] font-black uppercase tracking-wider italic">Attention: Revision Needed</p>
                                         <p className="text-xs font-bold text-slate-900 dark:text-slate-300 leading-relaxed italic">
-                                            &ldquo;{revisionTx.rejectionRemarks || "Please check the highlighted checklist files or values and submit them again."}&rdquo;
+                                            Reason: {(revisionTx as any).remarks || "Please check the values and files submitted."}
                                         </p>
                                     </div>
                                 </div>
                             )}
 
                             <InformantInfo
-                                firstName={formData.informantFirstName}
-                                middleName={formData.informantMiddleName}
-                                lastName={formData.informantLastName}
-                                suffix={formData.informantSuffix}
-                                birthDate={formData.informantBirthDate}
-                                age={formData.informantAge}
-                                civilStatus={formData.informantCivilStatus}
-                                citizenship={formData.informantCitizenship}
+                                firstName={resident?.firstName}
+                                middleName={resident?.middleName}
+                                lastName={resident?.lastName}
+                                suffix={resident?.suffix}
+                                birthDate={resident?.dateOfBirth}
+                                age={resident?.age?.toString()}
+                                civilStatus={resident?.civilStatus}
+                                citizenship={resident?.citizenship}
                                 address={formData.informantAddress}
                                 relationship={formData.relationship}
+                                relationshipSpecify={formData.relationshipOther}
                                 occupation={formData.informantOccupation}
                                 contactNumber={formData.contactNumber}
                                 onRelationshipChange={(val) => handleSelectChange("relationship", val)}
+                                onRelationshipSpecifyChange={(val) => setFormData(prev => ({ ...prev, relationshipOther: val.toUpperCase() }))}
                                 onOccupationChange={(val) => setFormData(prev => ({ ...prev, informantOccupation: val }))}
                                 onContactNumberChange={(val) => setFormData(prev => ({ ...prev, contactNumber: val }))}
-                                relationshipOptions={[
-                                    { value: "SELF", label: "SELF (I AM THE SUBJECT)" },
-                                    { value: "CHILD", label: "CHILD" },
-                                    { value: "PARENT", label: "PARENT" },
-                                    { value: "SIBLING", label: "SIBLING" },
-                                    { value: "RELATIVE", label: "OTHER RELATIVE" },
-                                    { value: "REPRESENTATIVE", label: "AUTHORIZED REPRESENTATIVE" }
-                                ]}
-                                errors={{
-                                    relationship: !formData.relationship ? "Required" : "",
-                                    contactNumber: !formData.contactNumber ? "Required" : ""
-                                }}
+                                relationshipOptions={RELATIONSHIP_OPTIONS}
                                 showErrors={showErrors}
-                                isCardWrapped={false}
+                                isCardWrapped={true}
+                                cardTitle="couple & informant relationship"
+                                cardSubtitle="identify your relationship to the couple"
                             />
 
-                            <div className="flex justify-between pt-6">
+                            <div className="flex justify-between items-center pt-8 border-t border-slate-200 dark:border-white/10">
                                 <Button
-                                    variant="ghost"
-                                    onClick={() => existingRequests.length > 0 ? setCurrentStep("EXISTING") : router.push("/modules/civil-registry")}
-                                    className="rounded-full px-8 border-slate-200 dark:border-white/10 font-black uppercase tracking-widest italic text-[10px] h-12"
+                                    type="button"
+                                    onClick={() => {
+                                        if (existingRequests.length > 0) {
+                                            setCurrentStep("EXISTING");
+                                        } else {
+                                            router.push("/modules/civil-registry");
+                                        }
+                                    }}
+                                    className="rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 px-8 py-5 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300"
                                 >
-                                    <ArrowRight className="w-4 h-4 mr-2 rotate-180" />
-                                    Back
+                                    Cancel
                                 </Button>
                                 <Button
+                                    type="button"
                                     onClick={() => {
-                                        if (!validateStep("INFORMANT")) return;
-                                        setCurrentStep("SUBJECT");
+                                        if (validateStep("INFORMANT")) {
+                                            setCurrentStep("SUBJECT");
+                                        }
                                     }}
-                                    className="rounded-full px-12 bg-theme-primary hover:bg-theme-hover text-white font-black uppercase tracking-widest italic text-[10px] h-12 shadow-xl shadow-theme-primary/20"
+                                    className="rounded-2xl bg-theme-primary hover:bg-theme-hover text-white px-8 py-5 text-xs font-black uppercase tracking-widest shadow-lg shadow-theme-primary/20 flex items-center gap-2"
                                 >
-                                    Next Step
-                                    <ArrowRight className="w-4 h-4 ml-2" />
+                                    Proceed to Marriage Details <ArrowRight size={16} />
                                 </Button>
                             </div>
                         </motion.div>
@@ -1188,90 +1239,102 @@ export default function BirthPsaEndorsementPage() {
                             className="space-y-6"
                         >
                             <div className="space-y-2">
-                                <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase italic tracking-tight flex items-center gap-2">
-                                    Subject Details
-                                </h2>
-                                <p className="text-xs text-slate-500 font-medium italic">Provide the details of the person whose birth record needs PSA endorsement</p>
+                                <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase italic tracking-tight">Marriage Details</h2>
+                                <p className="text-xs text-slate-500 font-medium italic">Couples registry verification details</p>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="md:col-span-2 space-y-2">
-                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500 italic ml-1">Subject&apos;s Full Name <span className="text-red-500">*</span></Label>
-                                    <Input
-                                        id="subjectFullName"
-                                        name="subjectFullName"
-                                        placeholder="ENTER FULL NAME OF SUBJECT"
-                                        value={formData.subjectFullName}
-                                        onChange={handleInputChange}
-                                        className={cn(
-                                            "rounded-xl bg-white dark:bg-slate-900 h-12 transition-all uppercase font-black text-slate-955 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-600",
-                                            (showErrors && !formData.subjectFullName) ? "border-2 border-red-500" : "border border-slate-200 dark:border-white/10"
-                                        )}
-                                    />
-                                    {(showErrors && !formData.subjectFullName) && (
-                                        <p className="text-[9px] font-black text-red-500 uppercase italic tracking-widest ml-1 animate-pulse">Required</p>
-                                    )}
+                            <Card className="bg-white/40 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-[2.5rem] p-8 md:p-12 shadow-2xl backdrop-blur-2xl space-y-6">
+                                <div className="grid md:grid-cols-2 gap-6">
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] md:text-xs font-black uppercase tracking-wider italic text-slate-400 dark:text-slate-500 ml-1">
+                                            Husband&apos;s Full Name <span className="text-red-500">*</span>
+                                        </Label>
+                                        <Input
+                                            name="husbandFullName"
+                                            value={formData.husbandFullName}
+                                            onChange={handleInputChange}
+                                            placeholder="FIRSTNAME MIDDLENAME LASTNAME"
+                                            className={cn(
+                                                "rounded-2xl border-slate-200 dark:border-white/10 h-12 text-slate-900 dark:text-white font-black uppercase italic bg-slate-50/20 dark:bg-black/20 backdrop-blur-md transition-all hover:border-theme-primary/45 focus-visible:border-theme-primary focus-visible:ring-theme-primary/25 focus-visible:ring-[3px] shadow-sm",
+                                                showErrors && !formData.husbandFullName && "border-red-500"
+                                            )}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] md:text-xs font-black uppercase tracking-wider italic text-slate-400 dark:text-slate-500 ml-1">
+                                            Wife&apos;s Maiden Full Name <span className="text-red-500">*</span>
+                                        </Label>
+                                        <Input
+                                            name="wifeFullName"
+                                            value={formData.wifeFullName}
+                                            onChange={handleInputChange}
+                                            placeholder="FIRSTNAME MIDDLENAME LASTNAME (MAIDEN)"
+                                            className={cn(
+                                                "rounded-2xl border-slate-200 dark:border-white/10 h-12 text-slate-900 dark:text-white font-black uppercase italic bg-slate-50/20 dark:bg-black/20 backdrop-blur-md transition-all hover:border-theme-primary/45 focus-visible:border-theme-primary focus-visible:ring-theme-primary/25 focus-visible:ring-[3px] shadow-sm",
+                                                showErrors && !formData.wifeFullName && "border-red-500"
+                                            )}
+                                        />
+                                    </div>
                                 </div>
-                                <div className="space-y-2">
-                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500 italic ml-1">Date of Birth <span className="text-red-500">*</span></Label>
-                                    <Input
-                                        id="subjectDateOfBirth"
-                                        type="date"
-                                        name="subjectDateOfBirth"
-                                        value={formData.subjectDateOfBirth}
-                                        onChange={handleInputChange}
-                                        className={cn(
-                                            "rounded-xl bg-white dark:bg-slate-900 h-12 transition-all font-black text-slate-955 dark:text-white dark:[color-scheme:dark]",
-                                            (showErrors && !formData.subjectDateOfBirth) ? "border-2 border-red-500" : "border border-slate-200 dark:border-white/10"
-                                        )}
-                                    />
-                                    {(showErrors && !formData.subjectDateOfBirth) && (
-                                        <p className="text-[9px] font-black text-red-500 uppercase italic tracking-widest ml-1 animate-pulse">Required</p>
-                                    )}
-                                </div>
-                                <div className="space-y-2">
-                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500 italic ml-1">Mother&apos;s Maiden Name <span className="text-red-500">*</span></Label>
-                                    <Input
-                                        id="mothersMaidenName"
-                                        name="mothersMaidenName"
-                                        placeholder="ENTER MOTHER'S MAIDEN NAME"
-                                        value={formData.mothersMaidenName}
-                                        onChange={handleInputChange}
-                                        className={cn(
-                                            "rounded-xl bg-white dark:bg-slate-900 h-12 transition-all uppercase font-black text-slate-955 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-600",
-                                            (showErrors && !formData.mothersMaidenName) ? "border-2 border-red-500" : "border border-slate-200 dark:border-white/10"
-                                        )}
-                                    />
-                                    {(showErrors && !formData.mothersMaidenName) && (
-                                        <p className="text-[9px] font-black text-red-500 uppercase italic tracking-widest ml-1 animate-pulse">Required</p>
-                                    )}
-                                </div>
-                            </div>
 
-                            <div className="flex justify-between pt-6">
+                                <div className="grid md:grid-cols-2 gap-6">
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] md:text-xs font-black uppercase tracking-wider italic text-slate-400 dark:text-slate-500 ml-1">
+                                            Date of Marriage <span className="text-red-500">*</span>
+                                        </Label>
+                                        <Input
+                                            type="date"
+                                            name="dateOfMarriage"
+                                            value={formData.dateOfMarriage}
+                                            onChange={handleInputChange}
+                                            className={cn(
+                                                "rounded-2xl border-slate-200 dark:border-white/10 h-12 text-slate-900 dark:text-white font-black uppercase italic bg-slate-50/20 dark:bg-black/20 backdrop-blur-md transition-all hover:border-theme-primary/45 focus-visible:border-theme-primary focus-visible:ring-theme-primary/25 focus-visible:ring-[3px] shadow-sm",
+                                                showErrors && !formData.dateOfMarriage && "border-red-500"
+                                            )}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] md:text-xs font-black uppercase tracking-wider italic text-slate-400 dark:text-slate-500 ml-1">
+                                            Place of Marriage <span className="text-red-500">*</span>
+                                        </Label>
+                                        <Input
+                                            name="placeOfMarriage"
+                                            value={formData.placeOfMarriage}
+                                            onChange={handleInputChange}
+                                            placeholder="E.G. MAPANDAN, PANGASINAN"
+                                            className={cn(
+                                                "rounded-2xl border-slate-200 dark:border-white/10 h-12 text-slate-900 dark:text-white font-black uppercase italic bg-slate-50/20 dark:bg-black/20 backdrop-blur-md transition-all hover:border-theme-primary/45 focus-visible:border-theme-primary focus-visible:ring-theme-primary/25 focus-visible:ring-[3px] shadow-sm",
+                                                showErrors && !formData.placeOfMarriage && "border-red-500"
+                                            )}
+                                        />
+                                    </div>
+                                </div>
+                            </Card>
+
+                            <div className="flex justify-between items-center pt-8 border-t border-slate-200 dark:border-white/10">
                                 <Button
-                                    variant="ghost"
+                                    type="button"
                                     onClick={() => setCurrentStep("INFORMANT")}
-                                    className="rounded-full px-8 border-slate-200 dark:border-white/10 font-black uppercase tracking-widest italic text-[10px] h-12"
+                                    className="rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 px-8 py-5 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300"
                                 >
-                                    <ArrowRight className="w-4 h-4 mr-2 rotate-180" />
                                     Back
                                 </Button>
                                 <Button
+                                    type="button"
                                     onClick={() => {
-                                        if (!validateStep("SUBJECT")) return;
-                                        setCurrentStep("UPLOAD");
+                                        if (validateStep("SUBJECT")) {
+                                            setCurrentStep("UPLOAD");
+                                        }
                                     }}
-                                    className="rounded-full px-12 bg-theme-primary hover:bg-theme-hover text-white font-black uppercase tracking-widest italic text-[10px] h-12 shadow-xl shadow-theme-primary/20"
+                                    className="rounded-2xl bg-theme-primary hover:bg-theme-hover text-white px-8 py-5 text-xs font-black uppercase tracking-widest shadow-lg shadow-theme-primary/20 flex items-center gap-2"
                                 >
-                                    Next: Upload Documents
-                                    <ArrowRight className="w-4 h-4 ml-2" />
+                                    Proceed to Document Upload <ArrowRight size={16} />
                                 </Button>
                             </div>
                         </motion.div>
                     )}
 
-                    {/* ===== STEP: UPLOAD DOCUMENTS ===== */}
+                    {/* ===== STEP 3: UPLOAD DOCUMENTS ===== */}
                     {currentStep === "UPLOAD" && (
                         <motion.div
                             key="upload-step"
@@ -1281,196 +1344,200 @@ export default function BirthPsaEndorsementPage() {
                             className="space-y-6"
                         >
                             <RequiredDocuments
-                                title="Required Documents"
-                                subtitle="Please upload the required certification files to proceed"
+                                title="Registry Documents Checklist"
+                                subtitle="Please attach the required certifications to initiate PSA Endorsement"
                                 warningBanner={
-                                    <div className="p-4 rounded-2xl bg-amber-50/50 dark:bg-amber-500/5 border border-amber-200/60 dark:border-amber-500/20">
-                                        <div className="flex items-start gap-3">
-                                            <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-                                            <div>
-                                                <p className="text-[10px] font-black uppercase tracking-widest text-amber-700 dark:text-amber-300">PSA Negative Certification Required</p>
-                                                <p className="text-[9px] text-amber-600/80 dark:text-amber-400/80 italic mt-1">
-                                                    This is strictly required as proof that the record is not available in the national database. Obtain this from any PSA Serbilis outlet.
-                                                </p>
-                                            </div>
-                                        </div>
+                                    <div className="p-4 rounded-xl bg-theme-primary/10 border border-theme-primary/20 text-xs text-theme-primary font-semibold flex items-start gap-3">
+                                        <AlertCircle className="w-5 h-5 shrink-0" />
+                                        <span>
+                                            Uploading clear PDF or image copies of the Local Civil Registry Form 3A and PSA Negative Certification accelerates validation. You can also scan the QR code to upload files from your mobile device.
+                                        </span>
                                     </div>
                                 }
+                                errorText={showErrors && (!files.psaNegativeCert && !previews.psaNegativeCert || !files.form3a && !previews.form3a) ? "All documents are required. Please upload files." : undefined}
                                 documents={[
                                     {
                                         key: "psaNegativeCert",
                                         label: "PSA Negative Certification",
                                         file: files.psaNegativeCert,
                                         previewUrl: previews.psaNegativeCert,
-                                        infoText: "PSA Negative Certification of Birth",
+                                        infoText: "PDF / PNG / JPG (MAX 5MB)",
                                         error: showErrors && !files.psaNegativeCert && !previews.psaNegativeCert,
                                         onFileSelect: async (newFile) => {
-                                            saveDraftFile(STORAGE_KEY, "psaNegativeCert", newFile).catch(err => console.error("Failed to save draft file in IndexedDB:", err));
-                                            try {
-                                                toast.loading("Uploading document...", { id: "file-upload-psa" });
-                                                const publicUrl = await uploadFileClientSide(newFile, "psaNegativeCert", userId);
-                                                setFiles(prev => ({ ...prev, psaNegativeCert: newFile }));
-                                                setPreviews(prev => ({ ...prev, psaNegativeCert: publicUrl }));
-                                                toast.success("Document uploaded!", { id: "file-upload-psa" });
-                                            } catch {
-                                                toast.error("Upload failed. Local copy stored.", { id: "file-upload-psa" });
-                                                setFiles(prev => ({ ...prev, psaNegativeCert: newFile }));
-                                                setPreviews(prev => ({ ...prev, psaNegativeCert: newFile.type.startsWith("image/") ? URL.createObjectURL(newFile) : null }));
-                                            }
+                                            if (newFile.size > 5 * 1024 * 1024) { toast.error("File exceeds 5MB limit"); return; }
+                                            setFiles(prev => ({ ...prev, psaNegativeCert: newFile }));
+                                            setPreviews(prev => ({ ...prev, psaNegativeCert: newFile.type.startsWith("image/") ? URL.createObjectURL(newFile) : null }));
+                                            await saveDraftFile(STORAGE_KEY, "psaNegativeCert", newFile);
                                         },
                                         onClickUpload: () => startHandoff("psaNegativeCert"),
                                         onClear: async () => {
                                             setFiles(prev => ({ ...prev, psaNegativeCert: null }));
                                             setPreviews(prev => ({ ...prev, psaNegativeCert: null }));
                                             await saveDraftFile(STORAGE_KEY, "psaNegativeCert", null);
-                                            toast.success("PSA Certification removed.");
                                         },
-                                        onView: () => handleOpenViewer(files.psaNegativeCert, "PSA Negative Certification", previews.psaNegativeCert),
+                                        onView: () => handleOpenViewer(files.psaNegativeCert, "PSA Negative Certification", previews.psaNegativeCert)
                                     },
                                     {
-                                        key: "form1a",
-                                        label: "Form 1A (Local Registry Copy)",
-                                        file: files.form1a,
-                                        previewUrl: previews.form1a,
-                                        infoText: "Form 1A / Local Registry Copy",
-                                        error: showErrors && !files.form1a && !previews.form1a,
+                                        key: "form3a",
+                                        label: "Form 3A (Local Registry Copy)",
+                                        file: files.form3a,
+                                        previewUrl: previews.form3a,
+                                        infoText: "PDF / PNG / JPG (MAX 5MB)",
+                                        error: showErrors && !files.form3a && !previews.form3a,
                                         onFileSelect: async (newFile) => {
-                                            saveDraftFile(STORAGE_KEY, "form1a", newFile).catch(err => console.error("Failed to save draft file in IndexedDB:", err));
-                                            try {
-                                                toast.loading("Uploading document...", { id: "file-upload-form1a" });
-                                                const publicUrl = await uploadFileClientSide(newFile, "form1a", userId);
-                                                setFiles(prev => ({ ...prev, form1a: newFile }));
-                                                setPreviews(prev => ({ ...prev, form1a: publicUrl }));
-                                                toast.success("Document uploaded!", { id: "file-upload-form1a" });
-                                            } catch {
-                                                toast.error("Upload failed. Local copy stored.", { id: "file-upload-form1a" });
-                                                setFiles(prev => ({ ...prev, form1a: newFile }));
-                                                setPreviews(prev => ({ ...prev, form1a: newFile.type.startsWith("image/") ? URL.createObjectURL(newFile) : null }));
-                                            }
+                                            if (newFile.size > 5 * 1024 * 1024) { toast.error("File exceeds 5MB limit"); return; }
+                                            setFiles(prev => ({ ...prev, form3a: newFile }));
+                                            setPreviews(prev => ({ ...prev, form3a: newFile.type.startsWith("image/") ? URL.createObjectURL(newFile) : null }));
+                                            await saveDraftFile(STORAGE_KEY, "form3a", newFile);
                                         },
-                                        onClickUpload: () => startHandoff("form1a"),
+                                        onClickUpload: () => startHandoff("form3a"),
                                         onClear: async () => {
-                                            setFiles(prev => ({ ...prev, form1a: null }));
-                                            setPreviews(prev => ({ ...prev, form1a: null }));
-                                            await saveDraftFile(STORAGE_KEY, "form1a", null);
-                                            toast.success("Form 1A copy removed.");
+                                            setFiles(prev => ({ ...prev, form3a: null }));
+                                            setPreviews(prev => ({ ...prev, form3a: null }));
+                                            await saveDraftFile(STORAGE_KEY, "form3a", null);
                                         },
-                                        onView: () => handleOpenViewer(files.form1a, "Form 1A (Local Copy)", previews.form1a),
+                                        onView: () => handleOpenViewer(files.form3a, "Form 3A (Local Registry Copy)", previews.form3a)
                                     }
                                 ]}
-                            />
+                            >
+                                <div className="mt-4 flex justify-center">
+                                    <Button
+                                        type="button"
+                                        onClick={() => startHandoff("marriage_psa")}
+                                        className="rounded-2xl bg-slate-800 hover:bg-slate-700 text-white font-bold uppercase tracking-wider text-xs py-4 px-6 border border-white/10"
+                                    >
+                                        Scan QR to Upload Both Documents
+                                    </Button>
+                                </div>
+                            </RequiredDocuments>
 
-                            <div className="flex justify-between pt-6">
+                            <div className="flex justify-between items-center pt-8 border-t border-slate-200 dark:border-white/10">
                                 <Button
-                                    variant="ghost"
+                                    type="button"
                                     onClick={() => setCurrentStep("SUBJECT")}
-                                    className="rounded-full px-8 border-slate-200 dark:border-white/10 font-black uppercase tracking-widest italic text-[10px] h-12"
+                                    className="rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 px-8 py-5 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300"
                                 >
-                                    <ArrowRight className="w-4 h-4 mr-2 rotate-180" />
                                     Back
                                 </Button>
                                 <Button
+                                    type="button"
                                     onClick={() => {
-                                        if (!validateStep("UPLOAD")) return;
-                                        setCurrentStep("REVIEW");
+                                        if (validateStep("UPLOAD")) {
+                                            setCurrentStep("REVIEW");
+                                        }
                                     }}
-                                    className="rounded-full px-12 bg-theme-primary hover:bg-theme-hover text-white font-black uppercase tracking-widest italic text-[10px] h-12 shadow-xl shadow-theme-primary/20"
+                                    className="rounded-2xl bg-theme-primary hover:bg-theme-hover text-white px-8 py-5 text-xs font-black uppercase tracking-widest shadow-lg shadow-theme-primary/20 flex items-center gap-2"
                                 >
-                                    Proceed to Review
-                                    <ArrowRight className="w-4 h-4 ml-2" />
+                                    Proceed to Review <ArrowRight size={16} />
                                 </Button>
                             </div>
                         </motion.div>
                     )}
 
-                    {/* ===== STEP 3: REVIEW & SUBMIT ===== */}
+                    {/* ===== STEP 4: REVIEW & SUBMIT ===== */}
                     {currentStep === "REVIEW" && (
-                        <ReviewAndSubmit
-                            title="Endorsement Review"
-                            subtitle="Verify information before submission"
-                            policyAccepted={policyAccepted}
-                            onPolicyAcceptedChange={setPolicyAccepted}
-                            onReviewPolicy={() => setPolicyOpen(true)}
-                            showErrors={showErrors}
-                            submitting={submitting}
-                            submitLabel="Submit Birth PSA Endorsement Application"
-                            submitDisabled={(!files.psaNegativeCert && !previews.psaNegativeCert) || (!files.form1a && !previews.form1a)}
-                            onSubmit={handleSubmit}
-                            onBack={() => setCurrentStep("UPLOAD")}
-                            backLabel="Modify Details"
-                            detailsCards={
-                                <Card className="bg-slate-50 dark:bg-white/5 border-none p-6 rounded-[2rem] space-y-4">
-                                    <div className="grid grid-cols-2 gap-6">
-                                        <div className="space-y-1">
-                                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 italic">Informant</span>
-                                            <p className="font-black text-slate-900 dark:text-white italic uppercase">{resident?.firstName} {resident?.lastName} ({formData.relationship})</p>
-                                        </div>
-                                        <div className="space-y-1">
-                                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 italic">Contact</span>
-                                            <p className="font-black text-slate-900 dark:text-white italic">{formData.contactNumber}</p>
-                                        </div>
-                                        <div className="space-y-1 col-span-2">
-                                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 italic">Informant Address</span>
-                                            <p className="font-black text-slate-900 dark:text-white italic uppercase">{formData.informantAddress}</p>
-                                        </div>
-                                        <div className="col-span-2 border-t border-slate-200 dark:border-white/5 pt-4 space-y-1">
-                                            <span className="text-[9px] font-black uppercase tracking-widest text-theme-primary italic">Subject Name (To Endorse)</span>
-                                            <p className="font-black text-slate-900 dark:text-white italic uppercase text-lg">{formData.subjectFullName}</p>
-                                        </div>
-                                        <div className="space-y-1">
-                                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 italic">Date of Birth</span>
-                                            <p className="font-black text-slate-900 dark:text-white italic">{formData.subjectDateOfBirth}</p>
-                                        </div>
-                                        <div className="space-y-1">
-                                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 italic">Mother&apos;s Maiden Name</span>
-                                            <p className="font-black text-slate-900 dark:text-white italic uppercase">{formData.mothersMaidenName}</p>
-                                        </div>
-                                    </div>
-
-                                    {/* Fee Display */}
-                                    <div className="flex items-center justify-between px-4 py-3 rounded-2xl bg-theme-primary/10 border border-theme-primary/20 mt-4">
-                                        <div>
-                                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 italic">PSA Endorsement Fee</span>
-                                            <p className="text-[9px] text-slate-400 italic mt-0.5">Standard processing fee for PSA endorsement</p>
-                                        </div>
-                                        <div className="text-right">
-                                            <span className="text-lg font-black text-theme-primary tracking-tight">₱200.00</span>
-                                        </div>
-                                    </div>
-                                </Card>
-                            }
-                            documentsSection={
-                                (files.psaNegativeCert || previews.psaNegativeCert || files.form1a || previews.form1a) ? (
-                                    <div className="bg-white/40 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-[2.5rem] p-8 shadow-2xl backdrop-blur-2xl transition-all duration-300 hover:border-theme-primary/30 space-y-6">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center text-slate-900 dark:text-white">
-                                                <Upload size={18} className="stroke-[2.5]" />
+                        <motion.div
+                            key="review-step"
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 1.05 }}
+                            className="space-y-6"
+                        >
+                            <ReviewAndSubmit
+                                title="Endorsement Review"
+                                subtitle="Verify information before submission"
+                                policyAccepted={policyAccepted}
+                                onPolicyAcceptedChange={setPolicyAccepted}
+                                onReviewPolicy={() => setPolicyOpen(true)}
+                                showErrors={showErrors}
+                                submitting={submitting}
+                                submitLabel="Submit Marriage PSA Endorsement"
+                                submitDisabled={(!files.psaNegativeCert && !previews.psaNegativeCert) || (!files.form3a && !previews.form3a)}
+                                onSubmit={handleSubmit}
+                                onBack={() => setCurrentStep("UPLOAD")}
+                                backLabel="Modify Details"
+                                detailsCards={
+                                    <Card className="bg-slate-50 dark:bg-white/5 border-none p-6 rounded-[2rem] space-y-4">
+                                        <div className="grid grid-cols-2 gap-6">
+                                            <div className="space-y-1">
+                                                <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 italic">Informant</span>
+                                                <p className="font-black text-slate-900 dark:text-white italic uppercase">{resident?.firstName} {resident?.lastName} ({formData.relationship === "OTHER" ? formData.relationshipOther : formData.relationship})</p>
                                             </div>
-                                            <h3 className="text-sm font-black uppercase tracking-widest text-slate-800 dark:text-slate-200">Uploaded Documents</h3>
+                                            <div className="space-y-1">
+                                                <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 italic">Contact</span>
+                                                <p className="font-black text-slate-900 dark:text-white italic">{formData.contactNumber}</p>
+                                            </div>
+                                            <div className="space-y-1 col-span-2">
+                                                <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 italic">Informant Address</span>
+                                                <p className="font-black text-slate-900 dark:text-white italic uppercase">{formData.informantAddress}</p>
+                                            </div>
+                                            <div className="col-span-2 border-t border-slate-200 dark:border-white/5 pt-4 space-y-1">
+                                                <span className="text-[9px] font-black uppercase tracking-widest text-theme-primary italic">Couple (To Endorse)</span>
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div>
+                                                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 italic">Husband Name</span>
+                                                        <p className="font-black text-slate-900 dark:text-white italic uppercase">{formData.husbandFullName}</p>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 italic">Wife Maiden Name</span>
+                                                        <p className="font-black text-slate-900 dark:text-white italic uppercase">{formData.wifeFullName}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 italic">Date of Marriage</span>
+                                                <p className="font-black text-slate-900 dark:text-white italic">{formData.dateOfMarriage}</p>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 italic">Place of Marriage</span>
+                                                <p className="font-black text-slate-900 dark:text-white italic uppercase">{formData.placeOfMarriage}</p>
+                                            </div>
                                         </div>
 
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <ReadOnlyDocumentPreview
-                                                file={files.psaNegativeCert}
-                                                previewUrl={previews.psaNegativeCert}
-                                                label="PSA Negative Certification"
-                                                fileName={files.psaNegativeCert ? files.psaNegativeCert.name : previews.psaNegativeCert ? "Uploaded" : "Not uploaded"}
-                                                onView={() => handleOpenViewer(files.psaNegativeCert, "PSA Negative Certification", previews.psaNegativeCert)}
-                                            />
-
-                                            <ReadOnlyDocumentPreview
-                                                file={files.form1a}
-                                                previewUrl={previews.form1a}
-                                                label="Form 1A"
-                                                fileName={files.form1a ? files.form1a.name : previews.form1a ? "Attached from previous draft" : "Not uploaded"}
-                                                onView={() => handleOpenViewer(files.form1a, "Form 1A (Local Copy)", previews.form1a)}
-                                            />
+                                        {/* Fee Display */}
+                                        <div className="flex items-center justify-between px-4 py-3 rounded-2xl bg-theme-primary/10 border border-theme-primary/20 mt-4">
+                                            <div>
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 italic">PSA Endorsement Fee</span>
+                                                <p className="text-[9px] text-slate-400 italic mt-0.5">Standard processing fee for PSA endorsement</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <span className="text-lg font-black text-theme-primary tracking-tight">₱150.00</span>
+                                            </div>
                                         </div>
-                                    </div>
-                                ) : null
-                            }
-                        />
+                                    </Card>
+                                }
+                                documentsSection={
+                                    (files.psaNegativeCert || previews.psaNegativeCert || files.form3a || previews.form3a) ? (
+                                        <div className="bg-white/40 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-[2.5rem] p-8 shadow-2xl backdrop-blur-2xl transition-all duration-300 hover:border-theme-primary/30 space-y-6">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center text-slate-900 dark:text-white">
+                                                    <Upload size={18} className="stroke-[2.5]" />
+                                                </div>
+                                                <h3 className="text-sm font-black uppercase tracking-widest text-slate-800 dark:text-slate-200">Uploaded Documents</h3>
+                                            </div>
 
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <ReadOnlyDocumentPreview
+                                                    file={files.psaNegativeCert}
+                                                    previewUrl={previews.psaNegativeCert}
+                                                    label="PSA Negative Certification"
+                                                    fileName={files.psaNegativeCert ? files.psaNegativeCert.name : previews.psaNegativeCert ? "Uploaded" : "Not uploaded"}
+                                                    onView={() => handleOpenViewer(files.psaNegativeCert, "PSA Negative Certification", previews.psaNegativeCert)}
+                                                />
+
+                                                <ReadOnlyDocumentPreview
+                                                    file={files.form3a}
+                                                    previewUrl={previews.form3a}
+                                                    label="Form 3A"
+                                                    fileName={files.form3a ? files.form3a.name : previews.form3a ? "Attached from previous transaction" : "Not uploaded"}
+                                                    onView={() => handleOpenViewer(files.form3a, "Form 3A (Local Copy)", previews.form3a)}
+                                                />
+                                            </div>
+                                        </div>
+                                    ) : null
+                                }
+                            />
+                        </motion.div>
                     )}
                 </AnimatePresence>
             </div>

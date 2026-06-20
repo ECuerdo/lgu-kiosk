@@ -164,9 +164,10 @@ const CIVIL_REGISTRY_SERVICES: RegistryService[] = [
       ilo: "Dawaten ti certified true copy ti adda a sertipiko ti ipupusay."
     },
     icon: <Copy className="w-8 h-8 text-theme-primary" />,
-    status: "COMING_SOON",
+    status: "ACTIVE",
+    path: "/modules/civil-registry/death-certificate-request",
     estimatedTime: "1-2 Business Days",
-    baseFee: "₱115.00",
+    baseFee: "₱100.00",
     requirements: {
       en: [
         "Deceased person's full name",
@@ -198,7 +199,8 @@ const CIVIL_REGISTRY_SERVICES: RegistryService[] = [
       ilo: "Agdawat ti endorso ti lokal a sertipiko ti ipupusay iti PSA."
     },
     icon: <FileCheck className="w-8 h-8 text-theme-primary" />,
-    status: "COMING_SOON",
+    status: "ACTIVE",
+    path: "/modules/civil-registry/death-psa-endorsement",
     estimatedTime: "3-5 Business Days",
     baseFee: "₱150.00",
     requirements: {
@@ -232,7 +234,8 @@ const CIVIL_REGISTRY_SERVICES: RegistryService[] = [
       ilo: "Ag-apply para iti lisensya ti kasar ditoy Pilipinas."
     },
     icon: <HeartHandshake className="w-8 h-8 text-theme-primary" />,
-    status: "COMING_SOON",
+    status: "ACTIVE",
+    path: "/modules/civil-registry/marriage-license-application",
     estimatedTime: "10-12 Days",
     baseFee: "₱250.00",
     requirements: {
@@ -268,7 +271,8 @@ const CIVIL_REGISTRY_SERVICES: RegistryService[] = [
       ilo: "Dawaten ti certified copy ti sertipiko ti kasar."
     },
     icon: <Heart className="w-8 h-8 text-theme-primary" />,
-    status: "COMING_SOON",
+    status: "ACTIVE",
+    path: "/modules/civil-registry/marriage-registration",
     estimatedTime: "1-2 Business Days",
     baseFee: "Free (Standard Registration)",
     requirements: {
@@ -302,9 +306,10 @@ const CIVIL_REGISTRY_SERVICES: RegistryService[] = [
       ilo: "Dawaten ti certified true copy ti adda a sertipiko ti kasar."
     },
     icon: <Copy className="w-8 h-8 text-theme-primary" />,
-    status: "COMING_SOON",
+    status: "ACTIVE",
+    path: "/modules/civil-registry/marriage-certificate-request",
     estimatedTime: "1-2 Business Days",
-    baseFee: "₱115.00",
+    baseFee: "₱150.00",
     requirements: {
       en: [
         "Husband's full name",
@@ -336,7 +341,8 @@ const CIVIL_REGISTRY_SERVICES: RegistryService[] = [
       ilo: "Agdawat ti endorso ti lokal a sertipiko ti kasar iti PSA."
     },
     icon: <FileCheck className="w-8 h-8 text-theme-primary" />,
-    status: "COMING_SOON",
+    status: "ACTIVE",
+    path: "/modules/civil-registry/marriage-psa-endorsement",
     estimatedTime: "3-5 Business Days",
     baseFee: "₱150.00",
     requirements: {
@@ -660,8 +666,8 @@ export default function CivilRegistryHubPage() {
               </button>
 
               <div className="flex items-center gap-4 mb-6">
-                <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
-                  {React.cloneElement(selectedService.icon as React.ReactElement<{ className?: string }>, { className: "w-8 h-8 text-white" })}
+                <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center shrink-0">
+                  {React.cloneElement(selectedService.icon as React.ReactElement<{ className?: string }>, { className: "w-8 h-8 text-slate-900 dark:text-white" })}
                 </div>
                 <div>
                   <Badge className="bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-white/10 uppercase font-black text-[9px] py-0.5 px-2 rounded-full mb-1">

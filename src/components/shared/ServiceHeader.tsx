@@ -36,6 +36,41 @@ export default function ServiceHeader() {
   const [resident, setResident] = useState<Resident | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
   const { theme, setTheme, resolvedTheme } = useTheme();
+  const [activeFontSize, setActiveFontSize] = useState<string>("md");
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("kiosk_font_size");
+      if (saved) {
+        setActiveFontSize(saved);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
+
+  useEffect(() => {
+    const sizeMap: Record<string, string> = {
+      sm: "14px",
+      md: "16px",
+      lg: "18px",
+      xl: "20px"
+    };
+    try {
+      document.documentElement.style.fontSize = sizeMap[activeFontSize] || "16px";
+    } catch (e) {
+      console.error(e);
+    }
+  }, [activeFontSize]);
+
+  const applyFontSize = (size: string) => {
+    try {
+      localStorage.setItem("kiosk_font_size", size);
+      setActiveFontSize(size);
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const serviceName = useMemo(() => {
     const segment = pathname.split("/").filter(Boolean)[1] || "Service";
@@ -122,6 +157,34 @@ export default function ServiceHeader() {
               <ProfileRow label="Barangay" value={resident.barangay} />
               <ProfileRow label="Municipality" value={resident.municipality || "Mapandan"} />
             </div>
+
+            {/* Font Size Selector */}
+            <div className="mt-6 border-t border-slate-200 pt-5 dark:border-slate-800">
+              <span className="block text-[9px] font-black uppercase tracking-[0.25em] text-slate-400 dark:text-slate-500">Font Size</span>
+              <div className="mt-2 grid grid-cols-4 gap-2">
+                {[
+                  { value: "sm", label: "Small", preview: "12px" },
+                  { value: "md", label: "Normal", preview: "16px" },
+                  { value: "lg", label: "Large", preview: "20px" },
+                  { value: "xl", label: "X-Large", preview: "24px" }
+                ].map((sz) => (
+                  <button
+                    key={sz.value}
+                    type="button"
+                    onClick={() => applyFontSize(sz.value)}
+                    className={`flex flex-col items-center justify-center rounded-xl border py-2.5 transition-all ${
+                      activeFontSize === sz.value
+                        ? "border-theme-primary bg-emerald-50 text-theme-primary dark:border-theme-primary dark:bg-emerald-950/30 dark:text-emerald-300 font-bold"
+                        : "border-slate-200 bg-white text-slate-700 hover:border-emerald-300 hover:bg-emerald-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-emerald-700"
+                    }`}
+                  >
+                    <span style={{ fontSize: sz.preview }} className="leading-none font-sans">A</span>
+                    <span className="mt-1 text-[9px] font-black uppercase tracking-wider">{sz.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <button
                 type="button"
