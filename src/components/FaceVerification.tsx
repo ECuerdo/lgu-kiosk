@@ -28,17 +28,30 @@ type FacialRecognitionObject =
 const MODEL_URL = "https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights";
 const MATCH_THRESHOLD = 0.5;
 
+function isFaceRecognitionObject(
+  input: unknown
+): input is {
+  mode?: "reference_image" | "embedding" | "liveness";
+  referenceImageUrl?: string;
+  selfieUrl?: string;
+  embedding?: number[];
+  model?: string;
+  verifiedAt?: string;
+} {
+  return Boolean(input) && typeof input === "object" && !Array.isArray(input);
+}
+
 function getRecognitionObject(input: unknown): Exclude<FacialRecognitionObject, string | null | undefined> | null {
   if (!input) return null;
   if (typeof input === "string") {
     try {
       const parsed = JSON.parse(input) as FacialRecognitionObject;
-      return typeof parsed === "object" && parsed ? (parsed as any) : null;
+      return isFaceRecognitionObject(parsed) ? parsed : null;
     } catch {
       return null;
     }
   }
-  if (typeof input === "object" && !Array.isArray(input)) return input as any;
+  if (isFaceRecognitionObject(input)) return input;
   return null;
 }
 

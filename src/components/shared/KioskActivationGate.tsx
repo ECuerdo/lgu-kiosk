@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { LockKeyhole, RefreshCw, ShieldCheck, ScanLine } from "lucide-react";
 
 type Role = "ADMIN" | "BARANGAY_ADMIN" | "USER" | "CONTENT_ADMIN" | "TREASURY_STAFF" | "ADMIN_AIDE" | "RIDER" | "ENGINEER" | null;
@@ -49,6 +49,41 @@ export default function KioskActivationGate({ children }: { children: React.Reac
     color: "var(--primary-theme-secondary)",
   } as const;
 
+  const unlock = useCallback((activation: ActivationState) => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(activation));
+    setActivated(activation);
+  }, []);
+
+  const verifyAdminCard = useCallback(async (cardId: string) => {
+    setChecking(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/rfid?card=${encodeURIComponent(cardId)}`);
+      const result = (await response.json()) as { resident?: RfidResident; error?: string };
+
+      if (!response.ok || !result.resident) {
+        throw new Error(result.error || "Card not recognized.");
+      }
+
+      if (!result.resident.role || !ALLOWED_ROLES.has(result.resident.role)) {
+        throw new Error("Only ADMIN or BARANGAY_ADMIN cards can unlock the kiosk.");
+      }
+
+      unlock({
+        userId: result.resident.id,
+        fullName: result.resident.fullName,
+        role: result.resident.role as Exclude<Role, null>,
+        activatedAt: new Date().toISOString(),
+      });
+      window.location.reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to verify RFID card.");
+    } finally {
+      setChecking(false);
+    }
+  }, [unlock]);
+
   useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -92,42 +127,7 @@ export default function KioskActivationGate({ children }: { children: React.Reac
       window.removeEventListener("keydown", handleKeyDown);
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-  }, [activated]);
-
-  const unlock = (activation: ActivationState) => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(activation));
-    setActivated(activation);
-  };
-
-  async function verifyAdminCard(cardId: string) {
-    setChecking(true);
-    setError(null);
-
-    try {
-      const response = await fetch(`/api/rfid?card=${encodeURIComponent(cardId)}`);
-      const result = (await response.json()) as { resident?: RfidResident; error?: string };
-
-      if (!response.ok || !result.resident) {
-        throw new Error(result.error || "Card not recognized.");
-      }
-
-      if (!result.resident.role || !ALLOWED_ROLES.has(result.resident.role)) {
-        throw new Error("Only ADMIN or BARANGAY_ADMIN cards can unlock the kiosk.");
-      }
-
-      unlock({
-        userId: result.resident.id,
-        fullName: result.resident.fullName,
-        role: result.resident.role as Exclude<Role, null>,
-        activatedAt: new Date().toISOString(),
-      });
-      window.location.reload();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to verify RFID card.");
-    } finally {
-      setChecking(false);
-    }
-  }
+  }, [activated, verifyAdminCard]);
 
   const handleReset = () => {
     localStorage.removeItem(STORAGE_KEY);
