@@ -128,6 +128,8 @@ const slides: Slide[] = [
 ];
 
 const SLIDE_DURATION = 8000; // ms each slide stays
+const MANUAL_RFID_INPUT_ENABLED =
+  process.env.NEXT_PUBLIC_KIOSK_RFID_MANUAL_INPUT?.toLowerCase() === "true";
 
 // ────────── Sub-components ──────────
 
@@ -491,13 +493,15 @@ export default function KioskSlideshow() {
           </div>
         </div>
         <div className="flex items-center gap-4">
-          <button
-            type="button"
-            onClick={() => window.dispatchEvent(new Event("open-rfid-overlay"))}
-            className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-[10px] font-black uppercase tracking-[0.25em] text-white/80 transition hover:bg-white/10 hover:text-white"
-          >
-            RFID Login
-          </button>
+          {MANUAL_RFID_INPUT_ENABLED ? (
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new Event("open-rfid-overlay"))}
+              className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-[10px] font-black uppercase tracking-[0.25em] text-white/80 transition hover:bg-white/10 hover:text-white"
+            >
+              RFID Login
+            </button>
+          ) : null}
           <KioskClock />
         </div>
       </header>
