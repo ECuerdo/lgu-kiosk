@@ -75,6 +75,9 @@ export default function RfidOverlay() {
   }, []);
 
   useEffect(() => {
+    const openOverlay = () => setActive(true);
+    window.addEventListener("open-rfid-overlay", openOverlay);
+
     const handleKeyDown = (e: KeyboardEvent) => {
       // DEV BYPASS: Ctrl + Shift + S
       if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "s") {
@@ -108,7 +111,10 @@ export default function RfidOverlay() {
     };
 
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("open-rfid-overlay", openOverlay);
+    };
   }, [step, handleCardTap]);
 
   const onVerified = () => {
@@ -177,6 +183,7 @@ export default function RfidOverlay() {
               residentName={resident.fullName}
               referenceImageUrl={resident.faceReferenceUrl || resident.photoUrl || null}
               authSource={resident.faceAuthSource || null}
+              facialRecognition={resident.facialRecognition}
               onSuccess={onVerified}
               onCancel={close}
             />

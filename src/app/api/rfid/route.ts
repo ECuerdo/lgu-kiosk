@@ -52,6 +52,11 @@ export async function GET(req: NextRequest) {
         livenessUrl: true,
         idFrontUrl: true,
         facialRecognition: true,
+        user: {
+          select: {
+            role: true,
+          },
+        },
       },
     });
 
@@ -89,6 +94,7 @@ export async function GET(req: NextRequest) {
         photoUrl: resident.livenessUrl || resident.imageUrl || resident.idFrontUrl,
         barangay: resident.barangay,
         email: resident.email,
+        role: resident.user?.role || null,
         hasFaceAuth: !!resident.facialRecognition,
         faceAuthSource: facialRecognitionObject?.mode || (faceReferenceUrl ? "reference_image" : null),
         faceReferenceUrl,
