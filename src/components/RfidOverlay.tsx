@@ -26,6 +26,7 @@ export default function RfidOverlay() {
   const [step, setStep] = useState<AuthStep>("TAP");
   const [resident, setResident] = useState<Resident | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [manualCardId, setManualCardId] = useState("");
   const inputBuffer = useRef<string>("");
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const router = useRouter();
@@ -73,6 +74,12 @@ export default function RfidOverlay() {
       setStep("TAP");
     }
   }, []);
+
+  const handleManualLogin = useCallback(() => {
+    const cardId = manualCardId.trim();
+    if (!cardId) return;
+    void handleCardTap(cardId);
+  }, [handleCardTap, manualCardId]);
 
   useEffect(() => {
     const openOverlay = () => setActive(true);
@@ -126,6 +133,7 @@ export default function RfidOverlay() {
     setStep("TAP");
     setResident(null);
     setError(null);
+    setManualCardId("");
   };
 
   const goToDashboard = (type: "municipal" | "barangay") => {
@@ -162,6 +170,42 @@ export default function RfidOverlay() {
             <div className="flex flex-col items-center py-12">
               <div className="h-16 w-16 animate-spin rounded-full border-4 border-theme-secondary border-t-transparent" />
               <p className="mt-6 text-xl font-medium text-white/80">Identifying Resident...</p>
+            </div>
+          )}
+
+          {step === "TAP" && (
+            <div className="w-full max-w-md py-6">
+              <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 text-left">
+                <p className="text-xs font-black uppercase tracking-[0.28em] text-white/50">
+                  Temporary RFID Login
+                </p>
+                <p className="mt-2 text-sm text-white/60">
+                  Type the RFID card ID here and press Enter to log in.
+                </p>
+              </div>
+              <input
+                value={manualCardId}
+                onChange={(e) => setManualCardId(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleManualLogin();
+                  }
+                }}
+                placeholder="Enter RFID card ID"
+                className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-4 text-lg font-semibold tracking-[0.14em] text-white outline-none ring-0 transition placeholder:text-white/25 focus:border-theme-secondary focus:bg-black/40"
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck={false}
+                autoFocus
+              />
+              <button
+                type="button"
+                onClick={handleManualLogin}
+                className="mt-4 inline-flex items-center justify-center rounded-full bg-theme-secondary px-6 py-3 text-sm font-black uppercase tracking-[0.2em] text-white transition hover:scale-[1.01]"
+              >
+                Login with RFID
+              </button>
             </div>
           )}
 

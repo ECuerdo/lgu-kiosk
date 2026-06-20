@@ -490,7 +490,16 @@ export default function KioskSlideshow() {
             <p>Province of Pangasinan &nbsp;|&nbsp; Official Public Kiosk</p>
           </div>
         </div>
-        <KioskClock />
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new Event("open-rfid-overlay"))}
+            className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-[10px] font-black uppercase tracking-[0.25em] text-white/80 transition hover:bg-white/10 hover:text-white"
+          >
+            RFID Login
+          </button>
+          <KioskClock />
+        </div>
       </header>
 
       {/* Ticker */}

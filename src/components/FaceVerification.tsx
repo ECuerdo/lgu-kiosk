@@ -17,6 +17,7 @@ type FacialRecognitionObject =
       mode?: "reference_image" | "embedding" | "liveness";
       referenceImageUrl?: string;
       selfieUrl?: string;
+      descriptor?: number[];
       embedding?: number[];
       model?: string;
       verifiedAt?: string;
@@ -34,6 +35,7 @@ function isFaceRecognitionObject(
   mode?: "reference_image" | "embedding" | "liveness";
   referenceImageUrl?: string;
   selfieUrl?: string;
+  descriptor?: number[];
   embedding?: number[];
   model?: string;
   verifiedAt?: string;
@@ -64,6 +66,20 @@ async function loadImage(url: string) {
   return img;
 }
 
+async function detectReferenceFace(img: HTMLImageElement | HTMLVideoElement | HTMLCanvasElement) {
+  const configs = [
+    new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.3 }),
+    new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.2 }),
+  ];
+
+  for (const options of configs) {
+    const detection = await faceapi.detectSingleFace(img, options).withFaceLandmarks(true).withFaceDescriptor();
+    if (detection) return detection;
+  }
+
+  return null;
+}
+
 export default function FaceVerification({
   residentName,
   referenceImageUrl,
@@ -82,6 +98,7 @@ export default function FaceVerification({
   const [referenceLabel, setReferenceLabel] = useState<string>("Resident");
   const [liveDescriptor, setLiveDescriptor] = useState<Float32Array | null>(null);
   const [referenceDescriptor, setReferenceDescriptor] = useState<Float32Array | null>(null);
+  const [matchState, setMatchState] = useState<"idle" | "matched" | "mismatch">("idle");
 
   const recognition = useMemo(() => getRecognitionObject(facialRecognition), [facialRecognition]);
 
@@ -90,19 +107,32 @@ export default function FaceVerification({
 
     async function setupCamera() {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: "user",
+          },
+          audio: false,
+        });
         if (cancelled) {
           stream.getTracks().forEach((track) => track.stop());
           return;
         }
 
+        streamRef.current?.getTracks().forEach((track) => track.stop());
         streamRef.current = stream;
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
+          await videoRef.current.play().catch(() => undefined);
           setCameraReady(true);
         }
-      } catch {
-        setError("Could not access camera. Please check permissions.");
+      } catch (err) {
+        if (!cancelled) {
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Could not access camera. Please check permissions."
+          );
+        }
       }
     }
 
@@ -120,9 +150,12 @@ export default function FaceVerification({
 
     async function loadModels() {
       try {
-        await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
-        await faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL);
-        await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+        await Promise.all([
+          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+          faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL),
+          faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+          faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+        ]);
         if (!cancelled) setModelsReady(true);
       } catch {
         if (!cancelled) {
@@ -139,12 +172,15 @@ export default function FaceVerification({
   }, []);
 
   useEffect(() => {
+    if (!modelsReady) return;
+
     let cancelled = false;
 
     async function loadReferenceDescriptor() {
       try {
-        if (recognition?.embedding && recognition.embedding.length > 0) {
-          setReferenceDescriptor(toFloat32Array(recognition.embedding));
+        const savedDescriptor = recognition?.descriptor || recognition?.embedding || null;
+        if (savedDescriptor && savedDescriptor.length > 0) {
+          setReferenceDescriptor(toFloat32Array(savedDescriptor));
           setReferenceLabel(residentName || "Resident");
           setReferenceReady(true);
           return;
@@ -152,16 +188,13 @@ export default function FaceVerification({
 
         const url = recognition?.referenceImageUrl || recognition?.selfieUrl || referenceImageUrl || null;
         if (!url) {
-          setError("No saved face reference is available for this resident.");
+          setError("No facialRecognition descriptor or reference image is available for this resident.");
           setReferenceReady(false);
           return;
         }
 
         const img = await loadImage(url);
-        const detection = await faceapi
-          .detectSingleFace(img, new faceapi.TinyFaceDetectorOptions())
-          .withFaceLandmarks(true)
-          .withFaceDescriptor();
+        const detection = await detectReferenceFace(img);
 
         if (!detection) {
           throw new Error("No face found in the saved reference image.");
@@ -184,7 +217,7 @@ export default function FaceVerification({
     return () => {
       cancelled = true;
     };
-  }, [recognition, referenceImageUrl, residentName]);
+  }, [modelsReady, recognition, referenceImageUrl, residentName]);
 
   useEffect(() => {
     if (!cameraReady || !modelsReady || !referenceReady) return;
@@ -201,13 +234,11 @@ export default function FaceVerification({
       }
 
       try {
-        const result = await faceapi
-          .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
-          .withFaceLandmarks(true)
-          .withFaceDescriptor();
+        const result = await detectReferenceFace(video);
 
         if (!cancelled) {
           setLiveDescriptor(result?.descriptor || null);
+          setMatchState("idle");
           if (!result) {
             setError(null);
           }
@@ -245,6 +276,14 @@ export default function FaceVerification({
       return;
     }
 
+    if (referenceDescriptor.length !== liveDescriptor.length) {
+      setMatchState("mismatch");
+      setError(
+        `Face descriptor length mismatch (${liveDescriptor.length} live vs ${referenceDescriptor.length} saved). Please re-enroll this resident's facialRecognition data.`
+      );
+      return;
+    }
+
     const matcher = new faceapi.FaceMatcher(
       [new faceapi.LabeledFaceDescriptors(referenceLabel, [referenceDescriptor])],
       MATCH_THRESHOLD
@@ -252,10 +291,12 @@ export default function FaceVerification({
     const bestMatch = matcher.findBestMatch(liveDescriptor);
 
     if (bestMatch.label === "unknown") {
+      setMatchState("mismatch");
       setError("Face does not match the saved resident record.");
       return;
     }
 
+    setMatchState("matched");
     setVerifying(true);
     setTimeout(() => {
       setVerifying(false);
@@ -267,8 +308,12 @@ export default function FaceVerification({
     ? "Loading biometric models..."
     : !referenceReady
       ? "Preparing saved face reference..."
-      : liveDescriptor
+      : matchState === "matched"
         ? "Face matched against the saved record."
+        : matchState === "mismatch"
+          ? "Face does not match the saved resident record."
+          : liveDescriptor
+            ? "Face detected. Ready for verification."
         : "Align your face within the circle to continue.";
 
   return (
@@ -289,7 +334,7 @@ export default function FaceVerification({
           autoPlay
           muted
           playsInline
-          className="h-full w-full object-cover grayscale"
+          className="h-full w-full object-cover"
         />
         <div className="absolute inset-0 border-[20px] border-transparent border-t-theme-secondary/30 animate-pulse" />
 

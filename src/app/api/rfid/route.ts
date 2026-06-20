@@ -76,14 +76,6 @@ export async function GET(req: NextRequest) {
       facialRecognition && typeof facialRecognition === "object" && !Array.isArray(facialRecognition)
         ? facialRecognition
         : null;
-    const faceReferenceUrl =
-      (facialRecognitionObject
-        ? facialRecognitionObject.referenceImageUrl || facialRecognitionObject.selfieUrl
-        : null) ||
-      resident.livenessUrl ||
-      resident.imageUrl ||
-      resident.idFrontUrl ||
-      null;
 
     return NextResponse.json({
       resident: {
@@ -95,9 +87,9 @@ export async function GET(req: NextRequest) {
         barangay: resident.barangay,
         email: resident.email,
         role: resident.user?.role || null,
-        hasFaceAuth: !!resident.facialRecognition,
-        faceAuthSource: facialRecognitionObject?.mode || (faceReferenceUrl ? "reference_image" : null),
-        faceReferenceUrl,
+        hasFaceAuth: !!facialRecognitionObject,
+        faceAuthSource: facialRecognitionObject?.mode || null,
+        faceReferenceUrl: facialRecognitionObject?.referenceImageUrl || facialRecognitionObject?.selfieUrl || null,
         facialRecognition,
       },
     });
