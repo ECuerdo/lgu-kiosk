@@ -261,7 +261,7 @@ function ProgramsSlide({ data }: { data: Record<string, unknown> }) {
   return (
     <div className="slide-programs">
       <div className="announce-header pb-4">
-        <div className="tag bg-emerald-500/15 border-emerald-500/30 text-emerald-400">⚙️ LGU Initiatives</div>
+        <div className="tag bg-theme-primary/15 border-theme-primary/30 text-theme-primary">⚙️ LGU Initiatives</div>
         <h2>{data.heading as string}</h2>
       </div>
       <div className="programs-grid">
@@ -490,7 +490,16 @@ export default function KioskSlideshow() {
             <p>Province of Pangasinan &nbsp;|&nbsp; Official Public Kiosk</p>
           </div>
         </div>
-        <KioskClock />
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new Event("open-rfid-overlay"))}
+            className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-[10px] font-black uppercase tracking-[0.25em] text-white/80 transition hover:bg-white/10 hover:text-white"
+          >
+            RFID Login
+          </button>
+          <KioskClock />
+        </div>
       </header>
 
       {/* Ticker */}
