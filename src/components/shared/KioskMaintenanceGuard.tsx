@@ -3,12 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ShieldAlert } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 export default function KioskMaintenanceGuard() {
   const [isMaintenance, setIsMaintenance] = useState(false);
   const [loading, setLoading] = useState(true);
   const lastStateRef = useRef<boolean | null>(null);
-  const reloadQueuedRef = useRef(false);
 
   const checkMaintenance = useCallback(async () => {
     try {
@@ -17,12 +17,6 @@ export default function KioskMaintenanceGuard() {
       });
       const result = await response.json();
       const nextValue = String(result.value || "").toLowerCase() === "true";
-
-      if (lastStateRef.current === true && nextValue === false && !reloadQueuedRef.current) {
-        reloadQueuedRef.current = true;
-        window.location.reload();
-        return;
-      }
 
       lastStateRef.current = nextValue;
       setIsMaintenance(nextValue);
@@ -38,19 +32,29 @@ export default function KioskMaintenanceGuard() {
       void checkMaintenance();
     }, 0);
 
-    const handleWake = () => {
-      void checkMaintenance();
-    };
-
-    window.addEventListener("focus", handleWake);
-    window.addEventListener("pageshow", handleWake);
-    document.addEventListener("visibilitychange", handleWake);
+    const channel = supabase
+      .channel("kiosk-maintenance-mode")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "SystemSetting",
+          filter: "key=eq.kiosk_maintenance_mode",
+        },
+        (payload) => {
+          const record = payload.new as { value?: string } | null | undefined;
+          const nextValue = String(record?.value || "").toLowerCase() === "true";
+          lastStateRef.current = nextValue;
+          setIsMaintenance(nextValue);
+          setLoading(false);
+        }
+      )
+      .subscribe();
 
     return () => {
       window.clearTimeout(initialCheckId);
-      window.removeEventListener("focus", handleWake);
-      window.removeEventListener("pageshow", handleWake);
-      document.removeEventListener("visibilitychange", handleWake);
+      void supabase.removeChannel(channel);
     };
   }, [checkMaintenance]);
 
