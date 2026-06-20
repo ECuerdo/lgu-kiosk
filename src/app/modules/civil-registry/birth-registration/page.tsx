@@ -1254,8 +1254,8 @@ export default function BirthRegistrationPage() {
                 {/* Header */}
                 <div className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
                     <div className="flex items-start gap-5">
-                        <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
-                            <Baby className="w-9 h-9 text-white" />
+                        <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center shrink-0">
+                            <Baby className="w-9 h-9 text-slate-900 dark:text-white" />
                         </div>
                         <div>
                             <h1 className="text-3xl md:text-5xl font-black uppercase italic tracking-tighter text-slate-900 dark:text-white leading-none">
@@ -1377,7 +1377,7 @@ export default function BirthRegistrationPage() {
                             return (
                                 <div className="space-y-8 animate-in fade-in duration-500">
                                     <div className="text-center">
-                                        <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 text-white flex items-center justify-center mx-auto mb-4 animate-bounce">
+                                        <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white flex items-center justify-center mx-auto mb-4 animate-bounce">
                                             <CheckCircle2 className="w-10 h-10" />
                                         </div>
                                         <h2 className="text-3xl md:text-5xl font-black italic uppercase tracking-tighter leading-tight">
@@ -1566,8 +1566,8 @@ export default function BirthRegistrationPage() {
                         {currentStep === "DETAILS" && (
                             <Card className="bg-white/40 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-[2.5rem] p-8 md:p-12 shadow-2xl backdrop-blur-2xl transition-all duration-300 hover:border-theme-primary/30 space-y-8 overflow-visible">
                                 <div className="flex items-center gap-4 mb-2">
-                                    <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
-                                        <Baby className="w-8 h-8 text-white" />
+                                    <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center">
+                                        <Baby className="w-8 h-8 text-slate-900 dark:text-white" />
                                     </div>
                                     <div>
                                         <h2 className="text-2xl md:text-3xl font-black uppercase italic tracking-tight text-slate-900 dark:text-white">Child Details</h2>
@@ -1699,8 +1699,8 @@ export default function BirthRegistrationPage() {
                         {currentStep === "PARENTS" && (
                             <Card className="bg-white/40 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-[2.5rem] p-8 md:p-12 shadow-2xl backdrop-blur-2xl transition-all duration-300 hover:border-theme-primary/30 space-y-8">
                                 <div className="flex items-center gap-4 mb-2">
-                                    <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
-                                        <Users className="w-8 h-8 text-white" />
+                                    <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center">
+                                        <Users className="w-8 h-8 text-slate-900 dark:text-white" />
                                     </div>
                                     <div>
                                         <h2 className="text-2xl md:text-3xl font-black uppercase italic tracking-tight text-slate-900 dark:text-white">Parental Information</h2>
@@ -1956,7 +1956,7 @@ export default function BirthRegistrationPage() {
                                     hasUploadedDocs() ? (
                                         <div className="bg-white/40 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-[2.5rem] p-8 shadow-2xl backdrop-blur-2xl transition-all duration-300 hover:border-theme-primary/30 space-y-6">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white">
+                                                <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center text-slate-900 dark:text-white">
                                                     <Upload size={18} className="stroke-[2.5]" />
                                                 </div>
                                                 <h3 className="text-sm font-black uppercase tracking-widest text-slate-800 dark:text-slate-200">Uploaded Documents</h3>
@@ -1992,7 +1992,7 @@ export default function BirthRegistrationPage() {
                                 feeSummary={
                                     <Card className="bg-white/40 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-[2.5rem] p-8 shadow-2xl backdrop-blur-2xl transition-all duration-300 hover:border-theme-primary/30 relative overflow-hidden">
                                         <div className="flex items-center gap-3 mb-6">
-                                            <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white">
+                                            <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center text-slate-900 dark:text-white">
                                                 <CheckCircle2 size={18} className="stroke-[2.5]" />
                                             </div>
                                             <h3 className="text-sm font-black uppercase tracking-widest text-slate-800 dark:text-slate-200">Fee Summary</h3>
