@@ -21,7 +21,7 @@ type ActivationState = {
 };
 
 const STORAGE_KEY = "kiosk_device_admin_activation";
-const ALLOWED_ROLES = new Set(["ADMIN", "BARANGAY_ADMIN"]);
+const ALLOWED_ROLES = new Set(["ADMIN"]);
 const ACTIVATION_BYPASS_ENABLED =
   process.env.NEXT_PUBLIC_KIOSK_ACTIVATION_BYPASS?.toLowerCase() === "true";
 const MANUAL_RFID_INPUT_ENABLED =
@@ -59,7 +59,7 @@ export default function KioskActivationGate({ children }: { children: React.Reac
     setError(null);
 
     try {
-      const response = await fetch(`/api/rfid?card=${encodeURIComponent(cardId)}`);
+      const response = await fetch(`/api/admin-rfid?card=${encodeURIComponent(cardId)}`);
       const result = (await response.json()) as { resident?: RfidResident; error?: string };
 
       if (!response.ok || !result.resident) {
@@ -67,7 +67,7 @@ export default function KioskActivationGate({ children }: { children: React.Reac
       }
 
       if (!result.resident.role || !ALLOWED_ROLES.has(result.resident.role)) {
-        throw new Error("Only ADMIN or BARANGAY_ADMIN cards can unlock the kiosk.");
+        throw new Error("Only ADMIN cards can unlock the kiosk.");
       }
 
       unlock({
@@ -162,13 +162,11 @@ export default function KioskActivationGate({ children }: { children: React.Reac
         <p className="max-w-xl text-sm leading-6 text-white/70 sm:text-base">
           {MANUAL_RFID_INPUT_ENABLED ? (
             <>
-              Enter an RFID card ID for an <strong>ADMIN</strong> or{" "}
-              <strong>BARANGAY_ADMIN</strong> account to unlock this kiosk on the current browser.
+              Enter an RFID card ID for an <strong>ADMIN</strong> account to unlock this kiosk on the current browser.
             </>
           ) : (
             <>
-              Tap or scan an RFID card for an <strong>ADMIN</strong> or{" "}
-              <strong>BARANGAY ADMIN</strong> account to unlock this kiosk on the current browser.
+              Tap or scan an RFID card for an <strong>ADMIN</strong> account to unlock this kiosk on the current browser.
             </>
           )}
         </p>

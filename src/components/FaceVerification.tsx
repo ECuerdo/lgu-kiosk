@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as faceapi from "face-api.js";
 
 interface FaceVerificationProps {
@@ -99,6 +99,7 @@ export default function FaceVerification({
   const [liveDescriptor, setLiveDescriptor] = useState<Float32Array | null>(null);
   const [referenceDescriptor, setReferenceDescriptor] = useState<Float32Array | null>(null);
   const [matchState, setMatchState] = useState<"idle" | "matched" | "mismatch">("idle");
+  const autoVerifyRef = useRef(false);
 
   const recognition = useMemo(() => getRecognitionObject(facialRecognition), [facialRecognition]);
 
@@ -239,6 +240,7 @@ export default function FaceVerification({
         if (!cancelled) {
           setLiveDescriptor(result?.descriptor || null);
           setMatchState("idle");
+          autoVerifyRef.current = false;
           if (!result) {
             setError(null);
           }
@@ -260,7 +262,7 @@ export default function FaceVerification({
     };
   }, [cameraReady, modelsReady, referenceReady]);
 
-  const handleVerify = () => {
+  const handleVerify = useCallback(() => {
     if (!modelsReady) {
       setError("Face verification models are not ready yet.");
       return;
@@ -302,7 +304,15 @@ export default function FaceVerification({
       setVerifying(false);
       onSuccess();
     }, 900);
-  };
+  }, [liveDescriptor, modelsReady, onSuccess, referenceDescriptor, referenceLabel, referenceReady]);
+
+  useEffect(() => {
+    if (!modelsReady || !referenceReady || !referenceDescriptor || !liveDescriptor || verifying) return;
+    if (autoVerifyRef.current) return;
+
+    autoVerifyRef.current = true;
+    void handleVerify();
+  }, [handleVerify, liveDescriptor, modelsReady, referenceDescriptor, referenceReady, verifying]);
 
   const faceStatus = !modelsReady
     ? "Loading biometric models..."
@@ -374,7 +384,7 @@ export default function FaceVerification({
           disabled={verifying || !liveDescriptor || !referenceReady || !modelsReady}
           className="flex-[2] rounded-xl bg-theme-secondary py-3 font-bold text-white shadow-lg transition-transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
         >
-          {verifying ? "Scanning..." : "Verify Identity"}
+          {verifying ? "Auto-verifying..." : "Verify Identity"}
         </button>
       </div>
     </div>
