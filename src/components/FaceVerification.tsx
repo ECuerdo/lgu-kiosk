@@ -121,7 +121,7 @@ export default function FaceVerification({
         </p>
       </div>
 
-      <div className="relative mb-6 h-64 w-64 overflow-hidden rounded-full border-4 border-[#4caf7d] bg-black shadow-2xl">
+      <div className="relative mb-6 h-64 w-64 overflow-hidden rounded-full border-4 border-theme-secondary bg-black shadow-2xl">
         <video
           ref={videoRef}
           autoPlay
@@ -129,7 +129,7 @@ export default function FaceVerification({
           playsInline
           className="h-full w-full object-cover grayscale"
         />
-        <div className="absolute inset-0 border-[20px] border-transparent border-t-[#4caf7d]/30 animate-pulse" />
+        <div className="absolute inset-0 border-[20px] border-transparent border-t-theme-secondary/30 animate-pulse" />
 
         {verifying && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/40">
@@ -171,7 +171,7 @@ export default function FaceVerification({
         <button
           onClick={handleVerify}
           disabled={verifying || !facePresent}
-          className="flex-[2] rounded-xl bg-[#4caf7d] py-3 font-bold text-white shadow-lg transition-transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+          className="flex-[2] rounded-xl bg-theme-secondary py-3 font-bold text-white shadow-lg transition-transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
         >
           {verifying ? "Scanning..." : "Verify Identity"}
         </button>

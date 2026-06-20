@@ -38,15 +38,15 @@ export async function POST(request: Request) {
     const attributes = resource?.attributes || {};
     const checkoutSessionId =
       String(resource?.id || "").startsWith("cs_") ? resource.id :
-      attributes.checkout_session_id || attributes.checkoutSessionId;
+        attributes.checkout_session_id || attributes.checkoutSessionId;
     const transactionId = attributes?.metadata?.transactionId;
 
     const transaction = transactionId
       ? await prisma.transaction.findUnique({ where: { id: transactionId } })
       : checkoutSessionId
         ? await prisma.transaction.findFirst({
-            where: { additionalData: { path: ["paymongo", "checkoutSessionId"], equals: checkoutSessionId } },
-          })
+          where: { additionalData: { path: ["paymongo", "checkoutSessionId"], equals: checkoutSessionId } },
+        })
         : null;
 
     if (!transaction) return NextResponse.json({ received: true });

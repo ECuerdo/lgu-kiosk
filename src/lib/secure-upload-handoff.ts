@@ -60,13 +60,22 @@ export function verifyHandoffToken(token: string): HandoffPayload {
 }
 
 export function getHandoffStoragePrefix(payload: HandoffPayload) {
-  const namespace = payload.slot.startsWith("bp_") ? "business-permits" : "building-permits";
+  const namespace = payload.slot.startsWith("bp_")
+    ? "business-permits"
+    : payload.slot === "birth_id"
+      ? "birth-certificates"
+      : payload.slot.startsWith("lcr_")
+        ? "civil-registry"
+        : "building-permits";
   return `${namespace}/${payload.userId}/handoff/${payload.nonce}`;
 }
 
 export function isAllowedHandoffSlot(sessionSlot: string, uploadSlot: string) {
   if (sessionSlot === "documents") {
     return (/^req_[0-9]$/.test(uploadSlot) && uploadSlot !== "req_5") || /^permit_[0-6]$/.test(uploadSlot);
+  }
+  if (sessionSlot === "birth_id") {
+    return uploadSlot === "idFront" || uploadSlot === "idBack";
   }
   if (sessionSlot.startsWith("bp_")) {
     return sessionSlot === uploadSlot;

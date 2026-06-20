@@ -70,6 +70,8 @@ interface PaymentModalProps {
   initialFulfillment?: FulfillmentMethod;
   initialAddress?: Partial<DeliveryAddress>;
   onBeforeCheckout: (details: CheckoutDetails) => Promise<boolean>;
+  referenceName?: string;
+  redirectPath?: string;
 }
 
 const emptyAddress: DeliveryAddress = {
@@ -92,6 +94,8 @@ export default function PaymentModal({
   initialFulfillment = "PICK_UP",
   initialAddress,
   onBeforeCheckout,
+  referenceName,
+  redirectPath,
 }: PaymentModalProps) {
   const [fulfillment, setFulfillment] = useState<FulfillmentMethod>(initialFulfillment);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("gcash");
@@ -142,7 +146,8 @@ export default function PaymentModal({
           amount: totalAmount,
           type: paymentMethod,
           transactionId,
-          reference: "Building Permit Payment",
+          reference: referenceName || "Municipal Service Payment",
+          redirectPath: redirectPath || "/modules/building-permit",
         }),
       });
       const data = await response.json();

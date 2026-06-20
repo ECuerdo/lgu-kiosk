@@ -1276,7 +1276,7 @@ export default function BuildingPermitPage() {
         file={viewerFile}
         fileUrl={viewerUrl}
         title={viewerTitle}
-        themeColor="#1a6b3a"
+        themeColor = "var(--primary-theme)"
       />
 
       {/* Floating Toast Notification */}
@@ -1300,7 +1300,7 @@ export default function BuildingPermitPage() {
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6 px-1 md:px-0">
           <div className="space-y-1 md:space-y-2">
             <h1 className="text-4xl md:text-7xl font-black text-white uppercase italic tracking-tighter leading-none select-none">
-              BUILDING <span className="text-[#1a6b3a] underline decoration-[6px] md:decoration-8 decoration-[#1a6b3a]/20 underline-offset-[6px] md:underline-offset-[12px]">PERMIT</span>
+              BUILDING <span className="text-theme-primary underline decoration-[6px] md:decoration-8 decoration-theme-primary/20 underline-offset-[6px] md:underline-offset-[12px]">PERMIT</span>
             </h1>
             <p className="text-[9px] md:text-[11px] font-bold text-slate-400 uppercase tracking-[0.4em] ml-1 md:ml-2 italic">Construction & Building Compliance Portal</p>
           </div>
@@ -1338,9 +1338,9 @@ export default function BuildingPermitPage() {
                 >
                   <div className={cn(
                     "w-11 h-11 md:w-16 md:h-16 rounded-xl md:rounded-2xl flex items-center justify-center transition-all duration-500 border-2",
-                    isActive ? "bg-[#1a6b3a] text-white border-[#1a6b3a] shadow-[0_0_20px_rgba(26,107,58,0.3)] scale-105 md:scale-110" :
+                    isActive ? "bg-theme-primary text-white border-theme-primary shadow-[0_0_20px_rgba(26,107,58,0.3)] scale-105 md:scale-110" :
                       isCompleted ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/30" :
-                        "bg-slate-100 dark:bg-white/5 text-slate-400 border-transparent group-hover:border-[#1a6b3a]/30"
+                        "bg-slate-100 dark:bg-white/5 text-slate-400 border-transparent group-hover:border-theme-primary/30"
                   )}>
                     <Icon className="w-4 h-4 md:w-7 md:h-7" />
                   </div>
@@ -1366,7 +1366,7 @@ export default function BuildingPermitPage() {
           <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
             <div className="text-center mb-8">
               <h2 className="text-3xl md:text-5xl font-black italic uppercase tracking-tighter leading-tight">
-                Existing <span className="text-[#1a6b3a] italic">Applications</span>
+                Existing <span className="text-theme-primary italic">Applications</span>
               </h2>
               <p className="text-slate-500 font-medium italic text-xs md:text-lg uppercase tracking-widest max-w-2xl mx-auto mt-2">
                 We found existing Building Permit records under your name.
@@ -1393,10 +1393,10 @@ export default function BuildingPermitPage() {
                     setMaxStepIdx(phase.maxStep);
                     setCurrentStep(phase.step);
                   }}
-                  className="bg-white/40 dark:bg-white/5 backdrop-blur-md border border-slate-200 dark:border-white/10 rounded-2xl p-6 flex items-center justify-between cursor-pointer hover:border-[#1a6b3a]/50 hover:bg-slate-50 dark:hover:bg-white/10 transition-all group"
+                  className="bg-white/40 dark:bg-white/5 backdrop-blur-md border border-slate-200 dark:border-white/10 rounded-2xl p-6 flex items-center justify-between cursor-pointer hover:border-theme-primary/50 hover:bg-slate-50 dark:hover:bg-white/10 transition-all group"
                 >
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-[#1a6b3a]/10 text-[#1a6b3a] flex items-center justify-center">
+                    <div className="w-12 h-12 rounded-xl bg-theme-primary/10 text-theme-primary flex items-center justify-center">
                       <Building2 className="w-6 h-6" />
                     </div>
                     <div>
@@ -1417,7 +1417,7 @@ export default function BuildingPermitPage() {
                     )}>
                       {app.isCancelled || app.status === "CANCELLED" ? "CANCELLED" : (app.status ? app.status.replace(/_/g, ' ') : "PENDING")}
                     </span>
-                    <span className="text-[#1a6b3a] group-hover:translate-x-1 transition-transform font-bold">
+                    <span className="text-theme-primary group-hover:translate-x-1 transition-transform font-bold">
                       →
                     </span>
                   </div>
@@ -1474,7 +1474,7 @@ export default function BuildingPermitPage() {
                   setUploadedPermits({});
                   setCurrentStep("GUIDE");
                 }}
-                className="bg-[#1a6b3a] text-white hover:bg-[#1a6b3a]/90 px-8 py-4 rounded-[2rem] font-black uppercase tracking-widest text-[10px] md:text-xs flex items-center gap-3 transition-all shadow-xl shadow-emerald-500/20"
+                className="bg-theme-primary text-white hover:bg-theme-primary/90 px-8 py-4 rounded-[2rem] font-black uppercase tracking-widest text-[10px] md:text-xs flex items-center gap-3 transition-all shadow-xl shadow-theme-primary/20"
               >
                 Start a New Application
                 <span className="text-xl leading-none">+</span>
@@ -1486,15 +1486,15 @@ export default function BuildingPermitPage() {
         {currentStep === "GUIDE" && (
           <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
             {/* Citizen's Charter Reference */}
-            <div className="bg-[#1a6b3a]/5 border border-[#1a6b3a]/20 p-6 rounded-[2rem] flex flex-col md:flex-row gap-4 md:items-center justify-between shadow-sm mb-12">
+            <div className="bg-theme-primary/5 border border-theme-primary/20 p-6 rounded-[2rem] flex flex-col md:flex-row gap-4 md:items-center justify-between shadow-sm mb-12">
               <div className="space-y-1.5 text-left">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#1a6b3a]/10 text-[#1a6b3a] text-[8px] font-black uppercase tracking-widest font-sans">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-theme-primary/10 text-theme-primary text-[8px] font-black uppercase tracking-widest font-sans">
                   <Book className="w-3 h-3" /> Citizen's Charter
                 </span>
                 <h4 className="text-sm font-black tracking-widest text-slate-700 dark:text-white italic">
                   Based on Mapandan Building Permit Process
                 </h4>
-                <div className="text-xs text-[#1a6b3a] dark:text-[#1a6b3a]/90 font-bold bg-[#1a6b3a]/[0.02] border border-[#1a6b3a]/10 p-4 rounded-xl mt-2 italic font-sans leading-relaxed">
+                <div className="text-xs text-theme-primary dark:text-theme-primary/90 font-bold bg-theme-primary/[0.02] border border-theme-primary/10 p-4 rounded-xl mt-2 italic font-sans leading-relaxed">
                   &quot;Compliant with PD 1096 (National Building Code), RA 11032 (EODB Act), and RA 10173 (Data Privacy Act). Ensure all requirements are duly signed and notarized where applicable.&quot;
                 </div>
               </div>
@@ -1502,7 +1502,7 @@ export default function BuildingPermitPage() {
 
             {/* Requirements Guide Content */}
             <div className="space-y-3 md:space-y-4 text-center mb-8">
-              <h2 className="text-3xl md:text-5xl font-black italic uppercase tracking-tighter leading-tight">Requirements <span className="text-[#1a6b3a] italic">Guide</span></h2>
+              <h2 className="text-3xl md:text-5xl font-black italic uppercase tracking-tighter leading-tight">Requirements <span className="text-theme-primary italic">Guide</span></h2>
               <p className="text-slate-500 font-medium italic text-xs md:text-lg uppercase tracking-widest max-w-2xl mx-auto">Review each requirement to see detailed step-by-step instructions.</p>
             </div>
 
@@ -1518,14 +1518,14 @@ export default function BuildingPermitPage() {
               {requirements.map((req) => (
                 <div
                   key={req.id}
-                  className="bg-white/40 dark:bg-white/5 backdrop-blur-md border border-slate-100 dark:border-white/10 rounded-2xl md:rounded-[2rem] overflow-hidden shadow-sm relative group hover:border-[#1a6b3a]/30 transition-all duration-300"
+                  className="bg-white/40 dark:bg-white/5 backdrop-blur-md border border-slate-100 dark:border-white/10 rounded-2xl md:rounded-[2rem] overflow-hidden shadow-sm relative group hover:border-theme-primary/30 transition-all duration-300"
                 >
-                  <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-[#1a6b3a] opacity-50 group-hover:opacity-100 transition-opacity"></div>
+                  <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-theme-primary opacity-50 group-hover:opacity-100 transition-opacity"></div>
 
                   <div className="p-6 md:p-8 pl-8 md:pl-10">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-[#1a6b3a]/5 text-[#1a6b3a] flex items-center justify-center">
+                        <div className="w-12 h-12 rounded-xl bg-theme-primary/5 text-theme-primary flex items-center justify-center">
                           {req.icon}
                         </div>
                         <h3 className="font-black text-slate-900 dark:text-white uppercase tracking-tighter italic text-lg md:text-xl">{req.title}</h3>
@@ -1538,7 +1538,7 @@ export default function BuildingPermitPage() {
                     <div className="space-y-4 mb-6">
                       {req.steps.map((step, idx) => (
                         <div key={idx} className="flex gap-4 items-start border-b border-dashed border-slate-200 dark:border-white/10 pb-4 last:border-0 last:pb-0">
-                          <div className="flex-shrink-0 w-6 h-6 rounded-full bg-[#1a6b3a]/10 text-[#1a6b3a] flex items-center justify-center text-xs font-black mt-0.5">
+                          <div className="flex-shrink-0 w-6 h-6 rounded-full bg-theme-primary/10 text-theme-primary flex items-center justify-center text-xs font-black mt-0.5">
                             {idx + 1}
                           </div>
                           <p className="text-slate-600 dark:text-slate-400 font-medium text-sm leading-relaxed pt-0.5">
@@ -1548,9 +1548,9 @@ export default function BuildingPermitPage() {
                       ))}
                     </div>
 
-                    <div className="bg-[#1a6b3a]/[0.03] rounded-xl p-4 flex items-start gap-3 border border-[#1a6b3a]/10">
+                    <div className="bg-theme-primary/[0.03] rounded-xl p-4 flex items-start gap-3 border border-theme-primary/10">
                       <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                        <span className="font-bold text-[#1a6b3a] uppercase tracking-wider text-[10px] mr-2">{req.infoLabel}:</span>
+                        <span className="font-bold text-theme-primary uppercase tracking-wider text-[10px] mr-2">{req.infoLabel}:</span>
                         <span className="italic">{req.infoText}</span>
                       </p>
                     </div>
@@ -1562,7 +1562,7 @@ export default function BuildingPermitPage() {
             <div className="mt-8 bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-[2rem] p-6 md:p-8">
               <div className="mb-6">
                 <h3 className="flex items-center gap-2 font-black text-slate-900 dark:text-white uppercase tracking-tighter text-lg md:text-xl italic">
-                  <Book className="w-5 h-5 text-[#1a6b3a]" />
+                  <Book className="w-5 h-5 text-theme-primary" />
                   Document Catalog Summary
                 </h3>
                 <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-1">
@@ -1588,7 +1588,7 @@ export default function BuildingPermitPage() {
             <div className="mt-8 bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-[2rem] p-6 md:p-8">
               <div className="mb-6">
                 <h3 className="flex items-center gap-2 font-black text-slate-900 dark:text-white uppercase tracking-tighter text-lg md:text-xl italic">
-                  <CreditCard className="w-5 h-5 text-[#1a6b3a]" />
+                  <CreditCard className="w-5 h-5 text-theme-primary" />
                   Acceptable Valid IDs
                 </h3>
                 <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-1">
@@ -1639,7 +1639,7 @@ export default function BuildingPermitPage() {
                 className={cn(
                   "px-8 py-4 rounded-[2rem] font-black uppercase tracking-widest text-[10px] md:text-xs flex items-center gap-3 transition-all w-full md:w-auto ml-auto",
                   hasReadGuide
-                    ? "bg-[#1a6b3a] text-white hover:bg-[#1a6b3a]/90 shadow-xl shadow-emerald-500/20"
+                    ? "bg-theme-primary text-white hover:bg-theme-primary/90 shadow-xl shadow-theme-primary/20"
                     : "bg-slate-300 text-slate-500 cursor-not-allowed dark:bg-white/10 dark:text-slate-400"
                 )}
               >
@@ -1657,23 +1657,23 @@ export default function BuildingPermitPage() {
               <div className="space-y-3 md:space-y-4 text-center mb-8">
                 <h2 className="text-3xl md:text-5xl font-black italic uppercase tracking-tighter leading-tight flex items-center justify-center gap-4">
                   <UserCheck className="w-10 h-10 md:w-12 md:h-12 text-slate-800 dark:text-white" />
-                  <span className="text-slate-800 dark:text-white">Profile <span className="text-[#1a6b3a] italic">Evaluation</span></span>
+                  <span className="text-slate-800 dark:text-white">Profile <span className="text-theme-primary italic">Evaluation</span></span>
                 </h2>
                 <p className="text-slate-500 font-medium italic text-xs md:text-lg uppercase tracking-widest max-w-2xl mx-auto">Verify your identity and provide the necessary details. Fields marked with <span className="text-red-500 font-bold text-lg">*</span> are required.</p>
               </div>
 
               {loading ? (
-                <div className="flex justify-center p-12"><div className="w-8 h-8 border-4 border-[#1a6b3a] border-t-transparent rounded-full animate-spin"></div></div>
+                <div className="flex justify-center p-12"><div className="w-8 h-8 border-4 border-theme-primary border-t-transparent rounded-full animate-spin"></div></div>
               ) : (
                 <>
-                  <div className="bg-white/40 dark:bg-white/5 backdrop-blur-md border border-slate-100 dark:border-white/10 rounded-2xl md:rounded-[2rem] overflow-hidden p-6 md:p-8 relative group hover:border-[#1a6b3a]/30 transition-all duration-300">
-                    <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-[#1a6b3a] opacity-50 group-hover:opacity-100 transition-opacity"></div>
+                  <div className="bg-white/40 dark:bg-white/5 backdrop-blur-md border border-slate-100 dark:border-white/10 rounded-2xl md:rounded-[2rem] overflow-hidden p-6 md:p-8 relative group hover:border-theme-primary/30 transition-all duration-300">
+                    <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-theme-primary opacity-50 group-hover:opacity-100 transition-opacity"></div>
                     <div className="flex items-center gap-2 mb-6">
-                      <Book className="w-5 h-5 text-[#1a6b3a]" />
+                      <Book className="w-5 h-5 text-theme-primary" />
                       <h3 className="font-black text-slate-900 dark:text-white uppercase tracking-tighter text-lg md:text-xl italic">Your Profile (from Digital Data Gathering)</h3>
                     </div>
 
-                    <div className="bg-[#1a6b3a]/10 text-[#1a6b3a] text-xs py-3 px-4 rounded-xl flex items-start gap-2 border border-[#1a6b3a]/20 mb-6">
+                    <div className="bg-theme-primary/10 text-theme-primary text-xs py-3 px-4 rounded-xl flex items-start gap-2 border border-theme-primary/20 mb-6">
                       <CheckCircle className="w-4 h-4 shrink-0 mt-0.5" />
                       <p><b>Data Import Notice:</b> Your information was imported from the Digital Data Gathering module. Updates to your profile must be made through the separate Digital Data Gathering system.</p>
                     </div>
@@ -1717,10 +1717,10 @@ export default function BuildingPermitPage() {
                   </div>
 
                   {/* Purpose / Additional Info */}
-                  <div className="bg-white/40 dark:bg-white/5 backdrop-blur-md border border-slate-100 dark:border-white/10 rounded-2xl md:rounded-[2rem] overflow-hidden p-6 md:p-8 mt-6 relative group hover:border-[#1a6b3a]/30 transition-all duration-300">
-                    <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-[#1a6b3a] opacity-50 group-hover:opacity-100 transition-opacity"></div>
+                  <div className="bg-white/40 dark:bg-white/5 backdrop-blur-md border border-slate-100 dark:border-white/10 rounded-2xl md:rounded-[2rem] overflow-hidden p-6 md:p-8 mt-6 relative group hover:border-theme-primary/30 transition-all duration-300">
+                    <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-theme-primary opacity-50 group-hover:opacity-100 transition-opacity"></div>
                     <div className="flex items-center gap-2 mb-6">
-                      <Book className="w-5 h-5 text-[#1a6b3a]" />
+                      <Book className="w-5 h-5 text-theme-primary" />
                       <h3 className="font-black text-slate-900 dark:text-white uppercase tracking-tighter text-lg md:text-xl italic">Additional Information</h3>
                     </div>
 
@@ -1990,7 +1990,7 @@ export default function BuildingPermitPage() {
                                       setViewerTitle("TCT Document");
                                       setViewerOpen(true);
                                     }}
-                                    className="inline-flex items-center gap-2 text-xs font-bold text-[#1a6b3a] hover:underline"
+                                    className="inline-flex items-center gap-2 text-xs font-bold text-theme-primary hover:underline"
                                   >
                                     View Full Document ↗
                                   </button>
@@ -2009,7 +2009,7 @@ export default function BuildingPermitPage() {
                                       <button
                                         type="button"
                                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); setViewerFile(formData.tctFile); setViewerTitle("TCT Document"); setViewerOpen(true); }}
-                                        className="px-4 py-1.5 bg-[#1a6b3a] text-white text-[10px] uppercase font-bold rounded-full shadow-lg hover:bg-[#1a6b3a]/90"
+                                        className="px-4 py-1.5 bg-theme-primary text-white text-[10px] uppercase font-bold rounded-full shadow-lg hover:bg-theme-primary/90"
                                       >
                                         Preview Image
                                       </button>
@@ -2022,7 +2022,7 @@ export default function BuildingPermitPage() {
                               } else if (formData.tctFile || tctHandoffUrl) {
                                 return (
                                   <div className="w-full flex flex-col justify-center items-center gap-4">
-                                    <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 text-[#1a6b3a] flex items-center justify-center">
+                                    <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 text-theme-primary flex items-center justify-center">
                                       <FileText className="w-7 h-7" />
                                     </div>
                                     <div className="max-w-full">
@@ -2040,7 +2040,7 @@ export default function BuildingPermitPage() {
                                             setViewerTitle("TCT Document");
                                             setViewerOpen(true);
                                           }}
-                                          className="px-5 py-2 bg-[#1a6b3a] text-white text-[10px] uppercase font-black tracking-widest rounded-full shadow-lg hover:bg-[#1a6b3a]/90"
+                                          className="px-5 py-2 bg-theme-primary text-white text-[10px] uppercase font-black tracking-widest rounded-full shadow-lg hover:bg-theme-primary/90"
                                         >
                                           Preview
                                         </button>
@@ -2058,7 +2058,7 @@ export default function BuildingPermitPage() {
                               }
                               return (
                                 <button type="button" onClick={startTctHandoff} disabled={isCreatingHandoff} className="absolute inset-0 flex flex-col items-center justify-center cursor-pointer z-20 disabled:opacity-50">
-                                  <QrCode className="w-8 h-8 text-[#1a6b3a] mb-2 pointer-events-none" />
+                                  <QrCode className="w-8 h-8 text-theme-primary mb-2 pointer-events-none" />
                                   <p className="text-sm font-medium text-slate-600 dark:text-slate-400 pointer-events-none px-2">
                                     {isCreatingHandoff ? "Creating secure QR code..." : "Scan QR to upload certified true copy of TCT"}
                                   </p>
@@ -2088,7 +2088,7 @@ export default function BuildingPermitPage() {
                             }}
                             disabled={!isEditable}
                           >
-                            <SelectTrigger className="w-full h-auto bg-white dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-xl p-4 text-sm focus:ring-2 focus:ring-[#1a6b3a]/20 outline-none cursor-pointer">
+                            <SelectTrigger className="w-full h-auto bg-white dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-xl p-4 text-sm focus:ring-2 focus:ring-theme-primary/20 outline-none cursor-pointer">
                               <SelectValue placeholder="Select occupancy category" />
                             </SelectTrigger>
                             <SelectContent className="bg-white dark:bg-[#11131a] border-slate-200 dark:border-white/10 rounded-xl">
@@ -2124,7 +2124,7 @@ export default function BuildingPermitPage() {
                                           }}
                                         />
                                       ) : (
-                                        <div className="w-2.5 h-2.5 rounded bg-[#1a6b3a] shrink-0" />
+                                        <div className="w-2.5 h-2.5 rounded bg-theme-primary shrink-0" />
                                       )}
                                       <label htmlFor={`sub-occ-${opt.code}`} className="text-xs md:text-sm font-medium text-slate-700 dark:text-slate-300 cursor-pointer select-none">
                                         {opt.label}
@@ -2139,7 +2139,7 @@ export default function BuildingPermitPage() {
                                   <input
                                     type="text"
                                     placeholder="Please specify occupancy use details"
-                                    className={cn("w-full bg-white dark:bg-black/20 border rounded-xl p-4 text-sm focus:ring-2 focus:ring-[#1a6b3a]/20 outline-none", (showValidationErrors && !formData.subOccupancyOthersSpecify) ? "border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)] animate-pulse" : "border-slate-200 dark:border-white/10")}
+                                    className={cn("w-full bg-white dark:bg-black/20 border rounded-xl p-4 text-sm focus:ring-2 focus:ring-theme-primary/20 outline-none", (showValidationErrors && !formData.subOccupancyOthersSpecify) ? "border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)] animate-pulse" : "border-slate-200 dark:border-white/10")}
                                     value={formData.subOccupancyOthersSpecify}
                                     onChange={e => setFormData({ ...formData, subOccupancyOthersSpecify: e.target.value })}
                                     disabled={!isEditable}
@@ -2160,7 +2160,7 @@ export default function BuildingPermitPage() {
                           type="number"
                           min="1"
                           placeholder="e.g. 2"
-                          className={cn("w-full bg-white dark:bg-black/20 border rounded-xl p-4 text-sm focus:ring-2 focus:ring-[#1a6b3a]/20 outline-none", (showValidationErrors && (!formData.totalFloors || Number(formData.totalFloors) <= 0)) ? "border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)] animate-pulse" : "border-slate-200 dark:border-white/10")}
+                          className={cn("w-full bg-white dark:bg-black/20 border rounded-xl p-4 text-sm focus:ring-2 focus:ring-theme-primary/20 outline-none", (showValidationErrors && (!formData.totalFloors || Number(formData.totalFloors) <= 0)) ? "border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)] animate-pulse" : "border-slate-200 dark:border-white/10")}
                           value={formData.totalFloors}
                           onChange={e => {
                             const val = e.target.value;
@@ -2182,7 +2182,7 @@ export default function BuildingPermitPage() {
                           <input
                             type="number"
                             min="0"
-                            className={cn("w-full bg-white dark:bg-black/20 border rounded-xl p-4 pl-10 text-sm focus:ring-2 focus:ring-[#1a6b3a]/20 outline-none", (showValidationErrors && (!formData.estimatedCost || Number(formData.estimatedCost) <= 0)) ? "border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)] animate-pulse" : "border-slate-200 dark:border-white/10")}
+                            className={cn("w-full bg-white dark:bg-black/20 border rounded-xl p-4 pl-10 text-sm focus:ring-2 focus:ring-theme-primary/20 outline-none", (showValidationErrors && (!formData.estimatedCost || Number(formData.estimatedCost) <= 0)) ? "border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)] animate-pulse" : "border-slate-200 dark:border-white/10")}
                             value={formData.estimatedCost}
                             onChange={e => {
                               const val = e.target.value;
@@ -2206,7 +2206,7 @@ export default function BuildingPermitPage() {
                             <input
                               type="text"
                               placeholder="e.g. 123"
-                              className="w-full bg-white dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-xl p-4 text-sm focus:ring-2 focus:ring-[#1a6b3a]/20 outline-none"
+                              className="w-full bg-white dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-xl p-4 text-sm focus:ring-2 focus:ring-theme-primary/20 outline-none"
                               value={formData.locHouseNo}
                               onChange={e => setFormData({ ...formData, locHouseNo: e.target.value })}
                               disabled={!isEditable}
@@ -2217,7 +2217,7 @@ export default function BuildingPermitPage() {
                             <input
                               type="text"
                               placeholder="e.g. Bonifacio St."
-                              className="w-full bg-white dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-xl p-4 text-sm focus:ring-2 focus:ring-[#1a6b3a]/20 outline-none"
+                              className="w-full bg-white dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-xl p-4 text-sm focus:ring-2 focus:ring-theme-primary/20 outline-none"
                               value={formData.locStreet}
                               onChange={e => setFormData({ ...formData, locStreet: e.target.value })}
                               disabled={!isEditable}
@@ -2230,7 +2230,7 @@ export default function BuildingPermitPage() {
                               onValueChange={value => setFormData({ ...formData, locBarangay: value })}
                               disabled={!isEditable}
                             >
-                              <SelectTrigger className="w-full h-auto bg-white dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-xl p-4 text-sm focus:ring-2 focus:ring-[#1a6b3a]/20 outline-none cursor-pointer">
+                              <SelectTrigger className="w-full h-auto bg-white dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-xl p-4 text-sm focus:ring-2 focus:ring-theme-primary/20 outline-none cursor-pointer">
                                 <SelectValue placeholder="Select Barangay" />
                               </SelectTrigger>
                               <SelectContent>
@@ -2266,7 +2266,7 @@ export default function BuildingPermitPage() {
                           }}
                           disabled={!isEditable}
                         >
-                          <SelectTrigger className={cn("w-full h-auto bg-white dark:bg-black/20 border rounded-xl p-4 text-sm focus:ring-2 focus:ring-[#1a6b3a]/20 outline-none cursor-pointer", (showValidationErrors && !formData.isLotOwner) ? "border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)] animate-pulse" : "border-slate-200 dark:border-white/10")}>
+                          <SelectTrigger className={cn("w-full h-auto bg-white dark:bg-black/20 border rounded-xl p-4 text-sm focus:ring-2 focus:ring-theme-primary/20 outline-none cursor-pointer", (showValidationErrors && !formData.isLotOwner) ? "border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)] animate-pulse" : "border-slate-200 dark:border-white/10")}>
                             <SelectValue placeholder="Select Yes or No" />
                           </SelectTrigger>
                           <SelectContent>
@@ -2325,7 +2325,7 @@ export default function BuildingPermitPage() {
                         setCurrentStep("DOCUMENTS");
                         window.scrollTo({ top: 0, behavior: "smooth" });
                       }}
-                      className="bg-[#1a6b3a] text-white hover:bg-[#1a6b3a]/90 px-8 py-4 rounded-[2rem] font-black uppercase tracking-widest text-[10px] md:text-xs flex items-center gap-3 transition-all shadow-xl shadow-emerald-500/20 w-full md:w-auto ml-auto"
+                      className="bg-theme-primary text-white hover:bg-theme-primary/90 px-8 py-4 rounded-[2rem] font-black uppercase tracking-widest text-[10px] md:text-xs flex items-center gap-3 transition-all shadow-xl shadow-theme-primary/20 w-full md:w-auto ml-auto"
                     >
                       Proceed to Document Uploads
                       <span className="text-xl leading-none">→</span>
@@ -2340,7 +2340,7 @@ export default function BuildingPermitPage() {
         {currentStep === "DOCUMENTS" && (
           <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
             <div className="space-y-3 md:space-y-4 text-center mb-8">
-              <h2 className="text-3xl md:text-5xl font-black italic uppercase tracking-tighter leading-tight">Document <span className="text-[#1a6b3a] italic">Uploads</span></h2>
+              <h2 className="text-3xl md:text-5xl font-black italic uppercase tracking-tighter leading-tight">Document <span className="text-theme-primary italic">Uploads</span></h2>
               <p className="text-slate-500 font-medium italic text-xs md:text-lg uppercase tracking-widest max-w-2xl mx-auto">Upload the required documents and permits. Optional files may also be included. Each file must be under 5MB.</p>
             </div>
 
@@ -2351,7 +2351,7 @@ export default function BuildingPermitPage() {
                 className={cn(
                   "flex items-center justify-center gap-2 flex-1 md:px-6 py-2.5 rounded-lg text-xs md:text-sm font-black uppercase tracking-widest transition-all",
                   activeDocTab === "REQUIREMENTS"
-                    ? "bg-white dark:bg-white/10 text-[#1a6b3a] shadow-sm ring-1 ring-black/5 dark:ring-white/10"
+                    ? "bg-white dark:bg-white/10 text-theme-primary shadow-sm ring-1 ring-black/5 dark:ring-white/10"
                     : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-white/50 dark:hover:bg-white/5"
                 )}
               >
@@ -2363,7 +2363,7 @@ export default function BuildingPermitPage() {
                 className={cn(
                   "flex items-center justify-center gap-2 flex-1 md:px-6 py-2.5 rounded-lg text-xs md:text-sm font-black uppercase tracking-widest transition-all",
                   activeDocTab === "PERMITS"
-                    ? "bg-white dark:bg-white/10 text-[#1a6b3a] shadow-sm ring-1 ring-black/5 dark:ring-white/10"
+                    ? "bg-white dark:bg-white/10 text-theme-primary shadow-sm ring-1 ring-black/5 dark:ring-white/10"
                     : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-white/50 dark:hover:bg-white/5"
                 )}
               >
@@ -2376,7 +2376,7 @@ export default function BuildingPermitPage() {
                 type="button"
                 onClick={startDocumentsHandoff}
                 disabled={isCreatingHandoff}
-                className="mb-6 inline-flex items-center gap-2 rounded-full bg-[#1a6b3a] px-6 py-3 text-xs font-black uppercase tracking-widest text-white shadow-lg hover:bg-[#1a6b3a]/90 disabled:opacity-50"
+                className="mb-6 inline-flex items-center gap-2 rounded-full bg-theme-primary px-6 py-3 text-xs font-black uppercase tracking-widest text-white shadow-lg hover:bg-theme-primary/90 disabled:opacity-50"
               >
                 <QrCode className="h-4 w-4" />
                 {isCreatingHandoff ? "Creating secure QR..." : "Upload all documents via QR"}
@@ -2440,7 +2440,7 @@ export default function BuildingPermitPage() {
                           </button>
                         )}
                         {isEditable && (
-                          <button type="button" onClick={startDocumentsHandoff} className="px-4 py-2 text-xs font-black uppercase bg-[#1a6b3a] text-white rounded-full hover:bg-[#1a6b3a]/90 flex items-center gap-1 shadow-sm">
+                          <button type="button" onClick={startDocumentsHandoff} className="px-4 py-2 text-xs font-black uppercase bg-theme-primary text-white rounded-full hover:bg-theme-primary/90 flex items-center gap-1 shadow-sm">
                             <QrCode className="w-3.5 h-3.5" />
                             {hasFile ? "Re-upload" : "Upload"}
                           </button>
@@ -2502,7 +2502,7 @@ export default function BuildingPermitPage() {
                           </button>
                         )}
                         {isEditable && (
-                          <button type="button" onClick={startDocumentsHandoff} className="px-4 py-2 text-xs font-black uppercase bg-[#1a6b3a] text-white rounded-full hover:bg-[#1a6b3a]/90 flex items-center gap-1 shadow-sm">
+                          <button type="button" onClick={startDocumentsHandoff} className="px-4 py-2 text-xs font-black uppercase bg-theme-primary text-white rounded-full hover:bg-theme-primary/90 flex items-center gap-1 shadow-sm">
                             <QrCode className="w-3.5 h-3.5" />
                             {hasFile ? "Re-upload" : "Upload"}
                           </button>
@@ -2518,7 +2518,7 @@ export default function BuildingPermitPage() {
               <div className="mt-10 grid grid-cols-1 gap-6 border-t border-slate-200 pt-8 dark:border-white/10 lg:grid-cols-2">
                 <div className="rounded-2xl border border-slate-200 bg-white/50 p-6 dark:border-white/10 dark:bg-white/5">
                   <div className="mb-4 flex items-center gap-3">
-                    <FileSignature className="h-5 w-5 text-[#1a6b3a]" />
+                    <FileSignature className="h-5 w-5 text-theme-primary" />
                     <h3 className="text-sm font-black uppercase tracking-wider text-slate-900 dark:text-white">
                       Submitted Digital Signature
                     </h3>
@@ -2588,7 +2588,7 @@ export default function BuildingPermitPage() {
                   setCurrentStep("SUBMIT");
                   window.scrollTo({ top: 0, behavior: "smooth" });
                 }}
-                className="bg-[#1a6b3a] text-white hover:bg-[#1a6b3a]/90 px-8 py-4 rounded-[2rem] font-black uppercase tracking-widest text-[10px] md:text-xs flex items-center gap-3 transition-all shadow-xl shadow-emerald-500/20 w-full md:w-auto ml-auto"
+                className="bg-theme-primary text-white hover:bg-theme-primary/90 px-8 py-4 rounded-[2rem] font-black uppercase tracking-widest text-[10px] md:text-xs flex items-center gap-3 transition-all shadow-xl shadow-theme-primary/20 w-full md:w-auto ml-auto"
               >
                 {selectedApplication && !isRevision ? "Next: Evaluation" : "Proceed to Verification & Submit"}
                 <span className="text-xl leading-none">→</span>
@@ -2601,7 +2601,7 @@ export default function BuildingPermitPage() {
           <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
             <div className="text-center mb-8">
               <h2 className="text-3xl md:text-5xl font-black italic uppercase tracking-tighter leading-tight">
-                Evaluation <span className="text-[#1a6b3a] italic">Status</span>
+                Evaluation <span className="text-theme-primary italic">Status</span>
               </h2>
               <p className="text-slate-500 font-medium italic text-xs md:text-lg uppercase tracking-widest max-w-2xl mx-auto mt-2">
                 Your application is currently being evaluated by the Engineering Office.
@@ -2610,7 +2610,7 @@ export default function BuildingPermitPage() {
 
             <div className="mx-auto max-w-4xl space-y-6 rounded-[2.5rem] border border-slate-200 bg-white p-6 shadow-xl md:p-10">
               <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-[#1a6b3a]">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-theme-primary">
                   <Landmark className="h-5 w-5" />
                 </span>
                 <h3 className="text-xl font-black tracking-tight text-slate-900">Treasury & Zoning/BFP Status</h3>
@@ -2618,7 +2618,7 @@ export default function BuildingPermitPage() {
 
               <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pb-6 border-b border-slate-200 dark:border-white/10">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-[#1a6b3a]/10 text-[#1a6b3a] flex items-center justify-center">
+                  <div className="w-12 h-12 rounded-xl bg-theme-primary/10 text-theme-primary flex items-center justify-center">
                     <Hourglass className="w-6 h-6 animate-spin" />
                   </div>
                   <div>
@@ -2628,7 +2628,7 @@ export default function BuildingPermitPage() {
                 </div>
 
                 <div className="text-right">
-                  <span className="bg-[#1a6b3a]/10 text-[#1a6b3a] text-xs font-bold uppercase tracking-widest px-4 py-2 rounded-full border border-[#1a6b3a]/20 shadow-inner">
+                  <span className="bg-theme-primary/10 text-theme-primary text-xs font-bold uppercase tracking-widest px-4 py-2 rounded-full border border-theme-primary/20 shadow-inner">
                     {selectedApplication.status.replace(/_/g, ' ')}
                   </span>
                 </div>
@@ -2712,7 +2712,7 @@ export default function BuildingPermitPage() {
                 </div>
                 <div>
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Estimated Cost</p>
-                  <p className="font-bold text-[#1a6b3a] mt-1 text-base">₱{parseFloat(selectedApplication.additionalData?.estimatedCost || "0").toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                  <p className="font-bold text-theme-primary mt-1 text-base">₱{parseFloat(selectedApplication.additionalData?.estimatedCost || "0").toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 </div>
                 <div>
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Location of Construction</p>
@@ -2727,7 +2727,7 @@ export default function BuildingPermitPage() {
                       setIsRevision(true);
                       setCurrentStep("PROFILE");
                     }}
-                    className="px-6 py-3 bg-[#1a6b3a] hover:bg-[#1a6b3a]/90 text-white rounded-full font-black uppercase tracking-widest text-xs shadow-md"
+                    className="px-6 py-3 bg-theme-primary hover:bg-theme-primary/90 text-white rounded-full font-black uppercase tracking-widest text-xs shadow-md"
                   >
                     Edit & Resubmit Application
                   </button>
@@ -2744,7 +2744,7 @@ export default function BuildingPermitPage() {
                   <button
                     disabled={["FOR_REQUESTING", "FOR_INSPECTION", "FOR_REINSPECTION", "EVALUATED"].includes(selectedApplication.status)}
                     onClick={() => setCurrentStep("TREASURY")}
-                    className="px-6 py-3 bg-[#1a6b3a] text-white rounded-full font-black uppercase tracking-widest text-xs disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500"
+                    className="px-6 py-3 bg-theme-primary text-white rounded-full font-black uppercase tracking-widest text-xs disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500"
                   >
                     {["FOR_REQUESTING", "FOR_INSPECTION", "FOR_REINSPECTION", "EVALUATED"].includes(selectedApplication.status)
                       ? "Awaiting Treasury Billing"
@@ -2772,7 +2772,7 @@ export default function BuildingPermitPage() {
           <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
             <div className="text-center mb-8">
               <h2 className="text-3xl md:text-5xl font-black italic uppercase tracking-tighter leading-tight">
-                Treasury & <span className="text-[#1a6b3a] italic">Clearances</span>
+                Treasury & <span className="text-theme-primary italic">Clearances</span>
               </h2>
               <p className="text-slate-500 font-medium italic text-xs md:text-lg uppercase tracking-widest max-w-2xl mx-auto mt-2">
                 Manage your payment proof and verify necessary clearances (BFP and zoning).
@@ -2804,7 +2804,7 @@ export default function BuildingPermitPage() {
                   <h4 className="text-lg font-black text-slate-900">Payment Processing</h4>
                 </div>
                 <div className="rounded-2xl border border-slate-200 bg-white p-5">
-                  <p className="text-[9px] font-black italic uppercase tracking-widest text-[#1a6b3a]">Endorsed Fees Summary</p>
+                  <p className="text-[9px] font-black italic uppercase tracking-widest text-theme-primary">Endorsed Fees Summary</p>
                   <div className="mt-3 space-y-3 text-xs font-bold text-slate-500">
                     {(() => {
                       const rawFiscal = selectedApplication.fiscalSnapshot;
@@ -2837,7 +2837,7 @@ export default function BuildingPermitPage() {
                   </div>
                   <div className="mt-5 flex items-center justify-between border-t border-dashed border-slate-300 pt-5">
                     <span className="text-xs font-black uppercase text-slate-900">Total Amount</span>
-                    <span className="text-xl font-black text-[#1a6b3a]">₱{Number(selectedApplication.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    <span className="text-xl font-black text-theme-primary">₱{Number(selectedApplication.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                   </div>
                 </div>
               </section>
@@ -2878,7 +2878,7 @@ export default function BuildingPermitPage() {
                           <button
                             type="button"
                             onClick={() => void handlePrintDocument(officialReceiptUrl, "Official Receipt")}
-                            className="flex items-center gap-2 rounded-full bg-[#1a6b3a] px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white hover:bg-[#155b31]"
+                            className="flex items-center gap-2 rounded-full bg-theme-primary px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white hover:bg-[#155b31]"
                           >
                             <Printer className="h-3.5 w-3.5" /> Print OR
                           </button>
@@ -2922,7 +2922,7 @@ export default function BuildingPermitPage() {
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div className="p-4 bg-white dark:bg-black/35 rounded-xl border border-slate-200 dark:border-white/5">
                           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Assessment Amount</p>
-                          <p className="font-black text-2xl text-[#1a6b3a] mt-1">₱{parseFloat(selectedApplication.totalAmount || "0").toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                          <p className="font-black text-2xl text-theme-primary mt-1">₱{parseFloat(selectedApplication.totalAmount || "0").toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                         </div>
                         <div className="p-4 bg-white dark:bg-black/35 rounded-xl border border-slate-200 dark:border-white/5">
                           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Payment Reference No.</p>
@@ -2950,12 +2950,12 @@ export default function BuildingPermitPage() {
                     
                     <div className="p-4 bg-white dark:bg-black/35 rounded-xl border border-slate-200 dark:border-white/5 w-fit">
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Assessment Amount</p>
-                      <p className="font-black text-2xl text-[#1a6b3a] mt-1">₱{parseFloat(selectedApplication.totalAmount || "0").toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                      <p className="font-black text-2xl text-theme-primary mt-1">₱{parseFloat(selectedApplication.totalAmount || "0").toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                     </div>
 
                     <button
                       onClick={() => setIsPaymentModalOpen(true)}
-                      className="px-6 py-3 bg-[#1a6b3a] hover:bg-[#1a6b3a]/90 text-white rounded-full font-black uppercase tracking-widest text-xs flex items-center gap-2 shadow-md"
+                      className="px-6 py-3 bg-theme-primary hover:bg-theme-primary/90 text-white rounded-full font-black uppercase tracking-widest text-xs flex items-center gap-2 shadow-md"
                     >
                       <CreditCard className="w-4 h-4" /> Proceed to Payment
                     </button>
@@ -3039,13 +3039,13 @@ export default function BuildingPermitPage() {
                             View Uploaded Clearance
                           </button>
                           {!selectedApplication.additionalData?.clearancesSubmitted && (
-                            <button type="button" onClick={startBfpHandoff} disabled={isCreatingHandoff} className="rounded-full bg-[#1a6b3a] px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white disabled:opacity-50">
+                            <button type="button" onClick={startBfpHandoff} disabled={isCreatingHandoff} className="rounded-full bg-theme-primary px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white disabled:opacity-50">
                               Re-upload QR
                             </button>
                           )}
                         </div>
                       ) : (
-                        <button type="button" onClick={startBfpHandoff} disabled={isCreatingHandoff} className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#1a6b3a] text-white text-xs font-bold uppercase rounded-full hover:bg-[#1a6b3a]/95 disabled:opacity-50">
+                        <button type="button" onClick={startBfpHandoff} disabled={isCreatingHandoff} className="inline-flex items-center gap-1.5 px-4 py-2 bg-theme-primary text-white text-xs font-bold uppercase rounded-full hover:bg-theme-primary/95 disabled:opacity-50">
                           <QrCode className="w-3.5 h-3.5" /> {isCreatingHandoff ? "Creating QR..." : "Upload BFP via QR"}
                         </button>
                       )}
@@ -3077,13 +3077,13 @@ export default function BuildingPermitPage() {
                             View Uploaded Clearance
                           </button>
                           {!selectedApplication.additionalData?.clearancesSubmitted && (
-                            <button type="button" onClick={startZoningHandoff} disabled={isCreatingHandoff} className="rounded-full bg-[#1a6b3a] px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white disabled:opacity-50">
+                            <button type="button" onClick={startZoningHandoff} disabled={isCreatingHandoff} className="rounded-full bg-theme-primary px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white disabled:opacity-50">
                               Re-upload QR
                             </button>
                           )}
                         </div>
                       ) : (
-                        <button type="button" onClick={startZoningHandoff} disabled={isCreatingHandoff} className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#1a6b3a] text-white text-xs font-bold uppercase rounded-full hover:bg-[#1a6b3a]/95 disabled:opacity-50">
+                        <button type="button" onClick={startZoningHandoff} disabled={isCreatingHandoff} className="inline-flex items-center gap-1.5 px-4 py-2 bg-theme-primary text-white text-xs font-bold uppercase rounded-full hover:bg-theme-primary/95 disabled:opacity-50">
                           <QrCode className="w-3.5 h-3.5" /> {isCreatingHandoff ? "Creating QR..." : "Upload Zoning via QR"}
                         </button>
                       )}
@@ -3156,7 +3156,7 @@ export default function BuildingPermitPage() {
                   if (!RELEASE_PHASE_STATUSES.includes(selectedApplication.status)) return;
                   setCurrentStep("SUBMIT");
                 }}
-                className="px-8 py-3 bg-[#1a6b3a] text-white rounded-full text-xs font-black uppercase tracking-widest disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500"
+                className="px-8 py-3 bg-theme-primary text-white rounded-full text-xs font-black uppercase tracking-widest disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500"
               >
                 {RELEASE_PHASE_STATUSES.includes(selectedApplication.status)
                   ? "Next: Submission"
@@ -3173,15 +3173,15 @@ export default function BuildingPermitPage() {
             <div className="space-y-3 md:space-y-4 text-center mb-8">
               <h2 className="text-3xl md:text-5xl font-black italic uppercase tracking-tighter leading-tight flex items-center justify-center gap-4">
                 <FileSignature className="w-10 h-10 md:w-12 md:h-12 text-slate-800 dark:text-white" />
-                <span className="text-slate-800 dark:text-white">Verification & <span className="text-[#1a6b3a] italic">Submit</span></span>
+                <span className="text-slate-800 dark:text-white">Verification & <span className="text-theme-primary italic">Submit</span></span>
               </h2>
               <p className="text-slate-500 font-medium italic text-xs md:text-lg uppercase tracking-widest max-w-2xl mx-auto">Verify your details and apply your digital signature to acknowledge the building application.</p>
             </div>
 
-            <div className="bg-white/40 dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-[2rem] p-6 md:p-8 relative group hover:border-[#1a6b3a]/30 transition-all duration-300">
-              <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-[#1a6b3a] opacity-50 group-hover:opacity-100 transition-opacity rounded-l-2xl"></div>
+            <div className="bg-white/40 dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-[2rem] p-6 md:p-8 relative group hover:border-theme-primary/30 transition-all duration-300">
+              <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-theme-primary opacity-50 group-hover:opacity-100 transition-opacity rounded-l-2xl"></div>
               <div className="flex items-center gap-2 mb-4">
-                <Book className="w-5 h-5 text-[#1a6b3a]" />
+                <Book className="w-5 h-5 text-theme-primary" />
                 <h3 className="font-black text-slate-900 dark:text-white uppercase tracking-tighter text-lg md:text-xl italic">Digital Signature Required</h3>
               </div>
               {!isEditable ? (
@@ -3258,7 +3258,7 @@ export default function BuildingPermitPage() {
 
             <PrivacyTermsModal
               isOpen={isPrivacyModalOpen}
-              themeColor="#1a6b3a"
+              themeColor = "var(--primary-theme)"
               onClose={() => setIsPrivacyModalOpen(false)}
               onAccept={() => {
                 setPrivacyAccepted(true);
@@ -3280,7 +3280,7 @@ export default function BuildingPermitPage() {
                 <button
                   onClick={handleSubmit}
                   disabled={isSubmitting}
-                  className="bg-[#1a6b3a] hover:bg-[#1a6b3a]/90 disabled:bg-slate-300 disabled:text-slate-500 text-white px-8 py-4 rounded-[2rem] font-black uppercase tracking-widest text-[10px] md:text-xs flex items-center gap-3 transition-all shadow-xl shadow-emerald-500/20 w-full md:w-auto ml-auto"
+                  className="bg-theme-primary hover:bg-theme-primary/90 disabled:bg-slate-300 disabled:text-slate-500 text-white px-8 py-4 rounded-[2rem] font-black uppercase tracking-widest text-[10px] md:text-xs flex items-center gap-3 transition-all shadow-xl shadow-theme-primary/20 w-full md:w-auto ml-auto"
                 >
                   {isSubmitting ? "Submitting Application..." : "Submit Building Permit Application"}
                   {!isSubmitting && <span className="text-xl leading-none">✓</span>}
@@ -3294,7 +3294,7 @@ export default function BuildingPermitPage() {
           <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
             <div className="rounded-[2.5rem] border border-slate-200 bg-white p-6 text-slate-900 shadow-xl md:p-10">
               <div className="rounded-3xl border border-slate-200 bg-slate-50/70 px-6 py-10 text-center md:px-12">
-                <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-white text-[#1a6b3a] shadow-md ring-1 ring-slate-200">
+                <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-white text-theme-primary shadow-md ring-1 ring-slate-200">
                   <CheckCircle2 className="h-10 w-10" />
                 </div>
                 <h2 className="mt-7 text-2xl font-black tracking-tight">Application Status</h2>
@@ -3318,7 +3318,7 @@ export default function BuildingPermitPage() {
                 {selectedApplication.eCopyUrl ? (
                   <div className="mx-auto mt-8 flex max-w-3xl flex-col items-center justify-between gap-5 rounded-2xl border-2 border-emerald-500/60 bg-emerald-50 p-6 text-left sm:flex-row">
                     <div className="flex items-center gap-4">
-                      <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/20">
+                      <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-emerald-500 text-white shadow-lg shadow-theme-primary/20">
                         <FileText className="h-7 w-7" />
                       </span>
                       <div>
@@ -3405,7 +3405,7 @@ export default function BuildingPermitPage() {
         <DialogContent className="max-w-md bg-white dark:bg-[#0f111a] border-slate-200 dark:border-white/10 rounded-[2rem] p-7 shadow-2xl">
           <DialogHeader>
             <DialogTitle className="text-2xl font-black italic uppercase tracking-tighter text-slate-900 dark:text-white flex items-center gap-3">
-              <QrCode className="w-7 h-7 text-[#1a6b3a]" />
+              <QrCode className="w-7 h-7 text-theme-primary" />
               Secure QR Upload
             </DialogTitle>
           </DialogHeader>
@@ -3464,6 +3464,8 @@ export default function BuildingPermitPage() {
           landmark: selectedApplication?.deliveryAddress?.landmark || selectedApplication?.deliveryLandmark || "",
         }}
         onBeforeCheckout={handleSaveCheckoutDetails}
+        referenceName="Building Permit Payment"
+        redirectPath="/modules/building-permit"
       />
 
       {/* Cancel Application Confirmation */}
