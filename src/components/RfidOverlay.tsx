@@ -58,12 +58,12 @@ export default function RfidOverlay() {
         setStep("TAP");
       } else {
         setResident(data.resident);
-        // Step logic: If has face auth, go to face, else go to method select or auto-send OTP
-        if (data.resident.hasFaceAuth) {
-          setStep("FACE_VERIFY");
-        } else if (data.resident.email) {
+        // Priority: email OTP first, then face verification as fallback
+        if (data.resident.email) {
           sendOtp(data.resident.email, data.resident.fullName);
           setStep("OTP_VERIFY");
+        } else if (data.resident.hasFaceAuth) {
+          setStep("FACE_VERIFY");
         } else {
           setError("No verification method associated with this account.");
           setStep("TAP");
