@@ -77,7 +77,7 @@ export async function ensureCivilRegistryTransactionTypes() {
         await prisma.transactionType.upsert({
             where: { code: t.code },
             create: { ...t },
-            update: { name: t.name, category: t.category, baseFee: t.baseFee }
+            update: { name: t.name, category: t.category }
         });
     }
 }

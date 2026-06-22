@@ -199,15 +199,15 @@ export async function getLatestForm3AForCurrentUser(userId: string) {
 
         for (const tx of transactions) {
             const addData = (tx.additionalData as any) || {};
-            const hasForm3A = addData.registryBookVerification === "FORM_3A" || 
-                              !!addData.form3a || 
-                              !!addData.form3A;
+            const hasForm3A = addData.registryBookVerification === "FORM_3A" ||
+                !!addData.form3a ||
+                !!addData.form3A;
             if (hasForm3A) {
-                const docUrl = addData.scannedDocUrl || 
-                               addData.verificationDocUrl || 
-                               addData.form3a || 
-                               addData.form3A || 
-                               tx.eCopyUrl;
+                const docUrl = addData.scannedDocUrl ||
+                    addData.verificationDocUrl ||
+                    addData.form3a ||
+                    addData.form3A ||
+                    tx.eCopyUrl;
                 if (docUrl) {
                     return {
                         success: true,

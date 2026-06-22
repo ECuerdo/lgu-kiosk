@@ -54,7 +54,8 @@ import {
     getTransactionById,
     getBarangaysList,
     getExistingBirthRegistrations,
-    cancelBirthRegistration
+    cancelBirthRegistration,
+    searchResidentsAction
 } from "./actions";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -114,6 +115,62 @@ const EVIDENCE_OPTIONS = [
     { value: 'F', label: 'F. Others (Voter registration record, Barangay certification)' },
     { value: 'G', label: 'G. Affidavit of 2 disinterested persons' }
 ];
+
+const ResidentSearch = ({ onSelect, placeholder = "Search resident...", gender }: { onSelect: (r: any) => void; placeholder?: string; gender?: string }) => {
+    const [query, setQuery] = useState("");
+    const [results, setResults] = useState<any[]>([]);
+    const [timer, setTimer] = useState<NodeJS.Timeout | null>(null);
+
+    const handleQueryChange = (val: string) => {
+        setQuery(val);
+        if (timer) clearTimeout(timer);
+
+        if (val.trim().length > 2) {
+            const newTimer = setTimeout(async () => {
+                const res = await searchResidentsAction(val, gender);
+                if (res.success && res.data) setResults(res.data as any[]);
+                else setResults([]);
+            }, 300);
+            setTimer(newTimer);
+        } else {
+            setResults([]);
+        }
+    };
+
+    return (
+        <div className="relative w-full">
+            <div className="relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Input
+                    placeholder={placeholder}
+                    value={query}
+                    onChange={(e) => handleQueryChange(e.target.value)}
+                    className="pl-12 h-12 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-950 dark:text-white font-bold rounded-2xl"
+                />
+            </div>
+            {results.length > 0 && (
+                <div className="absolute z-[110] w-full mt-2 bg-white dark:bg-[#151b2b] border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl max-h-60 overflow-y-auto p-2 space-y-1">
+                    {results.map(r => (
+                        <button
+                            key={r.id}
+                            type="button"
+                            onClick={() => { onSelect(r); setQuery(""); setResults([]); }}
+                            className="w-full text-left px-4 py-3 hover:bg-slate-50 dark:hover:bg-white/5 rounded-xl flex items-center gap-3 transition-colors text-slate-900 dark:text-white cursor-pointer"
+                        >
+                            <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-white/5 flex items-center justify-center">
+                                <User className="w-4 h-4 text-slate-400" />
+                            </div>
+                            <div>
+                                <p className="text-xs font-black uppercase italic text-slate-900 dark:text-white">{r.firstName} {r.lastName}</p>
+                                <p className="text-[10px] text-slate-700 dark:text-slate-400 font-bold uppercase tracking-wider">{r.barangay}</p>
+                            </div>
+                        </button>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+};
 
 // --- TYPES ---
 
@@ -248,6 +305,12 @@ export default function BirthRegistrationPage() {
         informantOccupation: ""
     });
 
+    const [dbBaseFee, setDbBaseFee] = useState<number>(100);
+    const [dbProcessingFee, setDbProcessingFee] = useState<number>(215);
+    const [dbLateFee1to10, setDbLateFee1to10] = useState<number>(315);
+    const [dbLateFee10to20, setDbLateFee10to20] = useState<number>(515);
+    const [dbLateFee20plus, setDbLateFee20plus] = useState<number>(1015);
+
     const [policyOpen, setPolicyOpen] = useState(false);
     const [policyAccepted, setPolicyAccepted] = useState(false);
     const [viewerOpen, setViewerOpen] = useState(false);
@@ -372,9 +435,9 @@ export default function BirthRegistrationPage() {
                     if (m < 0 || (m === 0 && todayNorm.getDate() < dobNorm.getDate())) {
                         age--;
                     }
-                    if (age > 20) { lateDuration = "20+"; miscFee = 1015; }
-                    else if (age > 10) { lateDuration = "10-20"; miscFee = 515; }
-                    else { lateDuration = "1-10"; miscFee = 315; }
+                    if (age > 20) { lateDuration = "20+"; miscFee = dbLateFee20plus; }
+                    else if (age > 10) { lateDuration = "10-20"; miscFee = dbLateFee10to20; }
+                    else { lateDuration = "1-10"; miscFee = dbLateFee1to10; }
                 } else {
                     lateDuration = "";
                     miscFee = 0;
@@ -386,7 +449,7 @@ export default function BirthRegistrationPage() {
         } catch {
             // ignore
         }
-    }, [form.dateOfEvent]);
+    }, [form.dateOfEvent, dbLateFee20plus, dbLateFee10to20, dbLateFee1to10]);
 
     const handleAcceptPolicy = () => {
         setPolicyOpen(false);
@@ -400,10 +463,10 @@ export default function BirthRegistrationPage() {
 
     const isRestoredRef = useRef(false);
 
-    const baseFee = form.registrationType === "STANDARD" ? 0 : (
-        form.lateDuration === "1-10" ? 315 : form.lateDuration === "10-20" ? 515 : form.lateDuration === "20+" ? 1015 : 0
+    const baseFee = form.registrationType === "STANDARD" ? dbBaseFee : (
+        form.lateDuration === "1-10" ? dbLateFee1to10 : form.lateDuration === "10-20" ? dbLateFee10to20 : form.lateDuration === "20+" ? dbLateFee20plus : 0
     );
-    const totalAmount = Number(baseFee || 0) + 215;
+    const totalAmount = Number(baseFee || 0) + dbProcessingFee;
 
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
@@ -499,6 +562,20 @@ export default function BirthRegistrationPage() {
                 motherFirstName: resident.motherFirstName || prev.motherFirstName,
                 motherMiddleName: resident.motherMiddleName || prev.motherMiddleName,
                 motherLastName: resident.motherLastName || prev.motherLastName,
+            }));
+        } else if (form.relationship === "FATHER" && resident) {
+            setForm(prev => ({
+                ...prev,
+                fatherFirstName: resident.firstName || "",
+                fatherMiddleName: resident.middleName || "",
+                fatherLastName: resident.lastName || "",
+            }));
+        } else if (form.relationship === "MOTHER" && resident) {
+            setForm(prev => ({
+                ...prev,
+                motherFirstName: resident.firstName || "",
+                motherMiddleName: resident.middleName || "",
+                motherLastName: resident.lastName || "",
             }));
         }
     }, [form.relationship, resident, loading]);
@@ -625,33 +702,49 @@ export default function BirthRegistrationPage() {
                     const currentDbType = lcrTypes.find((t: any) => t.code === "LCR_BIRTH_REG");
                     if (currentDbType) {
                         setForm(prev => ({ ...prev, typeId: prev.typeId || currentDbType.id }));
+                        setDbBaseFee(Number(currentDbType.baseFee ?? 100));
+                        if (currentDbType.defaultFees) {
+                            const feesArray = typeof currentDbType.defaultFees === "string"
+                                ? JSON.parse(currentDbType.defaultFees)
+                                : currentDbType.defaultFees;
+                            const procFeeObj = feesArray.find((f: any) => f.code === "PROCESSING_FEE");
+                            if (procFeeObj) setDbProcessingFee(Number(procFeeObj.amount));
+                            const late1 = feesArray.find((f: any) => f.code === "LATE_FEE_1_10");
+                            if (late1) setDbLateFee1to10(Number(late1.amount));
+                            const late10 = feesArray.find((f: any) => f.code === "LATE_FEE_10_20");
+                            if (late10) setDbLateFee10to20(Number(late10.amount));
+                            const late20 = feesArray.find((f: any) => f.code === "LATE_FEE_20_UP");
+                            if (late20) setDbLateFee20plus(Number(late20.amount));
+                        }
                     }
                 }
 
-                if (existingRes.success && existingRes.data && existingRes.data.length > 0) {
+                if (existingRes.success && existingRes.data) {
                     setExistingRequests(existingRes.data);
-                    const returnedTransactionId = urlParams.get("transactionId");
-                    const returnedApplication = returnedTransactionId
-                        ? existingRes.data.find((app: any) => app.id === returnedTransactionId)
-                        : null;
-                    if (returnedApplication) {
-                        setSelectedApplication(returnedApplication);
-                        setCurrentStep("SUBMIT");
-                    } else if (revId) {
-                        // Let it default to savedStep or IDENTITY
+                }
+
+                const returnedTransactionId = urlParams.get("transactionId");
+                const returnedApplication = (existingRes.success && existingRes.data && returnedTransactionId)
+                    ? existingRes.data.find((app: any) => app.id === returnedTransactionId)
+                    : null;
+
+                if (returnedApplication) {
+                    setSelectedApplication(returnedApplication);
+                    setCurrentStep("SUBMIT");
+                } else if (revId) {
+                    setCurrentStep("IDENTITY");
+                } else if (existingRes.success && existingRes.data && existingRes.data.length > 0) {
+                    const savedStep = sessionStorage.getItem("birth-reg-step");
+                    if (savedStep && savedStep !== "SUBMIT") {
+                        setCurrentStep(savedStep as Step);
                     } else {
-                        const savedStep = sessionStorage.getItem("birth-reg-step");
-                        if (savedStep && savedStep !== "SUBMIT") {
-                            setCurrentStep(savedStep as Step);
-                        } else {
-                            setCurrentStep("EXISTING");
-                        }
+                        setCurrentStep("EXISTING");
                     }
                 } else {
                     const savedStep = sessionStorage.getItem("birth-reg-step");
                     if (savedStep && savedStep !== "SUBMIT") {
                         setCurrentStep(savedStep as Step);
-                    } else if (!revId) {
+                    } else {
                         setCurrentStep("IDENTITY");
                     }
                 }
@@ -711,9 +804,9 @@ export default function BirthRegistrationPage() {
                 let age = todayNorm.getFullYear() - dobNorm.getFullYear();
                 const m = todayNorm.getMonth() - dobNorm.getMonth();
                 if (m < 0 || (m === 0 && todayNorm.getDate() < dobNorm.getDate())) age--;
-                if (age > 20) { lateDuration = "20+"; miscFee = 1015; }
-                else if (age > 10) { lateDuration = "10-20"; miscFee = 515; }
-                else { lateDuration = "1-10"; miscFee = 315; }
+                if (age > 20) { lateDuration = "20+"; miscFee = dbLateFee20plus; }
+                else if (age > 10) { lateDuration = "10-20"; miscFee = dbLateFee10to20; }
+                else { lateDuration = "1-10"; miscFee = dbLateFee1to10; }
             }
 
             setForm(prev => ({ ...prev, dateOfEvent: value, registrationType: isLate ? "LATE" : "STANDARD", lateDuration, miscFee }));
@@ -1292,24 +1385,24 @@ export default function BirthRegistrationPage() {
                                         <div className="flex flex-col items-center gap-2">
                                             <div className={cn(
                                                 "w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-300 border",
-                                                isActive ? "bg-slate-100/80 dark:bg-[#0d120f]/60 border-2 border-theme-primary shadow-[0_0_20px_color-mix(in_srgb,var(--primary-theme)_35%,transparent)] scale-110" :
-                                                    isDone ? "bg-slate-50/50 dark:bg-white/[0.02] border border-slate-250/80 dark:border-white/10" :
-                                                        "bg-transparent border border-slate-200/40 dark:border-white/5 opacity-40"
+                                                isActive ? "bg-white dark:bg-[#0d120f]/60 border-2 border-theme-primary shadow-[0_0_20px_color-mix(in_srgb,var(--primary-theme)_35%,transparent)] scale-110" :
+                                                    isDone ? "bg-slate-50/50 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/10" :
+                                                        "bg-transparent border border-slate-200 dark:border-white/5 text-slate-500 dark:text-slate-550 opacity-60"
                                             )}>
                                                 {isDone
                                                     ? <Check className="w-5 h-5 text-theme-primary stroke-[3]" />
-                                                    : <Icon className={cn("w-5 h-5", isActive ? "text-theme-primary animate-pulse" : "text-slate-400/60")} />
+                                                    : <Icon className={cn("w-5 h-5", isActive ? "text-theme-primary animate-pulse" : "text-slate-500 dark:text-slate-400")} />
                                                 }
                                             </div>
                                             <span className={cn(
                                                 "text-[9px] font-black uppercase tracking-widest italic transition-colors duration-300",
-                                                isActive ? "text-slate-900 dark:text-white font-black scale-105" : isDone ? "text-slate-500 dark:text-slate-400" : "text-slate-400/50 dark:text-slate-600 opacity-40"
+                                                isActive ? "text-slate-900 dark:text-white font-black scale-105" : isDone ? "text-slate-700 dark:text-slate-350" : "text-slate-600 dark:text-slate-400 opacity-60"
                                             )}>
                                                 {step.label}
                                             </span>
                                         </div>
                                         {idx < STEPS.length - 1 && (
-                                            <div className={cn("h-0.5 w-8 md:w-14 mx-1 transition-all duration-300", idx < stepIndex ? "bg-theme-primary/30" : "bg-slate-200 dark:bg-white/10")} />
+                                            <div className={cn("h-0.5 w-8 md:w-14 mx-1 transition-all duration-300", idx < stepIndex ? "bg-theme-primary/40" : "bg-slate-350 dark:bg-white/10")} />
                                         )}
                                     </React.Fragment>
                                 );
@@ -1460,7 +1553,7 @@ export default function BirthRegistrationPage() {
                                         <div className="border-t border-slate-200 dark:border-white/10 pt-4">
                                             <div className="flex justify-between text-xs font-black uppercase tracking-wider">
                                                 <span className="text-slate-400">Total Application Fee</span>
-                                                <span className="text-theme-primary text-sm">₱{(selectedApplication.totalAmount || 0).toFixed(2)}</span>
+                                                <span className="text-theme-primary text-sm">₱{(selectedApplication.totalAmount || totalAmount).toFixed(2)}</span>
                                             </div>
                                         </div>
 
@@ -1500,7 +1593,9 @@ export default function BirthRegistrationPage() {
                                         {selectedApplication.status === "FOR_REVISION" && !selectedApplication.isCancelled && (
                                             <Button
                                                 type="button"
-                                                onClick={() => router.push(`/modules/civil-registry/birth-registration?revisionId=${selectedApplication.id}`)}
+                                                onClick={() => {
+                                                    window.location.href = `/modules/civil-registry/birth-registration?revisionId=${selectedApplication.id}`;
+                                                }}
                                                 className="rounded-2xl bg-amber-600 hover:bg-amber-700 text-white px-8 py-5 text-xs font-black uppercase tracking-widest shadow-lg"
                                             >
                                                 Revise Details
@@ -1523,45 +1618,58 @@ export default function BirthRegistrationPage() {
 
                         {/* ============ STEP: IDENTITY ============ */}
                         {currentStep === "IDENTITY" && (
-                            <InformantInfo
-                                firstName={form.informantFirstName}
-                                middleName={form.informantMiddleName}
-                                lastName={form.informantLastName}
-                                suffix={form.informantSuffix}
-                                birthDate={form.informantBirthDate}
-                                age={form.informantAge}
-                                civilStatus={form.informantCivilStatus}
-                                citizenship={form.informantCitizenship}
-                                relationship={form.relationship}
-                                relationshipSpecify={form.relationshipSpecify}
-                                occupation={form.informantOccupation}
-                                contactNumber={form.contactNumber}
-                                onRelationshipChange={(val) => {
-                                    setForm(prev => ({ ...prev, relationship: val }));
-                                    setErrors(prev => { const c = { ...prev }; delete c.relationship; return c; });
-                                }}
-                                onRelationshipSpecifyChange={(val) => {
-                                    setForm(prev => ({ ...prev, relationshipSpecify: val }));
-                                    setErrors(prev => { const c = { ...prev }; delete c.relationshipSpecify; return c; });
-                                }}
-                                onOccupationChange={(val) => setForm(prev => ({ ...prev, informantOccupation: val }))}
-                                onContactNumberChange={(val) => {
-                                    setForm(prev => ({ ...prev, contactNumber: val }));
-                                    setErrors(prev => { const c = { ...prev }; delete c.contactNumber; return c; });
-                                }}
-                                relationshipOptions={[
-                                    { value: "FATHER", label: "Father" },
-                                    { value: "MOTHER", label: "Mother" },
-                                    { value: "SELF", label: "Self" },
-                                    { value: "GUARDIAN", label: "Guardian" },
-                                    { value: "OTHER", label: "Other" }
-                                ]}
-                                errors={errors}
-                                showErrors={true}
-                                isCardWrapped={true}
-                                cardTitle="Informant Information"
-                                cardSubtitle="Person filing this registration"
-                            />
+                            <div className="space-y-6">
+                                {_revisionTx && (
+                                    <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-start gap-3 text-amber-800 dark:text-amber-400 animate-in fade-in duration-300">
+                                        <AlertCircle className="w-5 h-5 shrink-0 animate-pulse mt-0.5" />
+                                        <div className="text-left space-y-1">
+                                            <p className="text-[10px] font-black uppercase tracking-wider italic">Attention: Revision Needed</p>
+                                            <p className="text-xs font-bold text-slate-900 dark:text-slate-300 leading-relaxed italic">
+                                                &ldquo;{_revisionTx.rejectionRemarks || "Please check the highlighted checklist files or values and submit them again."}&rdquo;
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+                                <InformantInfo
+                                    firstName={form.informantFirstName}
+                                    middleName={form.informantMiddleName}
+                                    lastName={form.informantLastName}
+                                    suffix={form.informantSuffix}
+                                    birthDate={form.informantBirthDate}
+                                    age={form.informantAge}
+                                    civilStatus={form.informantCivilStatus}
+                                    citizenship={form.informantCitizenship}
+                                    relationship={form.relationship}
+                                    relationshipSpecify={form.relationshipSpecify}
+                                    occupation={form.informantOccupation}
+                                    contactNumber={form.contactNumber}
+                                    onRelationshipChange={(val) => {
+                                        setForm(prev => ({ ...prev, relationship: val }));
+                                        setErrors(prev => { const c = { ...prev }; delete c.relationship; return c; });
+                                    }}
+                                    onRelationshipSpecifyChange={(val) => {
+                                        setForm(prev => ({ ...prev, relationshipSpecify: val }));
+                                        setErrors(prev => { const c = { ...prev }; delete c.relationshipSpecify; return c; });
+                                    }}
+                                    onOccupationChange={(val) => setForm(prev => ({ ...prev, informantOccupation: val }))}
+                                    onContactNumberChange={(val) => {
+                                        setForm(prev => ({ ...prev, contactNumber: val }));
+                                        setErrors(prev => { const c = { ...prev }; delete c.contactNumber; return c; });
+                                    }}
+                                    relationshipOptions={[
+                                        ...(resident?.gender?.toUpperCase() === "FEMALE" ? [] : [{ value: "FATHER", label: "Father" }]),
+                                        ...(resident?.gender?.toUpperCase() === "MALE" ? [] : [{ value: "MOTHER", label: "Mother" }]),
+                                        { value: "SELF", label: "Self" },
+                                        { value: "GUARDIAN", label: "Guardian" },
+                                        { value: "OTHER", label: "Other" }
+                                    ]}
+                                    errors={errors}
+                                    showErrors={true}
+                                    isCardWrapped={true}
+                                    cardTitle="Informant Information"
+                                    cardSubtitle="Person filing this registration"
+                                />
+                            </div>
                         )}                        {/* ============ STEP: DETAILS ============ */}
                         {currentStep === "DETAILS" && (
                             <Card className="bg-white/40 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-[2.5rem] p-8 md:p-12 shadow-2xl backdrop-blur-2xl transition-all duration-300 hover:border-theme-primary/30 space-y-8 overflow-visible">
@@ -1720,7 +1828,9 @@ export default function BirthRegistrationPage() {
                                                     "flex-1 py-4 rounded-2xl border-2 text-xs font-black uppercase tracking-wide transition-all duration-200 cursor-pointer",
                                                     form.parentsMarried === opt.val
                                                         ? "border-theme-primary bg-theme-primary/10 text-theme-primary"
-                                                        : "border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-400 hover:border-theme-primary/30"
+                                                        : errors.parentsMarried
+                                                            ? "border-red-500 dark:border-red-500/80 text-slate-600 dark:text-slate-400 hover:border-red-650"
+                                                            : "border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-400 hover:border-theme-primary/30"
                                                 )}
                                             >
                                                 {opt.val && form.parentsMarried === true ? <Check className="w-4 h-4 inline mr-1.5" /> : null}
@@ -2014,7 +2124,7 @@ export default function BirthRegistrationPage() {
                                             </div>
                                             <div className="flex justify-between items-center border-b border-dashed border-slate-200 dark:border-white/10 pb-3">
                                                 <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Processing & e-Copy Fee</span>
-                                                <span className="text-slate-700 dark:text-slate-350">₱215.00</span>
+                                                <span className="text-slate-700 dark:text-slate-350">₱{dbProcessingFee.toFixed(2)}</span>
                                             </div>
 
                                             {/* Total Receipt Row */}

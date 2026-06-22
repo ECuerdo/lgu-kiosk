@@ -199,16 +199,16 @@ export async function getLatestForm2AForCurrentUser(userId: string) {
 
         for (const tx of transactions) {
             const addData = (tx.additionalData as any) || {};
-            const hasForm2A = addData.registryBookVerification === "FORM_2A" || 
-                              addData.registryBookVerification === "FORM_1A" || 
-                              !!addData.form2a || 
-                              !!addData.form2A;
+            const hasForm2A = addData.registryBookVerification === "FORM_2A" ||
+                addData.registryBookVerification === "FORM_1A" ||
+                !!addData.form2a ||
+                !!addData.form2A;
             if (hasForm2A) {
-                const docUrl = addData.scannedDocUrl || 
-                               addData.verificationDocUrl || 
-                               addData.form2a || 
-                               addData.form2A || 
-                               tx.eCopyUrl;
+                const docUrl = addData.scannedDocUrl ||
+                    addData.verificationDocUrl ||
+                    addData.form2a ||
+                    addData.form2A ||
+                    tx.eCopyUrl;
                 if (docUrl) {
                     const snap = (tx.residentSnapshot as any) || {};
                     return {

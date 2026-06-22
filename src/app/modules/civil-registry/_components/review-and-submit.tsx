@@ -9,6 +9,7 @@ interface ReviewAndSubmitProps {
     detailsCards?: React.ReactNode;
     feeSummary?: React.ReactNode;
     documentsSection?: React.ReactNode;
+    expectedPayment?: number;
     
     // Privacy state
     policyAccepted: boolean;
@@ -35,6 +36,7 @@ export default function ReviewAndSubmit({
     detailsCards,
     feeSummary,
     documentsSection,
+    expectedPayment,
     policyAccepted,
     onPolicyAcceptedChange,
     onReviewPolicy,
@@ -74,11 +76,21 @@ export default function ReviewAndSubmit({
                 )}
 
                 {/* Fee display */}
-                {feeSummary && (
+                {feeSummary ? (
                     <div className="w-full">
                         {feeSummary}
                     </div>
-                )}
+                ) : expectedPayment !== undefined ? (
+                    <div className="w-full bg-slate-50/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-[2rem] p-6 flex justify-between items-center mt-6">
+                        <div>
+                            <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">Total Amount Due</h4>
+                            <p className="text-slate-500 font-bold uppercase text-[9px] italic mt-0.5">LCR Fee Schedule</p>
+                        </div>
+                        <span className="text-2xl font-black text-theme-primary tracking-tighter">
+                            {expectedPayment === 0 ? "FREE" : `₱${expectedPayment.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                        </span>
+                    </div>
+                ) : null}
             </div>
 
             {/* Data Privacy Agreement panel */}
@@ -186,6 +198,11 @@ export default function ReviewAndSubmit({
                             <span className="flex items-center justify-center gap-1 sm:gap-2">
                                 <Check className="w-4 h-4 shrink-0" />
                                 {submitLabel}
+                                {expectedPayment !== undefined && (
+                                    expectedPayment === 0
+                                        ? " (Free)"
+                                        : ` (₱${expectedPayment.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`
+                                )}
                             </span>
                         )}
                     </Button>

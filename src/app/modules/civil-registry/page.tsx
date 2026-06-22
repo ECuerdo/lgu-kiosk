@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 type ServiceStatus = "ACTIVE" | "COMING_SOON";
 
@@ -476,6 +477,12 @@ export default function CivilRegistryHubPage() {
     return "en";
   });
   const [selectedService, setSelectedService] = useState<RegistryService | null>(null);
+  const [activeFontSize] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("kiosk_font_size") || "md";
+    }
+    return "md";
+  });
 
   const handleServiceClick = (service: RegistryService) => {
     if (service.status === "ACTIVE" && service.path) {
@@ -610,32 +617,43 @@ export default function CivilRegistryHubPage() {
                   </div>
 
                   {/* Cards Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  <div className={cn(
+                    "grid gap-8",
+                    activeFontSize === "xl" ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
+                  )}>
                     {services.map((service) => (
                       <motion.div
                         key={service.id}
                         onClick={() => handleServiceClick(service)}
                         whileHover={{ y: -6 }}
                         transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                        className="group flex flex-col justify-start min-h-[260px] md:min-h-[300px] bg-slate-50/50 dark:bg-[#151821]/80 border border-slate-200/80 dark:border-[#202534] rounded-[2rem] p-8 md:p-10 hover:border-theme-primary/50 dark:hover:border-theme-primary/30 hover:bg-slate-100/30 dark:hover:bg-[#1a1e2c] active:scale-[0.98] transition-all duration-300 cursor-pointer relative overflow-hidden shadow-md hover:shadow-xl dark:hover:shadow-[0_0_30px_color-mix(in srgb, var(--primary-theme) 0.08 * 100%, transparent)]"
+                        className={cn(
+                          "group flex bg-slate-50/50 dark:bg-[#151821]/80 border border-slate-200/80 dark:border-[#202534] rounded-[2rem] hover:border-theme-primary/50 dark:hover:border-theme-primary/30 hover:bg-slate-100/30 dark:hover:bg-[#1a1e2c] active:scale-[0.98] transition-all duration-300 cursor-pointer relative overflow-hidden shadow-md hover:shadow-xl dark:hover:shadow-[0_0_30px_color-mix(in srgb, var(--primary-theme) 0.08 * 100%, transparent)]",
+                          activeFontSize === "xl"
+                            ? "flex-row items-center gap-6 p-6 sm:p-8 min-h-0"
+                            : "flex-col justify-start min-h-[260px] md:min-h-[300px] p-8 md:p-10"
+                        )}
                       >
                         {/* Card Icon */}
-                        <div className="mb-6">
+                        <div className={cn(activeFontSize === "xl" ? "mb-0 shrink-0" : "mb-6")}>
                           <div className="w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-slate-200/50 dark:bg-[#0c0d12] border border-slate-300/30 dark:border-white/5 flex items-center justify-center">
                             {/* Render icon with scaled dimensions dynamically */}
                             {React.cloneElement(service.icon as React.ReactElement<{ className?: string }>, { className: "w-8 h-8 md:w-10 md:h-10 text-theme-primary" })}
                           </div>
                         </div>
 
-                        {/* Title */}
-                        <h4 className="text-lg md:text-2xl lg:text-3xl font-black text-slate-900 dark:text-white group-hover:text-theme-primary transition-colors leading-tight mb-3 uppercase italic tracking-tight">
-                          {service.title[lang] || service.title.en}
-                        </h4>
+                        {/* Text Content */}
+                        <div className="flex-1 min-w-0">
+                          {/* Title */}
+                          <h4 className="text-lg md:text-2xl lg:text-3xl font-black text-slate-900 dark:text-white group-hover:text-theme-primary transition-colors leading-tight mb-3 uppercase italic tracking-tight">
+                            {service.title[lang] || service.title.en}
+                          </h4>
 
-                        {/* Description */}
-                        <p className="text-xs md:text-sm lg:text-base font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide leading-relaxed">
-                          {service.desc[lang] || service.desc.en}
-                        </p>
+                          {/* Description */}
+                          <p className="text-xs md:text-sm lg:text-base font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide leading-relaxed">
+                            {service.desc[lang] || service.desc.en}
+                          </p>
+                        </div>
                       </motion.div>
                     ))}
                   </div>

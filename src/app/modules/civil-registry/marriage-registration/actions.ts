@@ -70,14 +70,29 @@ export async function getTransactionById(id: string, userId: string) {
 
 export async function ensureCivilRegistryTransactionTypes() {
     const types = [
-        { code: "LCR_MARRIAGE_REG", name: "Marriage Registration", category: "Civil Registry", baseFee: 0 },
+        { 
+            code: "LCR_MARRIAGE_REG", 
+            name: "Marriage Registration", 
+            category: "Civil Registry", 
+            baseFee: 0,
+            defaultFees: [
+                { "code": "LATE_FEE", "name": "Late Registration Fee", "amount": 300 }
+            ]
+        },
     ];
 
     for (const t of types) {
+        const existing = await prisma.transactionType.findUnique({ where: { code: t.code } });
+        const hasDefaultFees = existing && Array.isArray(existing.defaultFees) && (existing.defaultFees as any).length > 0;
+
         await prisma.transactionType.upsert({
             where: { code: t.code },
             create: { ...t },
-            update: { name: t.name, category: t.category, baseFee: t.baseFee }
+            update: { 
+                name: t.name, 
+                category: t.category,
+                ...(!hasDefaultFees && t.defaultFees ? { defaultFees: t.defaultFees } : {})
+            }
         });
     }
 }

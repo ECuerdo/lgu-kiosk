@@ -171,7 +171,7 @@ export default function MarriageRegistrationPage() {
     const [resident, setResident] = useState<any>(null);
     const [typeId, setTypeId] = useState<string>("");
     const [dbBaseFee, setDbBaseFee] = useState<number>(BASE_FEE);
-    const [dbLateFee] = useState<number>(LATE_FEE);
+    const [dbLateFee, setDbLateFee] = useState<number>(LATE_FEE);
     const [revisionId, setRevisionId] = useState<string | null>(null);
     const [revisionTx, setRevisionTx] = useState<any>(null);
     const [showErrors, setShowErrors] = useState(false);
@@ -533,33 +533,44 @@ export default function MarriageRegistrationPage() {
                     if (regType) {
                         setTypeId(regType.id);
                         setDbBaseFee(Number(regType.baseFee ?? 0));
+                        if (regType.defaultFees) {
+                            const feesArray = typeof regType.defaultFees === "string"
+                                ? JSON.parse(regType.defaultFees)
+                                : regType.defaultFees;
+                            const lateFeeObj = feesArray.find((f: any) => f.code === "LATE_FEE");
+                            if (lateFeeObj) {
+                                setDbLateFee(Number(lateFeeObj.amount));
+                            }
+                        }
                     }
                 }
 
-                if (existingRes.success && existingRes.data && existingRes.data.length > 0) {
+                if (existingRes.success && existingRes.data) {
                     setExistingRequests(existingRes.data);
-                    const returnedTransactionId = urlParams.get("transactionId");
-                    const returnedApplication = returnedTransactionId
-                        ? existingRes.data.find((app: any) => app.id === returnedTransactionId)
-                        : null;
-                    if (returnedApplication) {
-                        setSelectedApplication(returnedApplication);
-                        setCurrentStep("SUBMIT");
-                    } else if (revId) {
-                        setCurrentStep("IDENTITY");
+                }
+
+                const returnedTransactionId = urlParams.get("transactionId");
+                const returnedApplication = (existingRes.success && existingRes.data && returnedTransactionId)
+                    ? existingRes.data.find((app: any) => app.id === returnedTransactionId)
+                    : null;
+
+                if (returnedApplication) {
+                    setSelectedApplication(returnedApplication);
+                    setCurrentStep("SUBMIT");
+                } else if (revId) {
+                    setCurrentStep("IDENTITY");
+                } else if (existingRes.success && existingRes.data && existingRes.data.length > 0) {
+                    const savedStep = sessionStorage.getItem("marriage-registration-step");
+                    if (savedStep && savedStep !== "SUBMIT") {
+                        setCurrentStep(savedStep as Step);
                     } else {
-                        const savedStep = sessionStorage.getItem("marriage-registration-step");
-                        if (savedStep && savedStep !== "SUBMIT") {
-                            setCurrentStep(savedStep as Step);
-                        } else {
-                            setCurrentStep("EXISTING");
-                        }
+                        setCurrentStep("EXISTING");
                     }
                 } else {
                     const savedStep = sessionStorage.getItem("marriage-registration-step");
                     if (savedStep && savedStep !== "SUBMIT") {
                         setCurrentStep(savedStep as Step);
-                    } else if (!revId) {
+                    } else {
                         setCurrentStep("IDENTITY");
                     }
                 }
@@ -983,22 +994,22 @@ export default function MarriageRegistrationPage() {
                                     }}
                                     className={cn(
                                         "flex flex-col items-center gap-2 md:gap-3 relative z-10 font-black cursor-pointer group",
-                                        !isCompleted && "cursor-not-allowed opacity-50"
+                                        !isCompleted && "cursor-not-allowed opacity-65"
                                     )}
                                 >
                                     <div className={cn(
                                         "w-10 h-10 md:w-16 md:h-16 rounded-xl md:rounded-2xl flex items-center justify-center transition-all duration-500 border",
-                                        isActive ? "bg-slate-100/80 dark:bg-[#0d120f]/60 text-theme-primary border-2 border-theme-primary shadow-[0_0_20px_color-mix(in_srgb,var(--primary-theme)_35%,transparent)] scale-105 md:scale-110" :
+                                        isActive ? "bg-white dark:bg-[#0d120f]/60 text-theme-primary border-2 border-theme-primary shadow-[0_0_20px_color-mix(in_srgb,var(--primary-theme)_35%,transparent)] scale-105 md:scale-110" :
                                             isCompleted ? "bg-slate-50/50 dark:bg-white/[0.02] text-theme-primary border border-slate-200/80 dark:border-white/10" :
-                                                "bg-transparent text-slate-600 dark:text-slate-600 border border-slate-200/40 dark:border-white/5 group-hover:border-theme-primary/30"
+                                                "bg-transparent text-slate-600 dark:text-slate-400 border border-slate-250/50 dark:border-white/5 group-hover:border-theme-primary/30"
                                     )}>
                                         <Icon className="w-4 h-4 md:w-7 md:h-7" />
                                     </div>
                                     <span className={cn(
                                         "text-[7px] md:text-[10px] uppercase tracking-widest text-center italic font-bold hidden sm:block",
                                         isActive ? "text-slate-900 dark:text-white font-black" :
-                                            isCompleted ? "text-slate-800 dark:text-slate-300" :
-                                                "text-slate-700 dark:text-slate-500"
+                                            isCompleted ? "text-slate-700 dark:text-slate-300" :
+                                                "text-slate-600 dark:text-slate-400"
                                     )}>
                                         {step.label}
                                     </span>
@@ -1200,7 +1211,9 @@ export default function MarriageRegistrationPage() {
                                     {selectedApplication.status === "FOR_REVISION" && !selectedApplication.isCancelled && (
                                         <Button
                                             type="button"
-                                            onClick={() => router.push(`/modules/civil-registry/marriage-registration?revisionId=${selectedApplication.id}`)}
+                                            onClick={() => {
+                                                window.location.href = `/modules/civil-registry/marriage-registration?revisionId=${selectedApplication.id}`;
+                                            }}
                                             className="rounded-2xl bg-amber-600 hover:bg-amber-700 text-white px-8 py-5 text-xs font-black uppercase tracking-widest shadow-lg"
                                         >
                                             Revise Details
@@ -1631,6 +1644,38 @@ export default function MarriageRegistrationPage() {
                             submitting={submitting}
                             submitLabel="Submit Marriage Registration"
                             submitDisabled={false}
+                            feeSummary={
+                                <div className="bg-slate-50/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden space-y-6">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center text-slate-900 dark:text-white">
+                                            <CheckCircle2 size={18} className="stroke-[2.5] text-theme-primary" />
+                                        </div>
+                                        <h3 className="text-sm font-black uppercase tracking-widest text-slate-800 dark:text-slate-200">Fee Summary</h3>
+                                    </div>
+                                    <div className="space-y-3 text-xs md:text-sm font-bold">
+                                        <div className="flex justify-between items-center border-b border-dashed border-slate-250 dark:border-white/10 pb-3">
+                                            <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Service Request</span>
+                                            <span className="text-slate-700 dark:text-slate-350 uppercase">
+                                                Marriage Registration ({form.registrationType === "LATE" ? "Late" : "Timely"})
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between items-center border-b border-dashed border-slate-250 dark:border-white/10 pb-3">
+                                            <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Base Filing Fee</span>
+                                            <span className="text-slate-700 dark:text-slate-350">₱{dbBaseFee.toFixed(2)}</span>
+                                        </div>
+                                        {form.registrationType === "LATE" && dbLateFee > 0 && (
+                                            <div className="flex justify-between items-center border-b border-dashed border-slate-250 dark:border-white/10 pb-3">
+                                                <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Late Registration Fee</span>
+                                                <span className="text-slate-700 dark:text-slate-350">₱{dbLateFee.toFixed(2)}</span>
+                                            </div>
+                                        )}
+                                        <div className="flex justify-between items-center bg-gradient-to-r from-theme-primary to-theme-secondary/85 text-white rounded-2xl p-4 md:p-6 shadow-xl shadow-theme-primary/10 mt-6">
+                                            <span className="font-black uppercase tracking-widest text-[10px] md:text-xs text-white/90">Total Amount Due</span>
+                                            <span className="font-black text-xl md:text-2xl tracking-tight">₱{(form.registrationType === "LATE" ? dbLateFee + dbBaseFee : dbBaseFee).toFixed(2)}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
                             onSubmit={handleSubmit}
                             onBack={() => setCurrentStep("UPLOAD")}
                             backLabel="Modify Uploads"
@@ -1668,20 +1713,7 @@ export default function MarriageRegistrationPage() {
                                         </div>
                                     </div>
 
-                                    {/* Fee Display */}
-                                    <div className="flex items-center justify-between px-4 py-3 rounded-2xl bg-theme-primary/10 border border-theme-primary/20 mt-4">
-                                        <div>
-                                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-800 dark:text-slate-400 italic">Registration Fee</span>
-                                            <p className="text-[9px] text-slate-600 dark:text-slate-400 italic mt-0.5">
-                                                {form.registrationType === "LATE" ? "Late registration penalty processing fee" : "Timely filings are registered free of charge"}
-                                            </p>
-                                        </div>
-                                        <div className="text-right">
-                                            <span className="text-lg font-black text-theme-primary tracking-tight">
-                                                {form.registrationType === "LATE" ? formatCurrency(dbLateFee) : "FREE"}
-                                            </span>
-                                        </div>
-                                    </div>
+
                                 </Card>
                             }
                             documentsSection={

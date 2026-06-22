@@ -61,6 +61,7 @@ import RequestList from "../_components/request-list";
 import ReviewAndSubmit from "../_components/review-and-submit";
 import RequiredDocuments from "../_components/required-documents";
 import ReadOnlyDocumentPreview from "../_components/read-only-document-preview";
+import PremiumDocumentUpload from "@/components/shared/PremiumDocumentUpload";
 
 const REQUIRED_DOCS = [
     "Municipal Form No. 90",
@@ -533,30 +534,32 @@ export default function MarriageLicenseApplicationPage() {
                     }
                 }
 
-                if (existingRes.success && existingRes.data && existingRes.data.length > 0) {
+                if (existingRes.success && existingRes.data) {
                     setExistingRequests(existingRes.data);
-                    const returnedTransactionId = urlParams.get("transactionId");
-                    const returnedApplication = returnedTransactionId
-                        ? existingRes.data.find((app: any) => app.id === returnedTransactionId)
-                        : null;
-                    if (returnedApplication) {
-                        setSelectedApplication(returnedApplication);
-                        setCurrentStep("SUBMIT");
-                    } else if (revId) {
-                        setCurrentStep("IDENTITY");
+                }
+
+                const returnedTransactionId = urlParams.get("transactionId");
+                const returnedApplication = (existingRes.success && existingRes.data && returnedTransactionId)
+                    ? existingRes.data.find((app: any) => app.id === returnedTransactionId)
+                    : null;
+
+                if (returnedApplication) {
+                    setSelectedApplication(returnedApplication);
+                    setCurrentStep("SUBMIT");
+                } else if (revId) {
+                    setCurrentStep("IDENTITY");
+                } else if (existingRes.success && existingRes.data && existingRes.data.length > 0) {
+                    const savedStep = sessionStorage.getItem("marriage-license-step");
+                    if (savedStep && savedStep !== "SUBMIT") {
+                        setCurrentStep(savedStep as Step);
                     } else {
-                        const savedStep = sessionStorage.getItem("marriage-license-step");
-                        if (savedStep && savedStep !== "SUBMIT") {
-                            setCurrentStep(savedStep as Step);
-                        } else {
-                            setCurrentStep("EXISTING");
-                        }
+                        setCurrentStep("EXISTING");
                     }
                 } else {
                     const savedStep = sessionStorage.getItem("marriage-license-step");
                     if (savedStep && savedStep !== "SUBMIT") {
                         setCurrentStep(savedStep as Step);
-                    } else if (!revId) {
+                    } else {
                         setCurrentStep("IDENTITY");
                     }
                 }
@@ -664,6 +667,56 @@ export default function MarriageLicenseApplicationPage() {
         }
         return true;
     });
+
+    const isApp1Male = form.app1Gender === "MALE";
+    const groomDocKeys = isApp1Male
+        ? ["Birth Certificate of Applicant 1", "Government ID of Applicant 1"]
+        : ["Birth Certificate of Applicant 2", "Government ID of Applicant 2"];
+
+    const brideDocKeys = isApp1Male
+        ? ["Birth Certificate of Applicant 2", "Government ID of Applicant 2"]
+        : ["Birth Certificate of Applicant 1", "Government ID of Applicant 1"];
+
+    const sharedDocKeys = docsToShow.filter(d =>
+        !groomDocKeys.includes(d) && !brideDocKeys.includes(d)
+    );
+
+    const groomName = (isApp1Male ? form.app1FullName : form.app2FullName) || "";
+    const brideName = (isApp1Male ? form.app2FullName : form.app1FullName) || "";
+
+    const getDocItem = (docName: string) => {
+        const sanitizedKey = docName.replace(/[^a-zA-Z0-9_-]/g, '_');
+        return {
+            id: sanitizedKey,
+            label: formatDocLabel(docName, form.app1Gender),
+            file: files[sanitizedKey] || null,
+            previewUrl: previews[sanitizedKey] || null,
+            infoText: `PDF / IMAGE (MAX 5MB)`,
+            error: showErrors && !files[sanitizedKey] && !previews[sanitizedKey],
+            onFileSelect: async (newFile: File) => {
+                saveDraftFile(STORAGE_KEY, sanitizedKey, newFile).catch(err => console.error("Failed to save draft file in IndexedDB:", err));
+                try {
+                    toast.loading("Uploading document...", { id: `file-upload-${sanitizedKey}` });
+                    const publicUrl = await uploadFileClientSide(newFile, sanitizedKey, userId);
+                    setFiles(prev => ({ ...prev, [sanitizedKey]: newFile }));
+                    setPreviews(prev => ({ ...prev, [sanitizedKey]: publicUrl }));
+                    toast.success("Document uploaded!", { id: `file-upload-${sanitizedKey}` });
+                } catch {
+                    toast.error("Upload failed. Local copy stored.", { id: `file-upload-${sanitizedKey}` });
+                    setFiles(prev => ({ ...prev, [sanitizedKey]: newFile }));
+                    setPreviews(prev => ({ ...prev, [sanitizedKey]: newFile.type.startsWith("image/") ? URL.createObjectURL(newFile) : null }));
+                }
+            },
+            onClickUpload: () => startHandoff(sanitizedKey),
+            onClear: async () => {
+                setFiles(prev => ({ ...prev, [sanitizedKey]: null }));
+                setPreviews(prev => ({ ...prev, [sanitizedKey]: null }));
+                await saveDraftFile(STORAGE_KEY, sanitizedKey, null);
+                toast.success("Document removed.");
+            },
+            onView: () => handleOpenViewer(files[sanitizedKey], formatDocLabel(docName, form.app1Gender), previews[sanitizedKey]),
+        };
+    };
 
     const validateStep = (step: Step): boolean => {
         const errs: Record<string, string> = {};
@@ -987,22 +1040,22 @@ export default function MarriageLicenseApplicationPage() {
                                     }}
                                     className={cn(
                                         "flex flex-col items-center gap-2 md:gap-3 relative z-10 font-black cursor-pointer group",
-                                        !isCompleted && "cursor-not-allowed opacity-50"
+                                        !isCompleted && "cursor-not-allowed opacity-65"
                                     )}
                                 >
                                     <div className={cn(
                                         "w-10 h-10 md:w-16 md:h-16 rounded-xl md:rounded-2xl flex items-center justify-center transition-all duration-500 border",
-                                        isActive ? "bg-slate-100/80 dark:bg-[#0d120f]/60 text-theme-primary border-2 border-theme-primary shadow-[0_0_20px_color-mix(in_srgb,var(--primary-theme)_35%,transparent)] scale-105 md:scale-110" :
+                                        isActive ? "bg-white dark:bg-[#0d120f]/60 text-theme-primary border-2 border-theme-primary shadow-[0_0_20px_color-mix(in_srgb,var(--primary-theme)_35%,transparent)] scale-105 md:scale-110" :
                                             isCompleted ? "bg-slate-50/50 dark:bg-white/[0.02] text-theme-primary border border-slate-200/80 dark:border-white/10" :
-                                                "bg-transparent text-slate-600 dark:text-slate-600 border border-slate-200/40 dark:border-white/5 group-hover:border-theme-primary/30"
+                                                "bg-transparent text-slate-600 dark:text-slate-400 border border-slate-250/50 dark:border-white/5 group-hover:border-theme-primary/30"
                                     )}>
                                         <Icon className="w-4 h-4 md:w-7 md:h-7" />
                                     </div>
                                     <span className={cn(
                                         "text-[7px] md:text-[10px] uppercase tracking-widest text-center italic font-bold hidden sm:block",
                                         isActive ? "text-slate-900 dark:text-white font-black" :
-                                            isCompleted ? "text-slate-800 dark:text-slate-300" :
-                                                "text-slate-700 dark:text-slate-500"
+                                            isCompleted ? "text-slate-700 dark:text-slate-300" :
+                                                "text-slate-600 dark:text-slate-400"
                                     )}>
                                         {step.label}
                                     </span>
@@ -1189,7 +1242,9 @@ export default function MarriageLicenseApplicationPage() {
                                     {selectedApplication.status === "FOR_REVISION" && !selectedApplication.isCancelled && (
                                         <Button
                                             type="button"
-                                            onClick={() => router.push(`/modules/civil-registry/marriage-license-application?revisionId=${selectedApplication.id}`)}
+                                            onClick={() => {
+                                                window.location.href = `/modules/civil-registry/marriage-license-application?revisionId=${selectedApplication.id}`;
+                                            }}
                                             className="rounded-2xl bg-amber-600 hover:bg-amber-700 text-white px-8 py-5 text-xs font-black uppercase tracking-widest shadow-lg"
                                         >
                                             Revise Details
@@ -1520,43 +1575,69 @@ export default function MarriageLicenseApplicationPage() {
                             exit={{ opacity: 0, scale: 1.05 }}
                             className="space-y-6 animate-in fade-in duration-300"
                         >
-                            <RequiredDocuments
-                                title="Required Documents"
-                                subtitle="Please upload the required files prepared by each applicant to proceed"
-                                documents={docsToShow.map((docName) => {
-                                    const sanitizedKey = docName.replace(/[^a-zA-Z0-9_-]/g, '_');
-                                    return {
-                                        key: sanitizedKey,
-                                        label: formatDocLabel(docName, form.app1Gender),
-                                        file: files[sanitizedKey] || null,
-                                        previewUrl: previews[sanitizedKey] || null,
-                                        infoText: `PDF / IMAGE (MAX 5MB)`,
-                                        error: showErrors && !files[sanitizedKey] && !previews[sanitizedKey],
-                                        onFileSelect: async (newFile: File) => {
-                                            saveDraftFile(STORAGE_KEY, sanitizedKey, newFile).catch(err => console.error("Failed to save draft file in IndexedDB:", err));
-                                            try {
-                                                toast.loading("Uploading document...", { id: `file-upload-${sanitizedKey}` });
-                                                const publicUrl = await uploadFileClientSide(newFile, sanitizedKey, userId);
-                                                setFiles(prev => ({ ...prev, [sanitizedKey]: newFile }));
-                                                setPreviews(prev => ({ ...prev, [sanitizedKey]: publicUrl }));
-                                                toast.success("Document uploaded!", { id: `file-upload-${sanitizedKey}` });
-                                            } catch {
-                                                toast.error("Upload failed. Local copy stored.", { id: `file-upload-${sanitizedKey}` });
-                                                setFiles(prev => ({ ...prev, [sanitizedKey]: newFile }));
-                                                setPreviews(prev => ({ ...prev, [sanitizedKey]: newFile.type.startsWith("image/") ? URL.createObjectURL(newFile) : null }));
-                                            }
-                                        },
-                                        onClickUpload: () => startHandoff(sanitizedKey),
-                                        onClear: async () => {
-                                            setFiles(prev => ({ ...prev, [sanitizedKey]: null }));
-                                            setPreviews(prev => ({ ...prev, [sanitizedKey]: null }));
-                                            await saveDraftFile(STORAGE_KEY, sanitizedKey, null);
-                                            toast.success("Document removed.");
-                                        },
-                                        onView: () => handleOpenViewer(files[sanitizedKey], formatDocLabel(docName, form.app1Gender), previews[sanitizedKey]),
-                                    };
-                                })}
-                            />
+                            {/* Header */}
+                            <div>
+                                <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase italic tracking-tight">
+                                    REQUIRED <span className="text-theme-primary">DOCUMENTS</span>
+                                </h2>
+                                <p className="text-xs text-slate-500 font-medium italic">
+                                    Please upload the documents prepared by each applicant (max 5MB each).
+                                </p>
+                            </div>
+
+                            {/* Groom Documents Section */}
+                            <div className="space-y-4 pt-6 border-t border-slate-200 dark:border-white/10">
+                                <div className="space-y-1">
+                                    <h3 className="text-sm font-black uppercase italic tracking-wider text-slate-900 dark:text-white">
+                                        GROOM <span className="text-theme-primary">DOCUMENTS</span> (MALE)
+                                    </h3>
+                                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                                        {groomName}
+                                    </p>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {groomDocKeys.map((docName) => {
+                                        const doc = getDocItem(docName);
+                                        return <PremiumDocumentUpload key={doc.id} {...doc} required={true} />;
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Bride Documents Section */}
+                            <div className="space-y-4 pt-6 border-t border-slate-200 dark:border-white/10">
+                                <div className="space-y-1">
+                                    <h3 className="text-sm font-black uppercase italic tracking-wider text-slate-900 dark:text-white">
+                                        BRIDE / WIFE <span className="text-theme-primary">DOCUMENTS</span> (FEMALE)
+                                    </h3>
+                                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                                        {brideName}
+                                    </p>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {brideDocKeys.map((docName) => {
+                                        const doc = getDocItem(docName);
+                                        return <PremiumDocumentUpload key={doc.id} {...doc} required={true} />;
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* General Documents Section */}
+                            <div className="space-y-4 pt-6 border-t border-slate-200 dark:border-white/10">
+                                <div className="space-y-1">
+                                    <h3 className="text-sm font-black uppercase italic tracking-wider text-slate-900 dark:text-white">
+                                        GENERAL / SHARED <span className="text-theme-primary">DOCUMENTS</span>
+                                    </h3>
+                                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                                        JOINT & ADMINISTRATIVE REQUIREMENTS
+                                    </p>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {sharedDocKeys.map((docName) => {
+                                        const doc = getDocItem(docName);
+                                        return <PremiumDocumentUpload key={doc.id} {...doc} required={true} />;
+                                    })}
+                                </div>
+                            </div>
 
                             <div className="flex justify-between pt-6 border-t border-slate-200 dark:border-white/10 mt-6">
                                 <Button
@@ -1593,6 +1674,30 @@ export default function MarriageLicenseApplicationPage() {
                             submitting={submitting}
                             submitLabel="Submit Marriage License Application"
                             submitDisabled={false}
+                            feeSummary={
+                                <div className="bg-slate-50/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden space-y-6">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center text-slate-900 dark:text-white">
+                                            <CheckCircle2 size={18} className="stroke-[2.5] text-theme-primary" />
+                                        </div>
+                                        <h3 className="text-sm font-black uppercase tracking-widest text-slate-800 dark:text-slate-200">Fee Summary</h3>
+                                    </div>
+                                    <div className="space-y-3 text-xs md:text-sm font-bold">
+                                        <div className="flex justify-between items-center border-b border-dashed border-slate-250 dark:border-white/10 pb-3">
+                                            <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Service Request</span>
+                                            <span className="text-slate-700 dark:text-slate-350 uppercase">Marriage License Application</span>
+                                        </div>
+                                        <div className="flex justify-between items-center border-b border-dashed border-slate-250 dark:border-white/10 pb-3">
+                                            <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Base Filing Fee</span>
+                                            <span className="text-slate-700 dark:text-slate-350">₱{dbMiscFee.toFixed(2)}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center bg-gradient-to-r from-theme-primary to-theme-secondary/85 text-white rounded-2xl p-4 md:p-6 shadow-xl shadow-theme-primary/10 mt-6">
+                                            <span className="font-black uppercase tracking-widest text-[10px] md:text-xs text-white/90">Total Amount Due</span>
+                                            <span className="font-black text-xl md:text-2xl tracking-tight">₱{dbMiscFee.toFixed(2)}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
                             onSubmit={handleSubmit}
                             onBack={() => setCurrentStep("UPLOAD")}
                             backLabel="Modify Uploads"
@@ -1619,16 +1724,7 @@ export default function MarriageLicenseApplicationPage() {
                                         </div>
                                     </div>
 
-                                    {/* Fee Display */}
-                                    <div className="flex items-center justify-between px-4 py-3 rounded-2xl bg-theme-primary/10 border border-theme-primary/20 mt-4">
-                                        <div>
-                                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 italic">Marriage License Fee</span>
-                                            <p className="text-[9px] text-slate-400 italic mt-0.5">Municipal processing fee for marriage application</p>
-                                        </div>
-                                        <div className="text-right">
-                                            <span className="text-lg font-black text-theme-primary tracking-tight">{formatCurrency(dbMiscFee)}</span>
-                                        </div>
-                                    </div>
+
                                 </Card>
                             }
                             documentsSection={
