@@ -1,7 +1,9 @@
 import nodemailer from 'nodemailer';
 
+const senderEmail = process.env.SENDER_EMAIL || process.env.EMAIL_USER;
+
 const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
+  host: 'smtp-relay.brevo.com',
   port: 587,
   secure: false, // true for 465, false for other ports
   auth: {
@@ -12,7 +14,7 @@ const transporter = nodemailer.createTransport({
 
 export async function sendOtpEmail(to: string, otp: string, name: string) {
   const mailOptions = {
-    from: `"Mapandan Kiosk" <${process.env.EMAIL_USER}>`,
+    from: `"Mapandan Kiosk" <${senderEmail}>`,
     to,
     subject: 'Your Authentication Code',
     html: `
