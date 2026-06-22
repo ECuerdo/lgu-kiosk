@@ -58,12 +58,12 @@ export default function RfidOverlay() {
         setStep("TAP");
       } else {
         setResident(data.resident);
-        // Priority: email OTP first, then face verification as fallback
-        if (data.resident.email) {
+        // Priority: face recognition first, then email OTP as fallback
+        if (data.resident.hasFaceAuth) {
+          setStep("FACE_VERIFY");
+        } else if (data.resident.email) {
           sendOtp(data.resident.email, data.resident.fullName);
           setStep("OTP_VERIFY");
-        } else if (data.resident.hasFaceAuth) {
-          setStep("FACE_VERIFY");
         } else {
           setError("No verification method associated with this account.");
           setStep("TAP");
