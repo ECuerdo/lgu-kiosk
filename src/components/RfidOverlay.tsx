@@ -173,7 +173,7 @@ export default function RfidOverlay() {
             </div>
           )}
 
-          {step === "TAP" && (
+          {step === "TAP" && !error && (
             <div className="w-full max-w-md py-6">
               <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 text-left">
                 <p className="text-xs font-black uppercase tracking-[0.28em] text-white/50">
