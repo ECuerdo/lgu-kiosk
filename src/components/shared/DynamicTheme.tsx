@@ -58,6 +58,20 @@ function hslToHex(h: number, s: number, l: number) {
 
 export default function DynamicTheme() {
   useEffect(() => {
+    // 1. Immediately apply cached styles if they exist to prevent flash during client hydration
+    const cached = typeof window !== "undefined" ? localStorage.getItem("kiosk_theme_cache") : null;
+    if (cached) {
+      try {
+        const vars = JSON.parse(cached);
+        const root = document.documentElement;
+        for (const [key, val] of Object.entries(vars)) {
+          root.style.setProperty(key, val as string);
+        }
+      } catch (e) {
+        console.error("Failed to parse cached theme:", e);
+      }
+    }
+
     async function loadTheme() {
       try {
         const response = await fetch(`/api/system-settings/theme_color?t=${Date.now()}`, {
@@ -73,27 +87,36 @@ export default function DynamicTheme() {
           const lightHex = hslToHex(h, s, 95);
           const secondaryHex = hslToHex(h, Math.min(100, s + 5), Math.min(100, l + 12));
           
-          const root = document.documentElement;
-          root.style.setProperty("--primary-theme", baseHex);
-          root.style.setProperty("--primary-theme-hover", hoverHex);
-          root.style.setProperty("--primary-theme-dark", darkHex);
-          root.style.setProperty("--primary-theme-light", lightHex);
-          root.style.setProperty("--primary-theme-secondary", secondaryHex);
-          
-          // Overwrite Tailwind color primary, secondary & emerald palette
-          root.style.setProperty("--color-primary", baseHex);
-          root.style.setProperty("--color-secondary", secondaryHex);
-          root.style.setProperty("--color-emerald-50", lightHex);
-          root.style.setProperty("--color-emerald-100", lightHex);
-          root.style.setProperty("--color-emerald-200", lightHex);
-          root.style.setProperty("--color-emerald-300", lightHex);
-          root.style.setProperty("--color-emerald-400", baseHex);
-          root.style.setProperty("--color-emerald-500", baseHex);
-          root.style.setProperty("--color-emerald-600", hoverHex);
-          root.style.setProperty("--color-emerald-700", darkHex);
-          root.style.setProperty("--color-emerald-800", darkHex);
-          root.style.setProperty("--color-emerald-900", darkHex);
-          root.style.setProperty("--color-emerald-950", darkHex);
+          const themeVars: Record<string, string> = {
+            "--primary-theme": baseHex,
+            "--primary-theme-hover": hoverHex,
+            "--primary-theme-dark": darkHex,
+            "--primary-theme-light": lightHex,
+            "--primary-theme-secondary": secondaryHex,
+            "--color-primary": baseHex,
+            "--color-secondary": secondaryHex,
+            "--color-emerald-50": lightHex,
+            "--color-emerald-100": lightHex,
+            "--color-emerald-200": lightHex,
+            "--color-emerald-300": lightHex,
+            "--color-emerald-400": baseHex,
+            "--color-emerald-500": baseHex,
+            "--color-emerald-600": hoverHex,
+            "--color-emerald-700": darkHex,
+            "--color-emerald-800": darkHex,
+            "--color-emerald-900": darkHex,
+            "--color-emerald-950": darkHex,
+          };
+
+          const newCacheString = JSON.stringify(themeVars);
+          if (newCacheString !== cached) {
+            localStorage.setItem("kiosk_theme_cache", newCacheString);
+            
+            const root = document.documentElement;
+            for (const [key, val] of Object.entries(themeVars)) {
+              root.style.setProperty(key, val);
+            }
+          }
         }
       } catch (e) {
         console.error("Failed to load dynamic theme setting:", e);
