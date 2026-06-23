@@ -125,6 +125,11 @@ export default function GlobalKeyboard() {
     // Focus input to keep typing experience fluent
     activeInput.focus();
 
+    const inputType = activeInput.tagName === "INPUT"
+      ? (activeInput as HTMLInputElement).type
+      : "";
+    const isNumberLikeInput = activeInput.tagName === "INPUT" && inputType === "number";
+
     if (key === "backspace") {
       // Dispatch keydown for backspace to allow custom handling (like in OTP inputs)
       const keyEvent = new KeyboardEvent("keydown", {
@@ -143,8 +148,8 @@ export default function GlobalKeyboard() {
       }
     }
 
-    const start = activeInput.selectionStart ?? 0;
-    const end = activeInput.selectionEnd ?? 0;
+    const start = isNumberLikeInput ? activeInput.value.length : (activeInput.selectionStart ?? 0);
+    const end = isNumberLikeInput ? activeInput.value.length : (activeInput.selectionEnd ?? 0);
     const val = activeInput.value;
 
     let newVal = val;
