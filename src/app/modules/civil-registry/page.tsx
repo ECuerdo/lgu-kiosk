@@ -9,6 +9,7 @@ import {
   Sparkles,
   FileText,
   ArrowLeft,
+  ChevronRight,
   Info,
   X,
   Clock,
@@ -483,6 +484,16 @@ export default function CivilRegistryHubPage() {
     }
     return "md";
   });
+  const [isKioskSize, setIsKioskSize] = React.useState(false);
+
+  React.useEffect(() => {
+    const checkSize = () => {
+      setIsKioskSize(window.innerWidth < 1280); // Kiosk layout trigger at less than xl breakpoint
+    };
+    checkSize();
+    window.addEventListener("resize", checkSize);
+    return () => window.removeEventListener("resize", checkSize);
+  }, []);
 
   const handleServiceClick = (service: RegistryService) => {
     if (service.status === "ACTIVE" && service.path) {
@@ -616,28 +627,33 @@ export default function CivilRegistryHubPage() {
                     </div>
                   </div>
 
-                  {/* Cards Grid */}
+                  {/* Cards Grid / List */}
                   <div className={cn(
-                    "grid gap-8",
-                    activeFontSize === "xl" ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
+                    "grid gap-6 xl:gap-8",
+                    activeFontSize === "xl" ? "grid-cols-1" : "grid-cols-1 xl:grid-cols-3"
                   )}>
                     {services.map((service) => (
                       <motion.div
                         key={service.id}
                         onClick={() => handleServiceClick(service)}
-                        whileHover={{ y: -6 }}
-                        transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                        whileHover={(isKioskSize || activeFontSize === "xl") ? { x: 12 } : { y: -6 }}
+                        transition={{ type: "spring", stiffness: 300, damping: 25 }}
                         className={cn(
-                          "group flex bg-slate-50/50 dark:bg-[#151821]/80 border border-slate-200/80 dark:border-[#202534] rounded-[2rem] hover:border-theme-primary/50 dark:hover:border-theme-primary/30 hover:bg-slate-100/30 dark:hover:bg-[#1a1e2c] active:scale-[0.98] transition-all duration-300 cursor-pointer relative overflow-hidden shadow-md hover:shadow-xl dark:hover:shadow-[0_0_30px_color-mix(in srgb, var(--primary-theme) 0.08 * 100%, transparent)]",
+                          "group flex bg-slate-50/50 dark:bg-[#151821]/80 border border-slate-200/80 dark:border-[#202534] rounded-[2rem] hover:border-theme-primary/50 dark:hover:border-theme-primary/30 hover:bg-slate-100/30 dark:hover:bg-[#1a1e2c] active:scale-[0.99] transition-all duration-300 cursor-pointer relative overflow-hidden shadow-md hover:shadow-xl dark:hover:shadow-[0_0_30px_color-mix(in srgb, var(--primary-theme) 0.08 * 100%, transparent)]",
+                          // Kiosk / List View (default on < xl, or always if activeFontSize is xl)
+                          "flex-row items-center gap-6 p-6 sm:p-8 min-h-0",
+                          // Desktop Grid View (>= xl, only if activeFontSize is not xl)
                           activeFontSize === "xl"
-                            ? "flex-row items-center gap-6 p-6 sm:p-8 min-h-0"
-                            : "flex-col justify-start min-h-[260px] md:min-h-[300px] p-8 md:p-10"
+                            ? "xl:flex-row xl:items-center xl:gap-6 xl:p-8 xl:min-h-0"
+                            : "xl:flex-col xl:items-start xl:justify-start xl:min-h-[300px] xl:p-10 xl:gap-0"
                         )}
                       >
-                        {/* Card Icon */}
-                        <div className={cn(activeFontSize === "xl" ? "mb-0 shrink-0" : "mb-6")}>
+                        {/* Icon */}
+                        <div className={cn(
+                          "shrink-0",
+                          activeFontSize === "xl" ? "xl:mb-0" : "xl:mb-6"
+                        )}>
                           <div className="w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-slate-200/50 dark:bg-[#0c0d12] border border-slate-300/30 dark:border-white/5 flex items-center justify-center">
-                            {/* Render icon with scaled dimensions dynamically */}
                             {React.cloneElement(service.icon as React.ReactElement<{ className?: string }>, { className: "w-8 h-8 md:w-10 md:h-10 text-theme-primary" })}
                           </div>
                         </div>
@@ -645,14 +661,30 @@ export default function CivilRegistryHubPage() {
                         {/* Text Content */}
                         <div className="flex-1 min-w-0">
                           {/* Title */}
-                          <h4 className="text-lg md:text-2xl lg:text-3xl font-black text-slate-900 dark:text-white group-hover:text-theme-primary transition-colors leading-tight mb-3 uppercase italic tracking-tight">
+                          <h4 className={cn(
+                            "font-black text-slate-900 dark:text-white group-hover:text-theme-primary transition-colors leading-tight mb-2 uppercase italic tracking-tight",
+                            activeFontSize === "xl" ? "text-xl md:text-3xl lg:text-4xl" : "text-lg md:text-2xl lg:text-3xl"
+                          )}>
                             {service.title[lang] || service.title.en}
                           </h4>
 
                           {/* Description */}
-                          <p className="text-xs md:text-sm lg:text-base font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide leading-relaxed">
+                          <p className={cn(
+                            "font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide leading-relaxed",
+                            activeFontSize === "xl" ? "text-sm md:text-base lg:text-lg" : "text-xs md:text-sm lg:text-base"
+                          )}>
                             {service.desc[lang] || service.desc.en}
                           </p>
+                        </div>
+
+                        {/* Action Chevron */}
+                        <div className={cn(
+                          "shrink-0 ml-auto",
+                          activeFontSize === "xl" ? "block" : "xl:hidden block"
+                        )}>
+                          <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center text-slate-400 group-hover:text-theme-primary group-hover:bg-theme-primary/10 group-hover:border-theme-primary/30 transition-all duration-300">
+                            <ChevronRight className="w-5 h-5 md:w-6 md:h-6 stroke-[3]" />
+                          </div>
                         </div>
                       </motion.div>
                     ))}

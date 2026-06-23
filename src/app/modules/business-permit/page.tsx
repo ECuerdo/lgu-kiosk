@@ -274,7 +274,18 @@ export default function BusinessPermitWizardPage() {
     const [revisionId, setRevisionId] = useState<string | null>(null);
     const [revisionTx, setRevisionTx] = useState<any>(null);
     const [showValidationErrors, setShowValidationErrors] = useState(false);
-    const [themeColor, setThemeColor] = useState("var(--primary-theme)");
+    const [themeColor, setThemeColor] = useState(() => {
+        if (typeof window !== "undefined") {
+            const cached = localStorage.getItem("kiosk_theme_cache");
+            if (cached) {
+                try {
+                    const vars = JSON.parse(cached);
+                    return vars["--primary-theme"] || "var(--primary-theme)";
+                } catch {}
+            }
+        }
+        return "var(--primary-theme)";
+    });
 
     const [previousPermits, setPreviousPermits] = useState<any[]>([]);
     const [selectedPermitIndex, setSelectedPermitIndex] = useState<number>(0);

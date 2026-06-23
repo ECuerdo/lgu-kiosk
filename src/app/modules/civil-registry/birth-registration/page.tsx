@@ -186,7 +186,18 @@ export default function BirthRegistrationPage() {
     const [mounted, setMounted] = useState(false);
     const [loading, setLoading] = useState(true);
 
-    const [themeColor, setThemeColor] = useState("var(--primary-theme)");
+    const [themeColor, setThemeColor] = useState(() => {
+        if (typeof window !== "undefined") {
+            const cached = localStorage.getItem("kiosk_theme_cache");
+            if (cached) {
+                try {
+                    const vars = JSON.parse(cached);
+                    return vars["--primary-theme"] || "var(--primary-theme)";
+                } catch {}
+            }
+        }
+        return "var(--primary-theme)";
+    });
 
     useEffect(() => {
         getSystemSettingAction("theme_color").then((res: any) => {
