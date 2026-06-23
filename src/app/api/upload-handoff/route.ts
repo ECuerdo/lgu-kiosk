@@ -3,6 +3,13 @@ import { createHandoffToken } from "@/lib/secure-upload-handoff";
 
 export const runtime = "nodejs";
 
+function normalizePublicOrigin(value: string | undefined, fallback: string) {
+  const raw = (value || fallback).trim();
+  if (!raw) return fallback;
+  if (/^https?:\/\//i.test(raw)) return raw;
+  return `https://${raw}`;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { userId, slot } = await request.json();
@@ -12,7 +19,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { token, expiresAt } = createHandoffToken(String(userId), slot);
-    const publicOrigin = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
+    const publicOrigin = normalizePublicOrigin(process.env.NEXT_PUBLIC_APP_URL, request.nextUrl.origin);
     const uploadUrl = new URL(`/upload-handoff/${encodeURIComponent(token)}`, publicOrigin);
     return NextResponse.json({ token, uploadUrl: uploadUrl.toString(), expiresAt });
   } catch (error) {
