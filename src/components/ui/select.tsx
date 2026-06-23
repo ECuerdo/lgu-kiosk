@@ -90,7 +90,7 @@ export function SelectContent({ className, children, ...props }: React.Component
         window.removeEventListener("scroll", updatePosition, true);
       };
     }
-  }, [open]);
+  }, [open, triggerRef]);
 
   if (!open) return null;
 

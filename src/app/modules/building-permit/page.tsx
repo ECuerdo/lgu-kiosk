@@ -446,7 +446,6 @@ export default function BuildingPermitPage() {
   const [maxStepIdx, setMaxStepIdx] = useState(0);
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
-  const displayResident = selectedApplication?.residentSnapshot || residentData;
 
   useEffect(() => {
     if (selectedApplication && !isRevision) return;
