@@ -6,6 +6,7 @@ import GlobalKeyboard from "@/components/shared/GlobalKeyboard";
 import KioskMaintenanceGuard from "@/components/shared/KioskMaintenanceGuard";
 import ThemeProvider from "@/components/shared/ThemeProvider";
 import DynamicTheme from "@/components/shared/DynamicTheme";
+import { Toaster } from "@/components/ui/sonner";
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
@@ -48,6 +49,7 @@ export default function RootLayout({
           <KioskMaintenanceGuard />
           {children}
           <GlobalKeyboard />
+          <Toaster />
         </ThemeProvider>
       </body>
     </html>

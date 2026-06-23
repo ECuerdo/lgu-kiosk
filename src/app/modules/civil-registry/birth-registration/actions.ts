@@ -100,19 +100,35 @@ export async function getBarangaysList() {
     }
 }
 
-// ─── Ensure Civil Registry Transaction Types Exist ───────────────────────────
-
 export async function ensureCivilRegistryTransactionTypes() {
     const types = [
-        { code: "LCR_BIRTH_REG", name: "Birth Registration", category: "Civil Registry", baseFee: 0 },
+        { 
+            code: "LCR_BIRTH_REG", 
+            name: "Birth Registration", 
+            category: "Civil Registry", 
+            baseFee: 100,
+            defaultFees: [
+                { "code": "PROCESSING_FEE", "name": "Processing & e-Copy Fee", "amount": 215 },
+                { "code": "LATE_FEE_1_10", "name": "Late Fee (1-10 years)", "amount": 315 },
+                { "code": "LATE_FEE_10_20", "name": "Late Fee (10-20 years)", "amount": 515 },
+                { "code": "LATE_FEE_20_UP", "name": "Late Fee (20+ years)", "amount": 1015 }
+            ]
+        },
         { code: "LCR_BIRTH", name: "Birth Certificate Request (True Copy)", category: "Civil Registry", baseFee: 100 },
     ];
 
     for (const t of types) {
+        const existing = await prisma.transactionType.findUnique({ where: { code: t.code } });
+        const hasDefaultFees = existing && Array.isArray(existing.defaultFees) && (existing.defaultFees as any).length > 0;
+
         await prisma.transactionType.upsert({
             where: { code: t.code },
             create: { ...t },
-            update: { name: t.name, category: t.category }
+            update: { 
+                name: t.name, 
+                category: t.category,
+                ...(!hasDefaultFees && t.defaultFees ? { defaultFees: t.defaultFees } : {})
+            }
         });
     }
 }
@@ -278,6 +294,43 @@ export async function cancelBirthRegistration(id: string, userId: string) {
     } catch (error) {
         console.error("Cancel transaction error:", error);
         return { success: false, error: "Failed to cancel transaction" };
+    }
+}
+
+// ─── Search Residents Action ─────────────────────────────────────────────────
+
+export async function searchResidentsAction(query: string, gender?: string) {
+    try {
+        if (!query || query.trim().length < 2) return { success: true, data: [] };
+
+        const normalizedQuery = query.trim();
+
+        const OR_clause: any[] = [
+            { firstName: { contains: normalizedQuery, mode: "insensitive" } },
+            { middleName: { contains: normalizedQuery, mode: "insensitive" } },
+            { lastName: { contains: normalizedQuery, mode: "insensitive" } },
+        ];
+
+        let whereClause: any = { OR: OR_clause };
+
+        if (gender) {
+            whereClause = {
+                AND: [
+                    { OR: OR_clause },
+                    { gender: { equals: gender, mode: "insensitive" } }
+                ]
+            };
+        }
+
+        const residents = await prisma.resident.findMany({
+            where: whereClause,
+            take: 10
+        });
+
+        return { success: true, data: residents };
+    } catch (error) {
+        console.error("Search residents error:", error);
+        return { success: false, error: "Failed to search residents" };
     }
 }
 
