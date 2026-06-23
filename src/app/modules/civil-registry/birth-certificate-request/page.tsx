@@ -49,7 +49,10 @@ import {
   getCurrentUserResident,
   submitBirthCertificateRequest,
   getExistingBirthRequests,
-  getSecureUploadUrlAction
+  getSecureUploadUrlAction,
+  ensureCivilRegistryTransactionTypes,
+  getTransactionTypes,
+  getTransactionById
 } from "./actions";
 import RequestList from "../_components/request-list";
 import InformantInfo from "../_components/informant-info";
@@ -127,6 +130,9 @@ export default function BirthCertificatePage() {
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploadingId, setIsUploadingId] = useState(false);
+  const [dbBaseFee, setDbBaseFee] = useState<number>(100);
+  const [revisionId, setRevisionId] = useState<string | null>(null);
+  const [revisionTx, setRevisionTx] = useState<any>(null);
 
 
   // Digital Handoff (QR Code Upload) States
@@ -340,35 +346,97 @@ export default function BirthCertificatePage() {
         const userId = resident.userId || resident.id;
         const query = new URLSearchParams(window.location.search);
         const returnedTransactionId = query.get("transactionId");
+        const revId = query.get("revisionId") || query.get("revId");
 
-        const [res, requestsRes] = await Promise.all([
+        await ensureCivilRegistryTransactionTypes();
+
+        let txData: any = null;
+        if (revId) {
+          const txRes = await getTransactionById(revId, userId);
+          if (txRes.success && txRes.data) {
+            txData = txRes.data;
+            setRevisionId(revId);
+            setRevisionTx(txData);
+          } else {
+            toast.error("Failed to fetch revision details");
+          }
+        }
+
+        const [res, requestsRes, typesResult] = await Promise.all([
           getCurrentUserResident(userId),
-          getExistingBirthRequests(userId)
+          getExistingBirthRequests(userId),
+          getTransactionTypes()
         ]);
+
+        if (typesResult.success && typesResult.data) {
+          const birthType = typesResult.data.find((t: any) => t.code === "LCR_BIRTH");
+          if (birthType) {
+            setDbBaseFee(Number(birthType.baseFee ?? 100));
+          }
+        }
 
         if (res.success && res.data) {
           const data = res.data;
           setResidentData(data);
-          // Set initial form data
-          setFormData(prev => ({
-            ...prev,
-            certFirstName: data.firstName || "",
-            certMiddleName: data.middleName || "",
-            certLastName: data.lastName || "",
-            certSuffix: data.suffix || "",
-            sex: (data.gender || "").toUpperCase(),
-            dateOfEvent: data.dateOfBirth ? new Date(data.dateOfBirth).toISOString().split('T')[0] : "",
-            placeOfEvent: data.placeOfBirth || "Mapandan, Pangasinan",
-            fatherFirstName: data.fatherFirstName || "",
-            fatherMiddleName: data.fatherMiddleName || "",
-            fatherLastName: data.fatherLastName || "",
-            motherFirstName: data.motherFirstName || "",
-            motherMiddleName: data.motherMiddleName || "",
-            motherLastName: data.motherLastName || "",
-            contactNumber: data.contactNumber || "",
-            email: data.email || "",
-            occupation: data.occupation || "",
-          }));
+
+          if (txData) {
+            const addData = txData.additionalData as any || {};
+            const resSnapshot = txData.residentSnapshot as any || data || {};
+            const docPreviews = addData.documents || {};
+
+            setFormData(prev => ({
+              ...prev,
+              certFirstName: addData.certFirstName || "",
+              certMiddleName: addData.certMiddleName || "",
+              certLastName: addData.certLastName || "",
+              certSuffix: addData.certSuffix || "",
+              sex: (addData.gender || addData.sex || "").toUpperCase(),
+              dateOfEvent: addData.dateOfEvent || "",
+              placeOfEvent: addData.placeOfEvent || "Mapandan, Pangasinan",
+              fatherFirstName: addData.fatherFirstName || "",
+              fatherMiddleName: addData.fatherMiddleName || "",
+              fatherLastName: addData.fatherLastName || "",
+              motherFirstName: addData.motherFirstName || "",
+              motherMiddleName: addData.motherMiddleName || "",
+              motherLastName: addData.motherLastName || "",
+              contactNumber: addData.contactNumber || resSnapshot.contactNumber || "",
+              email: addData.email || resSnapshot.email || "",
+              occupation: addData.occupation || data.occupation || "",
+              relation: addData.relation || "Self (Aplikante)",
+            }));
+
+            if (docPreviews.newIdFile) {
+              setIdFrontHandoffUrl(docPreviews.newIdFile);
+              setIdFrontHandoffFileName("Uploaded_ID_Front.jpg");
+              setIdChoice("UPLOAD");
+            }
+            if (docPreviews.newIdFileBack) {
+              setIdBackHandoffUrl(docPreviews.newIdFileBack);
+              setIdBackHandoffFileName("Uploaded_ID_Back.jpg");
+              setIdChoice("UPLOAD");
+            }
+          } else {
+            // Set initial form data
+            setFormData(prev => ({
+              ...prev,
+              certFirstName: data.firstName || "",
+              certMiddleName: data.middleName || "",
+              certLastName: data.lastName || "",
+              certSuffix: data.suffix || "",
+              sex: (data.gender || "").toUpperCase(),
+              dateOfEvent: data.dateOfBirth ? new Date(data.dateOfBirth).toISOString().split('T')[0] : "",
+              placeOfEvent: data.placeOfBirth || "Mapandan, Pangasinan",
+              fatherFirstName: data.fatherFirstName || "",
+              fatherMiddleName: data.fatherMiddleName || "",
+              fatherLastName: data.fatherLastName || "",
+              motherFirstName: data.motherFirstName || "",
+              motherMiddleName: data.motherMiddleName || "",
+              motherLastName: data.motherLastName || "",
+              contactNumber: data.contactNumber || "",
+              email: data.email || "",
+              occupation: data.occupation || "",
+            }));
+          }
         }
 
         // Check for saved step, form data, and handoff URLs
@@ -379,7 +447,7 @@ export default function BirthCertificatePage() {
         const savedFrontName = sessionStorage.getItem("birth-cert-front-name");
         const savedBackName = sessionStorage.getItem("birth-cert-back-name");
 
-        if (savedForm) {
+        if (!revId && savedForm) {
           try {
             const parsed = JSON.parse(savedForm);
             setFormData(prev => ({ ...prev, ...parsed }));
@@ -387,21 +455,25 @@ export default function BirthCertificatePage() {
             console.error("Failed to parse saved form", e);
           }
         }
-        if (savedFrontUrl) setIdFrontHandoffUrl(savedFrontUrl);
-        if (savedBackUrl) setIdBackHandoffUrl(savedBackUrl);
-        if (savedFrontName) setIdFrontHandoffFileName(savedFrontName);
-        if (savedBackName) setIdBackHandoffFileName(savedBackName);
+        if (!revId && savedFrontUrl) setIdFrontHandoffUrl(savedFrontUrl);
+        if (!revId && savedBackUrl) setIdBackHandoffUrl(savedBackUrl);
+        if (!revId && savedFrontName) setIdFrontHandoffFileName(savedFrontName);
+        if (!revId && savedBackName) setIdBackHandoffFileName(savedBackName);
 
-        if (requestsRes.success && requestsRes.data && requestsRes.data.length > 0) {
+        if (requestsRes.success && requestsRes.data) {
           setExistingRequests(requestsRes.data);
-          const returnedApplication = returnedTransactionId
-            ? requestsRes.data.find((app: any) => app.id === returnedTransactionId)
-            : null;
-          if (returnedApplication) {
-            setSelectedApplication(returnedApplication);
-            setCurrentStep("SUBMIT");
-            return;
-          }
+        }
+
+        const returnedApplication = (requestsRes.success && requestsRes.data && returnedTransactionId)
+          ? requestsRes.data.find((app: any) => app.id === returnedTransactionId)
+          : null;
+
+        if (returnedApplication) {
+          setSelectedApplication(returnedApplication);
+          setCurrentStep("SUBMIT");
+        } else if (revId) {
+          setCurrentStep("IDENTITY");
+        } else if (requestsRes.success && requestsRes.data && requestsRes.data.length > 0) {
           if (savedStep && savedStep !== "SUBMIT") {
             setCurrentStep(savedStep as Step);
           } else {
@@ -424,7 +496,7 @@ export default function BirthCertificatePage() {
   }, [router]);
 
   useEffect(() => {
-    if (!loading && !selectedApplication) {
+    if (!loading && !selectedApplication && !revisionId) {
       sessionStorage.setItem("birth-cert-step", currentStep);
       // Remove File object before stringifying
       const formCopy: any = { ...formData };
@@ -453,7 +525,7 @@ export default function BirthCertificatePage() {
         sessionStorage.removeItem("birth-cert-back-name");
       }
     }
-  }, [currentStep, formData, idFrontHandoffUrl, idBackHandoffUrl, idFrontHandoffFileName, idBackHandoffFileName, loading, selectedApplication]);
+  }, [currentStep, formData, idFrontHandoffUrl, idBackHandoffUrl, idFrontHandoffFileName, idBackHandoffFileName, loading, selectedApplication, revisionId]);
 
   const handleFormChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -623,6 +695,9 @@ export default function BirthCertificatePage() {
       data.append("email", formData.email);
       data.append("occupation", formData.occupation);
       data.append("privacyConsentAccepted", String(privacyAccepted));
+      if (revisionId) {
+        data.append("revisionId", revisionId);
+      }
 
       if (idChoice === "UPLOAD") {
         if (idFrontHandoffUrl) {
@@ -647,6 +722,14 @@ export default function BirthCertificatePage() {
 
       const result = await submitBirthCertificateRequest(data, userId);
       if (result.success && result.transactionId) {
+        // Clear drafts if success
+        sessionStorage.removeItem("birth-cert-step");
+        sessionStorage.removeItem("birth-cert-form");
+        sessionStorage.removeItem("birth-cert-front-url");
+        sessionStorage.removeItem("birth-cert-back-url");
+        sessionStorage.removeItem("birth-cert-front-name");
+        sessionStorage.removeItem("birth-cert-back-name");
+
         // Refresh request data
         const updatedRequests = await getExistingBirthRequests(userId);
         if (updatedRequests.success && updatedRequests.data) {
@@ -657,7 +740,7 @@ export default function BirthCertificatePage() {
           }
         }
 
-        toast.success("Birth Certificate request submitted successfully.");
+        toast.success(revisionId ? "Revision resubmitted successfully." : "Birth Certificate request submitted successfully.");
         setCurrentStep("SUBMIT");
       } else {
         toast.error(result.error || "Failed to submit request.");
@@ -760,22 +843,22 @@ export default function BirthCertificatePage() {
                   }}
                   className={cn(
                     "flex flex-col items-center gap-2 md:gap-3 relative z-10 font-black cursor-pointer group",
-                    (!isCompleted || (selectedApplication && currentStep === "SUBMIT")) && "cursor-not-allowed opacity-50"
+                    (!isCompleted || (selectedApplication && currentStep === "SUBMIT")) && "cursor-not-allowed opacity-65"
                   )}
                 >
                   <div className={cn(
                     "w-10 h-10 md:w-16 md:h-16 rounded-xl md:rounded-2xl flex items-center justify-center transition-all duration-500 border",
-                    isActive ? "bg-slate-100/80 dark:bg-[#0d120f]/60 text-theme-primary border-2 border-theme-primary shadow-[0_0_20px_color-mix(in_srgb,var(--primary-theme)_35%,transparent)] scale-105 md:scale-110" :
+                    isActive ? "bg-white dark:bg-[#0d120f]/60 text-theme-primary border-2 border-theme-primary shadow-[0_0_20px_color-mix(in_srgb,var(--primary-theme)_35%,transparent)] scale-105 md:scale-110" :
                       isCompleted ? "bg-slate-50/50 dark:bg-white/[0.02] text-theme-primary border border-slate-200/80 dark:border-white/10" :
-                        "bg-transparent text-slate-400 dark:text-slate-600 border border-slate-200/40 dark:border-white/5 group-hover:border-theme-primary/30"
+                        "bg-transparent text-slate-600 dark:text-slate-400 border border-slate-250/50 dark:border-white/5 group-hover:border-theme-primary/30"
                   )}>
                     <Icon className="w-4 h-4 md:w-7 md:h-7" />
                   </div>
                   <span className={cn(
                     "text-[7px] md:text-[10px] uppercase tracking-widest text-center italic font-bold hidden sm:block",
                     isActive ? "text-slate-900 dark:text-white font-black" :
-                      isCompleted ? "text-slate-600 dark:text-slate-300" :
-                        "text-slate-400 dark:text-slate-500"
+                      isCompleted ? "text-slate-700 dark:text-slate-300" :
+                        "text-slate-600 dark:text-slate-400"
                   )}>
                     {step.label}
                   </span>
@@ -838,6 +921,18 @@ export default function BirthCertificatePage() {
                 Confirm your relationship to the subject and your current contact information.
               </p>
             </div>
+
+            {revisionTx && (
+              <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-start gap-3 text-amber-800 dark:text-amber-400 animate-in fade-in duration-300 max-w-3xl mx-auto w-full">
+                <AlertCircle className="w-5 h-5 shrink-0 animate-pulse mt-0.5" />
+                <div className="text-left space-y-1">
+                  <p className="text-[10px] font-black uppercase tracking-wider italic">Attention: Revision Needed</p>
+                  <p className="text-xs font-bold text-slate-900 dark:text-slate-300 leading-relaxed italic">
+                    &ldquo;{revisionTx.rejectionRemarks || "Please check the highlighted checklist files or values and submit them again."}&rdquo;
+                  </p>
+                </div>
+              </div>
+            )}
 
             <div className="space-y-6">
               <InformantInfo
@@ -906,81 +1001,80 @@ export default function BirthCertificatePage() {
                 </p>
               </div>
 
-              <div className="grid md:grid-cols-2 gap-6 mt-6">
-                <div className="space-y-5">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">
-                        First Name <span className="text-red-500">*</span>
-                      </Label>
-                      <Input
-                        required
-                        id="certFirstName"
-                        placeholder="First Name"
-                        value={formData.certFirstName}
-                        onChange={e => !isSelf && handleFormChange("certFirstName", e.target.value)}
-                        disabled={isSelf}
-                        className={cn(
-                          "h-12 bg-slate-50/20 dark:bg-black/20 text-slate-900 dark:text-white rounded-xl focus-visible:ring-theme-primary/20 border",
-                          showValidationErrors && !formData.certFirstName ? "border-red-500 dark:border-red-500" : "border-slate-200 dark:border-white/10",
-                          isSelf && "cursor-not-allowed bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/5 text-slate-700 dark:text-white/80 opacity-80"
-                        )}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">
-                        Middle Name
-                      </Label>
-                      <Input
-                        placeholder="Middle Name"
-                        value={formData.certMiddleName}
-                        onChange={e => !isSelf && handleFormChange("certMiddleName", e.target.value)}
-                        disabled={isSelf}
-                        className={cn(
-                          "h-12 bg-slate-50/20 dark:bg-black/20 border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-xl focus-visible:ring-theme-primary/20",
-                          isSelf && "cursor-not-allowed bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/5 text-slate-700 dark:text-white/80 opacity-80"
-                        )}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="col-span-2 space-y-2">
-                      <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">
-                        Last Name <span className="text-red-500">*</span>
-                      </Label>
-                      <Input
-                        required
-                        id="certLastName"
-                        placeholder="Last Name"
-                        value={formData.certLastName}
-                        onChange={e => !isSelf && handleFormChange("certLastName", e.target.value)}
-                        disabled={isSelf}
-                        className={cn(
-                          "h-12 bg-slate-50/20 dark:bg-black/20 text-slate-900 dark:text-white rounded-xl focus-visible:ring-theme-primary/20 border",
-                          showValidationErrors && !formData.certLastName ? "border-red-500 dark:border-red-500" : "border-slate-200 dark:border-white/10",
-                          isSelf && "cursor-not-allowed bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/5 text-slate-700 dark:text-white/80 opacity-80"
-                        )}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">
-                        Suffix
-                      </Label>
-                      <Input
-                        placeholder="e.g. Jr, Sr"
-                        value={formData.certSuffix}
-                        onChange={e => !isSelf && handleFormChange("certSuffix", e.target.value)}
-                        disabled={isSelf}
-                        className={cn(
-                          "h-12 bg-slate-50/20 dark:bg-black/20 border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-xl focus-visible:ring-theme-primary/20",
-                          isSelf && "cursor-not-allowed bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/5 text-slate-700 dark:text-white/80 opacity-80"
-                        )}
-                      />
-                    </div>
-                  </div>
-
+              <div className="space-y-5 mt-6">
+                {/* Row 1: Name fields in a single responsive row (4 columns on md and up) */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">
+                      First Name <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      required
+                      id="certFirstName"
+                      placeholder="First Name"
+                      value={formData.certFirstName}
+                      onChange={e => !isSelf && handleFormChange("certFirstName", e.target.value)}
+                      disabled={isSelf}
+                      className={cn(
+                        "h-12 bg-slate-50/20 dark:bg-black/20 text-slate-900 dark:text-white rounded-xl focus-visible:ring-theme-primary/20 border",
+                        showValidationErrors && !formData.certFirstName ? "border-red-500 dark:border-red-500" : "border-slate-200 dark:border-white/10",
+                        isSelf && "cursor-not-allowed bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/5 text-slate-700 dark:text-white/80 opacity-80"
+                      )}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">
+                      Middle Name
+                    </Label>
+                    <Input
+                      placeholder="Middle Name"
+                      value={formData.certMiddleName}
+                      onChange={e => !isSelf && handleFormChange("certMiddleName", e.target.value)}
+                      disabled={isSelf}
+                      className={cn(
+                        "h-12 bg-slate-50/20 dark:bg-black/20 border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-xl focus-visible:ring-theme-primary/20",
+                        isSelf && "cursor-not-allowed bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/5 text-slate-700 dark:text-white/80 opacity-80"
+                      )}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">
+                      Last Name <span className="text-red-555">*</span>
+                    </Label>
+                    <Input
+                      required
+                      id="certLastName"
+                      placeholder="Last Name"
+                      value={formData.certLastName}
+                      onChange={e => !isSelf && handleFormChange("certLastName", e.target.value)}
+                      disabled={isSelf}
+                      className={cn(
+                        "h-12 bg-slate-50/20 dark:bg-black/20 text-slate-900 dark:text-white rounded-xl focus-visible:ring-theme-primary/20 border",
+                        showValidationErrors && !formData.certLastName ? "border-red-500 dark:border-red-500" : "border-slate-200 dark:border-white/10",
+                        isSelf && "cursor-not-allowed bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/5 text-slate-700 dark:text-white/80 opacity-80"
+                      )}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">
+                      Suffix
+                    </Label>
+                    <Input
+                      placeholder="e.g. Jr, Sr"
+                      value={formData.certSuffix}
+                      onChange={e => !isSelf && handleFormChange("certSuffix", e.target.value)}
+                      disabled={isSelf}
+                      className={cn(
+                        "h-12 bg-slate-50/20 dark:bg-black/20 border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-xl focus-visible:ring-theme-primary/20",
+                        isSelf && "cursor-not-allowed bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/5 text-slate-700 dark:text-white/80 opacity-80"
+                      )}
+                    />
+                  </div>
+                </div>
+
+                {/* Row 2: Gender, Date of Birth, and Place of Birth all on one line, aligned together */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="space-y-2 col-span-2 md:col-span-1">
                     <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">
                       Gender (Kasarian) <span className="text-red-500">*</span>
                     </Label>
@@ -1005,10 +1099,8 @@ export default function BirthCertificatePage() {
                       </SelectContent>
                     </Select>
                   </div>
-                </div>
 
-                <div className="space-y-5">
-                  <div className="space-y-2">
+                  <div className="space-y-2 col-span-2 md:col-span-1">
                     <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">
                       Date of Birth (Araw ng Kapanganakan) <span className="text-red-500">*</span>
                     </Label>
@@ -1027,7 +1119,7 @@ export default function BirthCertificatePage() {
                     />
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-2 col-span-2 md:col-span-2">
                     <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">
                       Place of Birth (Lugar ng Kapanganakan) <span className="text-red-500">*</span>
                     </Label>
@@ -1313,6 +1405,30 @@ export default function BirthCertificatePage() {
               showErrors={showValidationErrors}
               submitting={isSubmitting}
               submitLabel="Submit Application"
+              feeSummary={
+                <div className="bg-slate-50/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden space-y-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center text-slate-900 dark:text-white">
+                      <CheckCircle2 size={18} className="stroke-[2.5] text-theme-primary" />
+                    </div>
+                    <h3 className="text-sm font-black uppercase tracking-widest text-slate-800 dark:text-slate-200">Fee Summary</h3>
+                  </div>
+                  <div className="space-y-3 text-xs md:text-sm font-bold">
+                    <div className="flex justify-between items-center border-b border-dashed border-slate-250 dark:border-white/10 pb-3">
+                      <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Service Request</span>
+                      <span className="text-slate-700 dark:text-slate-350 uppercase">Birth Certificate Copy</span>
+                    </div>
+                    <div className="flex justify-between items-center border-b border-dashed border-slate-250 dark:border-white/10 pb-3">
+                      <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Base Filing Fee</span>
+                      <span className="text-slate-700 dark:text-slate-350">₱{dbBaseFee.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between items-center bg-gradient-to-r from-theme-primary to-theme-secondary/85 text-white rounded-2xl p-4 md:p-6 shadow-xl shadow-theme-primary/10 mt-6">
+                      <span className="font-black uppercase tracking-widest text-[10px] md:text-xs text-white/90">Total Amount Due</span>
+                      <span className="font-black text-xl md:text-2xl tracking-tight">₱{dbBaseFee.toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+              }
               onSubmit={handleSubmitRequest}
               onBack={() => setCurrentStep("UPLOAD")}
               backLabel="Back to Upload"
@@ -1538,7 +1654,7 @@ export default function BirthCertificatePage() {
                     </div>
                     <div>
                       <span className="block text-[9px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Total Paid Amount</span>
-                      <span className="text-slate-900 dark:text-white font-black">₱{selectedApplication.totalAmount?.toFixed(2) || "115.00"}</span>
+                      <span className="text-slate-900 dark:text-white font-black">₱{selectedApplication.totalAmount?.toFixed(2) || dbBaseFee.toFixed(2)}</span>
                     </div>
                     <div>
                       <span className="block text-[9px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Request Purpose</span>
@@ -1560,6 +1676,13 @@ export default function BirthCertificatePage() {
                     <span>This request is drafted but unpaid. Please click checkout below to proceed with the payment.</span>
                   </div>
                 )}
+
+                {selectedApplication.status === "FOR_REVISION" && (
+                  <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 flex gap-3 text-xs text-amber-600 dark:text-amber-300 font-semibold leading-relaxed">
+                    <AlertCircle className="w-5 h-5 shrink-0" />
+                    <span>This request requires revision. Please check the rejection remarks or checklist files and resubmit.</span>
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-center gap-4 pt-8">
@@ -1577,6 +1700,17 @@ export default function BirthCertificatePage() {
                 >
                   <Printer size={16} /> Print Receipt
                 </Button>
+                {selectedApplication.status === "FOR_REVISION" && !selectedApplication.isCancelled && (
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      window.location.href = `/modules/civil-registry/birth-certificate-request?revisionId=${selectedApplication.id}`;
+                    }}
+                    className="rounded-xl bg-amber-600 hover:bg-amber-700 text-white px-8 py-5 text-xs font-black uppercase tracking-widest shadow-lg"
+                  >
+                    Revise Details
+                  </Button>
+                )}
               </div>
             </div>
           )

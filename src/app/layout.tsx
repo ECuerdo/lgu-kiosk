@@ -6,8 +6,9 @@ import GlobalKeyboard from "@/components/shared/GlobalKeyboard";
 import KioskMaintenanceGuard from "@/components/shared/KioskMaintenanceGuard";
 import ThemeProvider from "@/components/shared/ThemeProvider";
 import DynamicTheme from "@/components/shared/DynamicTheme";
+import { Toaster } from "@/components/ui/sonner";
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
+const geist = Geist({ subsets: ['latin'], variable: '--font-sans' });
 
 export const metadata: Metadata = {
   title: "LGU Mapandan - Public Kiosk",
@@ -36,6 +37,16 @@ export default function RootLayout({
                     const sizeMap = { sm: '14px', md: '16px', lg: '18px', xl: '20px' };
                     document.documentElement.style.fontSize = sizeMap[saved] || '16px';
                   }
+                  const cachedTheme = localStorage.getItem('kiosk_theme_cache');
+                  if (cachedTheme) {
+                    const vars = JSON.parse(cachedTheme);
+                    const root = document.documentElement;
+                    for (const key in vars) {
+                      if (Object.prototype.hasOwnProperty.call(vars, key)) {
+                        root.style.setProperty(key, vars[key]);
+                      }
+                    }
+                  }
                 } catch (e) {}
               })();
             `,
@@ -48,6 +59,7 @@ export default function RootLayout({
           <KioskMaintenanceGuard />
           {children}
           <GlobalKeyboard />
+          <Toaster />
         </ThemeProvider>
       </body>
     </html>

@@ -104,6 +104,9 @@ export default function RequiredDocuments({
         </div>
       )}
 
+      {/* Children slot */}
+      {children}
+
       {/* Profile ID Display (if chosen) */}
       {idChoice === "PROFILE" && residentData && (
         <div className="bg-slate-50/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-[2.5rem] p-8 text-center space-y-6">
@@ -198,8 +201,6 @@ export default function RequiredDocuments({
         </div>
       )}
 
-      {/* Children slot (for custom evidence sections / check-boxes) */}
-      {children}
     </div>
   );
 }

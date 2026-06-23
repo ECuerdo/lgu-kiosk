@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 type ServiceStatus = "ACTIVE" | "COMING_SOON";
 
@@ -111,7 +112,7 @@ const CIVIL_REGISTRY_SERVICES: RegistryService[] = [
       ]
     }
   },
-  
+
   // DEATH REGISTRY SERVICES
   {
     id: "death-registration",
@@ -476,6 +477,12 @@ export default function CivilRegistryHubPage() {
     return "en";
   });
   const [selectedService, setSelectedService] = useState<RegistryService | null>(null);
+  const [activeFontSize] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("kiosk_font_size") || "md";
+    }
+    return "md";
+  });
 
   const handleServiceClick = (service: RegistryService) => {
     if (service.status === "ACTIVE" && service.path) {
@@ -490,7 +497,7 @@ export default function CivilRegistryHubPage() {
   return (
     <div className="h-full overflow-y-auto bg-slate-50 dark:bg-[#0a0b10] px-6 py-12 md:px-20 md:py-16 font-sans text-slate-900 dark:text-white relative transition-colors duration-300">
       <div className="mx-auto max-w-[1500px]">
-        
+
         {/* Navigation & Go Back */}
         <div className="mb-10 flex items-center justify-between">
           <Button
@@ -573,7 +580,7 @@ export default function CivilRegistryHubPage() {
 
         {/* Main Content Card Container */}
         <div className="bg-white dark:bg-[#0c0d12] border border-slate-200 dark:border-[#1d2230] rounded-[3rem] p-8 md:p-16 lg:p-20 shadow-xl md:shadow-2xl transition-colors duration-300">
-          
+
           {/* Header Title inside Card */}
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-7xl lg:text-8xl font-black italic uppercase tracking-tighter leading-none select-none text-slate-900 dark:text-white">
@@ -593,7 +600,7 @@ export default function CivilRegistryHubPage() {
             {(["BIRTH", "DEATH", "MARRIAGE"] as const).map((cat) => {
               const catTrans = CATEGORY_TRANSLATIONS[cat];
               const services = CIVIL_REGISTRY_SERVICES.filter(s => s.category === cat);
-              
+
               return (
                 <div key={cat} className="space-y-8">
                   {/* Category Header with Vertical Accent Bar */}
@@ -610,122 +617,133 @@ export default function CivilRegistryHubPage() {
                   </div>
 
                   {/* Cards Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  <div className={cn(
+                    "grid gap-8",
+                    activeFontSize === "xl" ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
+                  )}>
                     {services.map((service) => (
                       <motion.div
                         key={service.id}
                         onClick={() => handleServiceClick(service)}
                         whileHover={{ y: -6 }}
                         transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                        className="group flex flex-col justify-start min-h-[260px] md:min-h-[300px] bg-slate-50/50 dark:bg-[#151821]/80 border border-slate-200/80 dark:border-[#202534] rounded-[2rem] p-8 md:p-10 hover:border-theme-primary/50 dark:hover:border-theme-primary/30 hover:bg-slate-100/30 dark:hover:bg-[#1a1e2c] active:scale-[0.98] transition-all duration-300 cursor-pointer relative overflow-hidden shadow-md hover:shadow-xl dark:hover:shadow-[0_0_30px_color-mix(in srgb, var(--primary-theme) 0.08 * 100%, transparent)]"
+                        className={cn(
+                          "group flex bg-slate-50/50 dark:bg-[#151821]/80 border border-slate-200/80 dark:border-[#202534] rounded-[2rem] hover:border-theme-primary/50 dark:hover:border-theme-primary/30 hover:bg-slate-100/30 dark:hover:bg-[#1a1e2c] active:scale-[0.98] transition-all duration-300 cursor-pointer relative overflow-hidden shadow-md hover:shadow-xl dark:hover:shadow-[0_0_30px_color-mix(in srgb, var(--primary-theme) 0.08 * 100%, transparent)]",
+                          activeFontSize === "xl"
+                            ? "flex-row items-center gap-6 p-6 sm:p-8 min-h-0"
+                            : "flex-col justify-start min-h-[260px] md:min-h-[300px] p-8 md:p-10"
+                        )}
                       >
                         {/* Card Icon */}
-                        <div className="mb-6">
+                        <div className={cn(activeFontSize === "xl" ? "mb-0 shrink-0" : "mb-6")}>
                           <div className="w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-slate-200/50 dark:bg-[#0c0d12] border border-slate-300/30 dark:border-white/5 flex items-center justify-center">
                             {/* Render icon with scaled dimensions dynamically */}
                             {React.cloneElement(service.icon as React.ReactElement<{ className?: string }>, { className: "w-8 h-8 md:w-10 md:h-10 text-theme-primary" })}
                           </div>
                         </div>
 
-                        {/* Title */}
-                        <h4 className="text-lg md:text-2xl lg:text-3xl font-black text-slate-900 dark:text-white group-hover:text-theme-primary transition-colors leading-tight mb-3 uppercase italic tracking-tight">
-                          {service.title[lang] || service.title.en}
-                        </h4>
+                        {/* Text Content */}
+                        <div className="flex-1 min-w-0">
+                          {/* Title */}
+                          <h4 className="text-lg md:text-2xl lg:text-3xl font-black text-slate-900 dark:text-white group-hover:text-theme-primary transition-colors leading-tight mb-3 uppercase italic tracking-tight">
+                            {service.title[lang] || service.title.en}
+                          </h4>
 
-                        {/* Description */}
-                        <p className="text-xs md:text-sm lg:text-base font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide leading-relaxed">
-                          {service.desc[lang] || service.desc.en}
-                        </p>
+                          {/* Description */}
+                          <p className="text-xs md:text-sm lg:text-base font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide leading-relaxed">
+                            {service.desc[lang] || service.desc.en}
+                          </p>
+                        </div>
                       </motion.div>
                     ))}
                   </div>
                 </div>
               );
             })}
+
           </div>
 
         </div>
 
-      </div>
-
-      {/* Interactive Coming Soon/Details Modal */}
-      <AnimatePresence>
-        {selectedService && (
-          <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-md">
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="w-full max-w-xl rounded-[2.5rem] bg-white dark:bg-[#151821] border border-slate-200 dark:border-white/10 p-8 shadow-2xl relative"
-            >
-              <button
-                onClick={() => setSelectedService(null)}
-                className="absolute top-6 right-6 flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-white/10 hover:text-slate-800 dark:hover:text-white"
+        {/* Interactive Coming Soon/Details Modal */}
+        <AnimatePresence>
+          {selectedService && (
+            <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-md">
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                className="w-full max-w-xl rounded-[2.5rem] bg-white dark:bg-[#151821] border border-slate-200 dark:border-white/10 p-8 shadow-2xl relative"
               >
-                <X className="h-5 w-5" />
-              </button>
-
-              <div className="flex items-center gap-4 mb-6">
-                <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center shrink-0">
-                  {React.cloneElement(selectedService.icon as React.ReactElement<{ className?: string }>, { className: "w-8 h-8 text-slate-900 dark:text-white" })}
-                </div>
-                <div>
-                  <Badge className="bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-white/10 uppercase font-black text-[9px] py-0.5 px-2 rounded-full mb-1">
-                    {t.soonBadge}
-                  </Badge>
-                  <h2 className="text-2xl font-black text-slate-900 dark:text-white italic uppercase tracking-tight leading-tight">
-                    {selectedService.title[lang] || selectedService.title.en}
-                  </h2>
-                </div>
-              </div>
-
-              <div className="space-y-6">
-                <div className="bg-slate-50 dark:bg-[#0c0d12]/50 border border-slate-100 dark:border-white/5 rounded-2xl p-5 space-y-4">
-                  <h3 className="text-xs font-black uppercase tracking-wider text-theme-primary flex items-center gap-1.5">
-                    <BookOpen size={16} />
-                    {t.requirementsTitle}
-                  </h3>
-                  <ul className="space-y-2 text-xs font-semibold text-slate-600 dark:text-slate-300">
-                    {(selectedService.requirements?.[lang] || selectedService.requirements?.en || []).map((req, index) => (
-                      <li key={index} className="flex items-start gap-2">
-                        <span className="text-theme-primary font-bold mt-0.5">•</span>
-                        <span>{req}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-slate-50 dark:bg-[#0c0d12]/50 border border-slate-100 dark:border-white/5 rounded-2xl p-4">
-                    <p className="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">{t.processTime}</p>
-                    <p className="text-sm font-black text-slate-900 dark:text-white">{selectedService.estimatedTime || "N/A"}</p>
-                  </div>
-                  <div className="bg-slate-50 dark:bg-[#0c0d12]/50 border border-slate-100 dark:border-white/5 rounded-2xl p-4">
-                    <p className="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">{t.fees}</p>
-                    <p className="text-sm font-black text-theme-primary">{selectedService.baseFee || "Free"}</p>
-                  </div>
-                </div>
-
-                <div className="p-4 rounded-xl bg-theme-primary/10 border border-theme-primary/20 flex gap-3 text-xs font-semibold text-theme-primary leading-relaxed">
-                  <Info className="w-5 h-5 shrink-0 text-theme-primary" />
-                  <span>
-                    This service is currently being digitized. When complete, you will be able to apply directly through this kiosk terminal.
-                  </span>
-                </div>
-              </div>
-
-              <div className="mt-8 flex justify-end">
-                <Button
+                <button
                   onClick={() => setSelectedService(null)}
-                  className="w-full sm:w-auto rounded-xl bg-theme-primary hover:bg-theme-hover font-black uppercase tracking-wider py-5 px-8 text-xs text-white"
+                  className="absolute top-6 right-6 flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-white/10 hover:text-slate-800 dark:hover:text-white"
                 >
-                  {t.closeBtn}
-                </Button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+                  <X className="h-5 w-5" />
+                </button>
+
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center shrink-0">
+                    {React.cloneElement(selectedService.icon as React.ReactElement<{ className?: string }>, { className: "w-8 h-8 text-slate-900 dark:text-white" })}
+                  </div>
+                  <div>
+                    <Badge className="bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-white/10 uppercase font-black text-[9px] py-0.5 px-2 rounded-full mb-1">
+                      {t.soonBadge}
+                    </Badge>
+                    <h2 className="text-2xl font-black text-slate-900 dark:text-white italic uppercase tracking-tight leading-tight">
+                      {selectedService.title[lang] || selectedService.title.en}
+                    </h2>
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="bg-slate-50 dark:bg-[#0c0d12]/50 border border-slate-100 dark:border-white/5 rounded-2xl p-5 space-y-4">
+                    <h3 className="text-xs font-black uppercase tracking-wider text-theme-primary flex items-center gap-1.5">
+                      <BookOpen size={16} />
+                      {t.requirementsTitle}
+                    </h3>
+                    <ul className="space-y-2 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                      {(selectedService.requirements?.[lang] || selectedService.requirements?.en || []).map((req, index) => (
+                        <li key={index} className="flex items-start gap-2">
+                          <span className="text-theme-primary font-bold mt-0.5">•</span>
+                          <span>{req}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-slate-50 dark:bg-[#0c0d12]/50 border border-slate-100 dark:border-white/5 rounded-2xl p-4">
+                      <p className="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">{t.processTime}</p>
+                      <p className="text-sm font-black text-slate-900 dark:text-white">{selectedService.estimatedTime || "N/A"}</p>
+                    </div>
+                    <div className="bg-slate-50 dark:bg-[#0c0d12]/50 border border-slate-100 dark:border-white/5 rounded-2xl p-4">
+                      <p className="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">{t.fees}</p>
+                      <p className="text-sm font-black text-theme-primary">{selectedService.baseFee || "Free"}</p>
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-theme-primary/10 border border-theme-primary/20 flex gap-3 text-xs font-semibold text-theme-primary leading-relaxed">
+                    <Info className="w-5 h-5 shrink-0 text-theme-primary" />
+                    <span>
+                      This service is currently being digitized. When complete, you will be able to apply directly through this kiosk terminal.
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mt-8 flex justify-end">
+                  <Button
+                    onClick={() => setSelectedService(null)}
+                    className="w-full sm:w-auto rounded-xl bg-theme-primary hover:bg-theme-hover font-black uppercase tracking-wider py-5 px-8 text-xs text-white"
+                  >
+                    {t.closeBtn}
+                  </Button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }
