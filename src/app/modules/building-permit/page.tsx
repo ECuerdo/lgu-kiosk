@@ -76,6 +76,7 @@ import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import DocumentViewerModal from "@/components/shared/DocumentViewerModal";
+import SecureQrUploadModal from "@/components/shared/SecureQrUploadModal";
 import { supabase } from "@/lib/supabase";
 
 
@@ -1278,6 +1279,21 @@ export default function BuildingPermitPage() {
         title={viewerTitle}
         themeColor = "var(--primary-theme)"
       />
+      <SecureQrUploadModal
+        isOpen={isHandoffOpen}
+        onClose={() => { setIsHandoffOpen(false); setHandoffToken(""); }}
+        qrCode={handoffQrCode}
+        expiresAt={handoffExpiresAt}
+        slotLabel={
+          handoffSessionSlot === "tct"
+            ? "Certified True Copy of TCT"
+            : handoffSessionSlot === "documents"
+              ? "Required Document"
+              : handoffSessionSlot === "bfp"
+                ? "BFP Fire Safety Clearance"
+                : "Zoning / Locational Clearance"
+        }
+      />
 
       {/* Floating Toast Notification */}
       {toastMessage && (
@@ -1999,7 +2015,7 @@ export default function BuildingPermitPage() {
                             })()}
                           </div>
                         ) : (
-                          <div className={cn("min-h-[180px] bg-white dark:bg-black/20 rounded-xl border border-dashed p-8 flex flex-col items-center justify-center text-center relative hover:bg-slate-50 dark:hover:bg-white/5 transition-colors overflow-hidden", (showValidationErrors && !hasTctFile) ? "border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)] animate-pulse" : "border-slate-300 dark:border-white/20")}>
+                          <div className={cn("min-h-[180px] bg-white dark:bg-black/20 rounded-xl border border-dashed p-8 flex flex-col items-center justify-center text-center relative isolate hover:bg-slate-50 dark:hover:bg-white/5 transition-colors overflow-hidden", (showValidationErrors && !hasTctFile) ? "border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)] animate-pulse" : "border-slate-300 dark:border-white/20")}>
                             {(() => {
                               if (formData.tctFile && formData.tctFile.type.startsWith("image/")) {
                                 return (
@@ -2057,13 +2073,23 @@ export default function BuildingPermitPage() {
                                 );
                               }
                               return (
-                                <button type="button" onClick={startTctHandoff} disabled={isCreatingHandoff} className="absolute inset-0 flex flex-col items-center justify-center cursor-pointer z-20 disabled:opacity-50">
-                                  <QrCode className="w-8 h-8 text-theme-primary mb-2 pointer-events-none" />
-                                  <p className="text-sm font-medium text-slate-600 dark:text-slate-400 pointer-events-none px-2">
-                                    {isCreatingHandoff ? "Creating secure QR code..." : "Scan QR to upload certified true copy of TCT"}
-                                  </p>
-                                  <p className="text-[10px] mt-1 text-slate-400">PDF/JPG/PNG • 5MB • Antivirus scanned</p>
-                                </button>
+                                <div className="w-full flex flex-col items-center justify-center gap-4">
+                                  <QrCode className="w-8 h-8 text-theme-primary" />
+                                  <div>
+                                    <p className="text-sm font-medium text-slate-600 dark:text-slate-400 px-2">
+                                      Certified true copy of TCT
+                                    </p>
+                                    <p className="text-[10px] mt-1 text-slate-400">PDF/JPG/PNG • 5MB • Antivirus scanned</p>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={startTctHandoff}
+                                    disabled={isCreatingHandoff}
+                                    className="px-6 py-3 rounded-xl bg-theme-primary hover:bg-emerald-700 text-white font-black uppercase tracking-widest text-[9px] shadow-lg shadow-theme-primary/20 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+                                  >
+                                    {isCreatingHandoff ? "Creating secure QR..." : "Upload via QR"}
+                                  </button>
+                                </div>
                               );
                             })()}
                           </div>
@@ -3039,13 +3065,25 @@ export default function BuildingPermitPage() {
                             View Uploaded Clearance
                           </button>
                           {!selectedApplication.additionalData?.clearancesSubmitted && (
-                            <button type="button" onClick={startBfpHandoff} disabled={isCreatingHandoff} className="rounded-full bg-theme-primary px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white disabled:opacity-50">
+                            <button
+                              type="button"
+                              onClick={startBfpHandoff}
+                              disabled={isCreatingHandoff}
+                              className="rounded-full bg-theme-primary px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white pointer-events-auto disabled:opacity-50"
+                              style={{ touchAction: "manipulation" }}
+                            >
                               Re-upload QR
                             </button>
                           )}
                         </div>
                       ) : (
-                        <button type="button" onClick={startBfpHandoff} disabled={isCreatingHandoff} className="inline-flex items-center gap-1.5 px-4 py-2 bg-theme-primary text-white text-xs font-bold uppercase rounded-full hover:bg-theme-primary/95 disabled:opacity-50">
+                        <button
+                          type="button"
+                          onClick={startBfpHandoff}
+                          disabled={isCreatingHandoff}
+                          className="inline-flex items-center gap-1.5 px-4 py-2 bg-theme-primary text-white text-xs font-bold uppercase rounded-full hover:bg-theme-primary/95 pointer-events-auto disabled:opacity-50"
+                          style={{ touchAction: "manipulation" }}
+                        >
                           <QrCode className="w-3.5 h-3.5" /> {isCreatingHandoff ? "Creating QR..." : "Upload BFP via QR"}
                         </button>
                       )}
@@ -3077,13 +3115,25 @@ export default function BuildingPermitPage() {
                             View Uploaded Clearance
                           </button>
                           {!selectedApplication.additionalData?.clearancesSubmitted && (
-                            <button type="button" onClick={startZoningHandoff} disabled={isCreatingHandoff} className="rounded-full bg-theme-primary px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white disabled:opacity-50">
+                            <button
+                              type="button"
+                              onClick={startZoningHandoff}
+                              disabled={isCreatingHandoff}
+                              className="rounded-full bg-theme-primary px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white pointer-events-auto disabled:opacity-50"
+                              style={{ touchAction: "manipulation" }}
+                            >
                               Re-upload QR
                             </button>
                           )}
                         </div>
                       ) : (
-                        <button type="button" onClick={startZoningHandoff} disabled={isCreatingHandoff} className="inline-flex items-center gap-1.5 px-4 py-2 bg-theme-primary text-white text-xs font-bold uppercase rounded-full hover:bg-theme-primary/95 disabled:opacity-50">
+                        <button
+                          type="button"
+                          onClick={startZoningHandoff}
+                          disabled={isCreatingHandoff}
+                          className="inline-flex items-center gap-1.5 px-4 py-2 bg-theme-primary text-white text-xs font-bold uppercase rounded-full hover:bg-theme-primary/95 pointer-events-auto disabled:opacity-50"
+                          style={{ touchAction: "manipulation" }}
+                        >
                           <QrCode className="w-3.5 h-3.5" /> {isCreatingHandoff ? "Creating QR..." : "Upload Zoning via QR"}
                         </button>
                       )}
