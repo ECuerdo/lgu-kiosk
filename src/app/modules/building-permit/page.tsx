@@ -5,6 +5,7 @@ import React, { useState, useEffect } from "react";
 import QRCode from "qrcode";
 import PrivacyTermsModal from "@/components/shared/PrivacyTermsModal";
 import PaymentModal, { CheckoutDetails } from "@/components/shared/PaymentModal";
+import { compressImage } from "@/lib/image-compression";
 import {
   Book,
   CheckCircle,
@@ -73,7 +74,6 @@ import {
   getBarangayNames
 } from "./actions";
 import { useRouter } from "next/navigation";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import DocumentViewerModal from "@/components/shared/DocumentViewerModal";
 import SecureQrUploadModal from "@/components/shared/SecureQrUploadModal";
@@ -446,6 +446,7 @@ export default function BuildingPermitPage() {
   const [maxStepIdx, setMaxStepIdx] = useState(0);
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
+  const displayResident = selectedApplication?.residentSnapshot || residentData;
 
   useEffect(() => {
     if (selectedApplication && !isRevision) return;
@@ -554,10 +555,13 @@ export default function BuildingPermitPage() {
   }, [handoffToken]);
 
   const startHandoff = async (slot: "tct" | "documents" | "bfp" | "zoning") => {
-    if (!residentData || isCreatingHandoff) return;
+    if (isCreatingHandoff) return;
     setIsCreatingHandoff(true);
     try {
-      const userId = residentData.userId || residentData.id;
+      const savedResident = typeof window !== "undefined" ? sessionStorage.getItem("active_resident") : null;
+      const activeResident = residentData || (savedResident ? JSON.parse(savedResident) : null);
+      const userId = activeResident?.userId || activeResident?.id;
+      if (!userId) throw new Error("Unable to determine resident for QR upload.");
       const response = await fetch("/api/upload-handoff", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -588,6 +592,27 @@ export default function BuildingPermitPage() {
   const startZoningHandoff = () => startHandoff("zoning");
 
   const isAffidavitOfConsentRequired = formData.isLotOwner === "No";
+  const missingBuildingPermitFields = showValidationErrors ? [
+    ...((!formData.scopeNewConstruction &&
+      !formData.scopeAddition &&
+      !formData.scopeRepair &&
+      !formData.scopeRenovation &&
+      !formData.scopeOthers1 &&
+      !formData.descriptionOfWorkLegacyText) ? ["Scope of Work"] : []),
+    ...(formData.scopeAddition && !formData.scopeAdditionText ? ["Addition of"] : []),
+    ...(formData.scopeRepair && !formData.scopeRepairText ? ["Repair of"] : []),
+    ...(formData.scopeRenovation && !formData.scopeRenovationText ? ["Renovation of"] : []),
+    ...(formData.scopeOthers1 && (!formData.scopeOthers1Text1 || !formData.scopeOthers1Text2) ? ["Others (Specify)"] : []),
+    ...((!formData.estimatedCost || Number(formData.estimatedCost) <= 0) ? ["Estimated cost of the proposal"] : []),
+    ...((!formData.locHouseNo || !formData.locStreet || !formData.locBarangay) ? ["Location of Construction"] : []),
+    ...((!formData.totalFloors || Number(formData.totalFloors) <= 0) ? ["Total Floor(s)"] : []),
+    ...((!formData.isLotOwner) ? ["Is the applicant the owner of the lot?"] : []),
+    ...((!formData.occupancyCategory) ? ["Occupancy category"] : []),
+    ...((formData.occupancyCategory && formData.occupancyCategory !== "Other Construction" && formData.selectedSubOccupancies.length === 0) ? ["Occupancy sub-type"] : []),
+    ...((formData.occupancyCategory === "Other Construction" && !formData.subOccupancyOthersSpecify) ? ["Occupancy details"] : []),
+    ...((idChoice === "UPLOAD" && !formData.newIdFile && !selectedApplication?.additionalData?.documents?.newIdFile) ? ["Valid ID upload"] : []),
+    ...((!hasTctFile) ? ["Certified true copy of the TCT"] : []),
+  ] : [];
   const requiredRequirementIndexes = Array.from({ length: 10 }, (_, index) => index)
     .filter(index => ![2, 5, 8].includes(index) && (isAffidavitOfConsentRequired || index !== 7));
   const requiredRequirementsCount = requiredRequirementIndexes.length;
@@ -672,6 +697,8 @@ export default function BuildingPermitPage() {
 
         if (res.success && res.data) {
           setResidentData(res.data);
+        } else {
+          setResidentData(resident);
         }
         if (permitsRes.success && permitsRes.data.length > 0) {
           setExistingApplications(permitsRes.data);
@@ -1064,19 +1091,12 @@ export default function BuildingPermitPage() {
     }
   };
 
-  const dataURLtoFile = (dataurl: string, filenameWithoutExt: string): File | null => {
+  const dataURLtoFile = async (dataurl: string, filenameWithoutExt: string): Promise<File | null> => {
     try {
-      const arr = dataurl.split(',');
-      const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/png';
-      const ext = mime.includes('pdf') ? 'pdf' : (mime.split('/')[1] || 'png');
-      const filename = `${filenameWithoutExt}.${ext}`;
-      const bstr = atob(arr[1]);
-      let n = bstr.length;
-      const u8arr = new Uint8Array(n);
-      while (n--) {
-        u8arr[n] = bstr.charCodeAt(n);
-      }
-      return new File([u8arr], filename, { type: mime });
+      const response = await fetch(dataurl);
+      const blob = await response.blob();
+      const ext = blob.type.split("/")[1] || "png";
+      return new File([blob], `${filenameWithoutExt}.${ext}`, { type: blob.type || "image/png" });
     } catch (e) {
       console.error("Failed to convert dataURL to File:", e);
       return null;
@@ -1086,14 +1106,15 @@ export default function BuildingPermitPage() {
   const uploadFileClientSide = async (file: File | null, folder: string, keyName: string) => {
     if (!file) return null;
     try {
+      const uploadFile = file.type.startsWith("image/") ? await compressImage(file) : file;
       const userId = (selectedApplication?.residentSnapshot || residentData)?.userId || (selectedApplication?.residentSnapshot || residentData)?.id || "anonymous";
       const timestamp = Date.now();
-      const cleanFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const cleanFileName = uploadFile.name.replace(/[^a-zA-Z0-9.-]/g, '_');
       const filePath = `building-permits/${userId}/${folder}/${timestamp}-${cleanFileName}`;
 
       const { error } = await supabase.storage
         .from("system-assets")
-        .upload(filePath, file, {
+        .upload(filePath, uploadFile, {
           cacheControl: '3600',
           upsert: true
         });
@@ -1147,7 +1168,7 @@ export default function BuildingPermitPage() {
         const profileIdUrl = displayResident?.idFrontUrl || displayResident?.idBackUrl;
         if (profileIdUrl) {
           if (profileIdUrl.startsWith("data:")) {
-            const file = dataURLtoFile(profileIdUrl, "profile_id");
+            const file = await dataURLtoFile(profileIdUrl, "profile_id");
             if (file) {
               idFileUrl = await uploadFileClientSide(file, "ids", "newIdFile");
             }
@@ -1228,6 +1249,22 @@ export default function BuildingPermitPage() {
         data.append("tctFile", tctFileUrl);
       }
 
+      let signatureUrl: string | null = null;
+      if (signatureData) {
+        if (signatureData.startsWith("http")) {
+          signatureUrl = signatureData;
+        } else if (signatureData.startsWith("data:")) {
+          const signatureFile = await dataURLtoFile(signatureData, "building-permit-signature");
+          if (signatureFile) {
+            signatureUrl = await uploadFileClientSide(signatureFile, "signatures", "signature");
+          }
+        }
+      }
+
+      if (!signatureUrl) {
+        throw new Error("Failed to prepare signature image.");
+      }
+
       Object.entries(finalReqUrls).forEach(([key, url]) => {
         data.append(key, url);
       });
@@ -1244,7 +1281,7 @@ export default function BuildingPermitPage() {
 
       if (result.success) {
         if (!isRevision && signatureData) {
-          await saveTransactionSignature(result.transactionId!, signatureData, userId);
+          await saveTransactionSignature(result.transactionId!, signatureUrl!, userId);
         }
         
         const permitsRes = await getExistingBuildingPermits(userId);
@@ -1269,7 +1306,7 @@ export default function BuildingPermitPage() {
   return (
     <div
       ref={pageScrollRef}
-      className="h-full max-w-5xl mx-auto overflow-y-auto overscroll-y-contain touch-pan-y [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden px-4 sm:px-6 py-8 space-y-12 pb-32 font-sans relative"
+      className="h-full max-w-5xl mx-auto overflow-y-auto overscroll-y-contain touch-pan-y [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden px-4 sm:px-6 py-8 space-y-12 pb-32 font-sans relative bg-[var(--page-bg)]"
     >
       <DocumentViewerModal
         isOpen={viewerOpen}
@@ -1315,10 +1352,10 @@ export default function BuildingPermitPage() {
       <div className="space-y-4 md:space-y-10">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6 px-1 md:px-0">
           <div className="space-y-1 md:space-y-2">
-            <h1 className="text-4xl md:text-7xl font-black text-white uppercase italic tracking-tighter leading-none select-none">
+            <h1 className="text-4xl md:text-7xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter leading-none select-none transition-colors duration-300 ease-out">
               BUILDING <span className="text-theme-primary underline decoration-[6px] md:decoration-8 decoration-theme-primary/20 underline-offset-[6px] md:underline-offset-[12px]">PERMIT</span>
             </h1>
-            <p className="text-[9px] md:text-[11px] font-bold text-slate-400 uppercase tracking-[0.4em] ml-1 md:ml-2 italic">Construction & Building Compliance Portal</p>
+            <p className="text-[9px] md:text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-[0.4em] ml-1 md:ml-2 italic transition-colors duration-300 ease-out">Construction & Building Compliance Portal</p>
           </div>
         </div>
       </div>
@@ -1376,7 +1413,7 @@ export default function BuildingPermitPage() {
       })()}
 
       {/* Main Content Area */}
-      <div className="mt-4 md:mt-8 md:bg-white md:dark:bg-[#11131a] md:rounded-[2.5rem] md:border md:border-slate-200 md:dark:border-white/10 p-0 md:p-12 md:shadow-2xl relative md:overflow-hidden group/container min-h-[400px] md:min-h-[500px] flex flex-col">
+      <div className="mt-4 md:mt-8 md:bg-white md:dark:bg-[#11131a] md:rounded-[2.5rem] md:border md:border-slate-200 md:dark:border-white/10 p-0 md:p-12 md:shadow-2xl relative md:overflow-hidden group/container min-h-[400px] md:min-h-[500px] flex flex-col transition-colors duration-300 ease-out">
 
         {currentStep === "EXISTING" && (
           <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
@@ -1676,6 +1713,18 @@ export default function BuildingPermitPage() {
                   <span className="text-slate-800 dark:text-white">Profile <span className="text-theme-primary italic">Evaluation</span></span>
                 </h2>
                 <p className="text-slate-500 font-medium italic text-xs md:text-lg uppercase tracking-widest max-w-2xl mx-auto">Verify your identity and provide the necessary details. Fields marked with <span className="text-red-500 font-bold text-lg">*</span> are required.</p>
+                {showValidationErrors && missingBuildingPermitFields.length > 0 && (
+                  <div className="mx-auto mt-6 max-w-3xl rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-left">
+                    <p className="text-sm font-black uppercase tracking-widest text-red-400">Required fields missing</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {missingBuildingPermitFields.map((field) => (
+                        <span key={field} className="rounded-full border border-red-500/30 bg-red-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-red-300">
+                          {field}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {loading ? (
@@ -1706,26 +1755,34 @@ export default function BuildingPermitPage() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
                         <div>
                           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Full Name</p>
-                          <p className="font-bold text-slate-800 dark:text-slate-200 mt-1 uppercase text-sm">{displayResident?.firstName} {displayResident?.lastName}</p>
+                          <p className="font-bold text-slate-800 dark:text-slate-200 mt-1 uppercase text-sm">
+                            {displayResident?.fullName ||
+                              [displayResident?.firstName, displayResident?.middleName, displayResident?.lastName].filter(Boolean).join(" ") ||
+                              "N/A"}
+                          </p>
                         </div>
                         <div>
                           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Age / Date of Birth</p>
                           <p className="font-bold text-slate-800 dark:text-slate-200 mt-1 uppercase text-sm">
-                            {displayResident?.dateOfBirth ? `${new Date().getFullYear() - new Date(displayResident.dateOfBirth).getFullYear()} years old / ${new Date(displayResident.dateOfBirth).toLocaleDateString()}` : "N/A"}
+                            {displayResident?.dateOfBirth
+                              ? `${new Date().getFullYear() - new Date(displayResident.dateOfBirth).getFullYear()} years old / ${new Date(displayResident.dateOfBirth).toLocaleDateString()}`
+                              : "N/A"}
                           </p>
                         </div>
                         <div>
                           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Phone Number</p>
-                          <p className="font-bold text-slate-800 dark:text-slate-200 mt-1 text-sm">{displayResident?.contactNumber || "N/A"}</p>
+                          <p className="font-bold text-slate-800 dark:text-slate-200 mt-1 text-sm">{displayResident?.contactNumber || displayResident?.phoneNumber || "N/A"}</p>
                         </div>
                         <div>
                           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Email</p>
-                          <p className="font-bold text-slate-800 dark:text-slate-200 mt-1 text-sm">{displayResident?.user?.email || "N/A"}</p>
+                          <p className="font-bold text-slate-800 dark:text-slate-200 mt-1 text-sm">{displayResident?.user?.email || displayResident?.email || "N/A"}</p>
                         </div>
                         <div className="md:col-span-2">
                           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Complete Address</p>
                           <p className="font-bold text-slate-800 dark:text-slate-200 mt-1 uppercase text-sm">
-                            {displayResident?.houseNumber ? `#${displayResident.houseNumber} ${displayResident.street || ""}, Brgy. ${displayResident.barangay || ""}, Mapandan, Pangasinan` : "N/A"}
+                            {displayResident?.houseNumber
+                              ? `#${displayResident.houseNumber} ${displayResident.street || ""}, Brgy. ${displayResident.barangay || ""}, Mapandan, Pangasinan`
+                              : displayResident?.address || "N/A"}
                           </p>
                         </div>
                       </div>
@@ -2333,7 +2390,9 @@ export default function BuildingPermitPage() {
                           hasMissingScopeTexts ||
                           !formData.estimatedCost ||
                           Number(formData.estimatedCost) <= 0 ||
-                          !formData.locationOfConstruction ||
+                          !formData.locHouseNo ||
+                          !formData.locStreet ||
+                          !formData.locBarangay ||
                           !formData.isLotOwner ||
                           !formData.occupancyCategory ||
                           (formData.occupancyCategory !== "Other Construction" && formData.selectedSubOccupancies.length === 0) ||
@@ -3447,47 +3506,6 @@ export default function BuildingPermitPage() {
         )}
 
       </div>
-
-      <Dialog
-        open={isHandoffOpen}
-        onOpenChange={setIsHandoffOpen}
-      >
-        <DialogContent className="max-w-md bg-white dark:bg-[#0f111a] border-slate-200 dark:border-white/10 rounded-[2rem] p-7 shadow-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-black italic uppercase tracking-tighter text-slate-900 dark:text-white flex items-center gap-3">
-              <QrCode className="w-7 h-7 text-theme-primary" />
-              Secure QR Upload
-            </DialogTitle>
-          </DialogHeader>
-          <div className="flex flex-col items-center space-y-4 pt-3 text-center">
-            {handoffQrCode && (
-              <img
-                src={handoffQrCode}
-                alt="Secure TCT upload QR code"
-                className="w-64 h-64 rounded-2xl border border-slate-200 p-3 bg-white"
-              />
-            )}
-            <div>
-              <p className="text-sm font-bold text-slate-700 dark:text-slate-200">
-                {handoffSessionSlot === "documents"
-                  ? "Scan using your phone, then upload the 10 requirements and 7 permits."
-                  : handoffSessionSlot === "bfp"
-                    ? "Scan using your phone, then upload the Fire Safety / BFP Clearance."
-                    : handoffSessionSlot === "zoning"
-                      ? "Scan using your phone, then upload the Zoning / Locational Clearance."
-                      : "Scan using your phone, then choose the TCT document."}
-              </p>
-              <p className="mt-2 text-xs leading-relaxed text-slate-500">
-                The link expires in 30 minutes. You may close this QR window while uploading; the kiosk will continue receiving files in the background.
-              </p>
-            </div>
-            <div className="w-full rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs font-semibold text-emerald-800">
-              Waiting for secure upload
-              {handoffExpiresAt > 0 && ` • Expires ${new Date(handoffExpiresAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       <PaymentModal
         open={isPaymentModalOpen}

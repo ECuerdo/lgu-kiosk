@@ -139,7 +139,7 @@ export default function PrivacyTermsModal({ isOpen, onClose, onAccept, onDecline
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 15 }}
                         transition={{ type: "spring", duration: 0.5 }}
-                        className="relative w-full max-w-lg bg-white dark:bg-[#0c0f16] border border-slate-200 dark:border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col z-10 max-h-[75vh]"
+                        className="relative w-full max-w-lg bg-white dark:bg-[#0c0f16] border border-slate-200 dark:border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col z-10 max-h-[75vh] touch-pan-y"
                     >
                         {/* Ambient Glow behind header */}
                         <div
@@ -199,7 +199,7 @@ export default function PrivacyTermsModal({ isOpen, onClose, onAccept, onDecline
                         <div
                             ref={containerRef}
                             onScroll={(e) => handleScroll(e, activeTab)}
-                            className="p-4 sm:p-6 md:p-8 overflow-y-auto space-y-4 flex-1 text-slate-600 dark:text-slate-300 scrollbar-thin max-h-[40vh] sm:max-h-[45vh]"
+                            className="p-4 sm:p-6 md:p-8 overflow-y-auto space-y-4 flex-1 text-slate-600 dark:text-slate-300 scrollbar-thin max-h-[40vh] sm:max-h-[45vh] overscroll-contain touch-pan-y [webkit-overflow-scrolling:touch]"
                         >
                             {activeTab === "PRIVACY" ? (
                                 <div className="space-y-3 sm:space-y-4 text-[11px] sm:text-xs md:text-sm font-medium leading-relaxed italic">

@@ -213,7 +213,14 @@ export default function GlobalKeyboard() {
     if (document.activeElement === activeInput) {
       setTimeout(() => {
         if (document.activeElement === activeInput) {
-          activeInput.setSelectionRange(newCursorPos, newCursorPos);
+          const inputType = (activeInput as HTMLInputElement).type;
+          const supportsSelection =
+            activeInput.tagName === "TEXTAREA" ||
+            !["number", "date", "time", "month", "week", "datetime-local"].includes(inputType);
+
+          if (supportsSelection) {
+            activeInput.setSelectionRange(newCursorPos, newCursorPos);
+          }
         }
       }, 0);
     }

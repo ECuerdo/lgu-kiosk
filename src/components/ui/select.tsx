@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { createPortal } from "react-dom"
 import { ChevronDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -10,11 +11,13 @@ const SelectContext = React.createContext<{
   open?: boolean;
   setOpen?: (open: boolean) => void;
   disabled?: boolean;
+  triggerRef?: React.RefObject<HTMLButtonElement | null>;
 }>({});
 
 export function Select({ value, onValueChange, children, disabled = false }: { value?: string; onValueChange?: (value: string) => void; children: React.ReactNode; disabled?: boolean }) {
   const [open, setOpen] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
+  const triggerRef = React.useRef<HTMLButtonElement | null>(null);
 
   React.useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -27,7 +30,7 @@ export function Select({ value, onValueChange, children, disabled = false }: { v
   }, []);
 
   return (
-    <SelectContext.Provider value={{ value, onValueChange, open, setOpen, disabled }}>
+    <SelectContext.Provider value={{ value, onValueChange, open, setOpen, disabled, triggerRef }}>
       <div ref={containerRef} className="relative w-full">
         {children}
       </div>
@@ -36,9 +39,10 @@ export function Select({ value, onValueChange, children, disabled = false }: { v
 }
 
 export function SelectTrigger({ className, children, ...props }: React.ComponentProps<"button">) {
-  const { open, setOpen, disabled } = React.useContext(SelectContext);
+  const { open, setOpen, disabled, triggerRef } = React.useContext(SelectContext);
   return (
     <button
+      ref={triggerRef}
       type="button"
       disabled={disabled}
       onClick={() => setOpen?.(!open)}
@@ -60,19 +64,50 @@ export function SelectValue({ placeholder }: { placeholder?: string }) {
 }
 
 export function SelectContent({ className, children, ...props }: React.ComponentProps<"div">) {
-  const { open } = React.useContext(SelectContext);
+  const { open, triggerRef } = React.useContext(SelectContext);
+  const [style, setStyle] = React.useState<React.CSSProperties>({});
+
+  React.useEffect(() => {
+    function updatePosition() {
+      const trigger = triggerRef?.current;
+      if (!trigger) return;
+      const rect = trigger.getBoundingClientRect();
+      setStyle({
+        position: "fixed",
+        top: rect.bottom + 6,
+        left: rect.left,
+        width: rect.width,
+        zIndex: 9999,
+      });
+    }
+
+    if (open) {
+      updatePosition();
+      window.addEventListener("resize", updatePosition);
+      window.addEventListener("scroll", updatePosition, true);
+      return () => {
+        window.removeEventListener("resize", updatePosition);
+        window.removeEventListener("scroll", updatePosition, true);
+      };
+    }
+  }, [open]);
+
   if (!open) return null;
-  return (
+
+  const content = (
     <div
+      style={style}
       className={cn(
-        "absolute z-[160] mt-1 max-h-60 w-full overflow-auto rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 p-1 shadow-md focus:outline-none",
+        "max-h-60 overflow-auto rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 p-1 shadow-md focus:outline-none",
         className
       )}
       {...props}
     >
       {children}
     </div>
-  )
+  );
+
+  return typeof document !== "undefined" ? createPortal(content, document.body) : content;
 }
 
 export function SelectItem({ className, value, children, ...props }: React.ComponentProps<"div"> & { value: string }) {
@@ -81,6 +116,10 @@ export function SelectItem({ className, value, children, ...props }: React.Compo
   
   return (
     <div
+      onMouseDown={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+      }}
       onClick={() => {
         onValueChange?.(value);
         setOpen?.(false);
