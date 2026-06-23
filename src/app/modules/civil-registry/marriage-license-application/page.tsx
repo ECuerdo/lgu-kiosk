@@ -59,7 +59,6 @@ import { useRouter } from "next/navigation";
 import { saveDraftFile, getDraftFiles, clearDraftFiles } from "@/lib/draftDb";
 import RequestList from "../_components/request-list";
 import ReviewAndSubmit from "../_components/review-and-submit";
-import RequiredDocuments from "../_components/required-documents";
 import ReadOnlyDocumentPreview from "../_components/read-only-document-preview";
 import PremiumDocumentUpload from "@/components/shared/PremiumDocumentUpload";
 
@@ -80,6 +79,18 @@ const REQUIRED_DOCS = [
 const STORAGE_KEY = "lcr_marriage_license_draft";
 const MISC_FEE = 862; // base fee for marriage license
 
+const calculateAge = (birthDateString: string): number => {
+    if (!birthDateString) return 0;
+    const today = new Date();
+    const birthDate = new Date(birthDateString);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+    }
+    return age;
+};
+
 const formatDocLabel = (docName: string, app1Gender: string) => {
     const isApp1Male = app1Gender === "MALE";
     if (docName.includes("Applicant 1")) {
@@ -91,13 +102,7 @@ const formatDocLabel = (docName: string, app1Gender: string) => {
     return docName;
 };
 
-function formatCurrency(amount: number) {
-    try {
-        return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(amount);
-    } catch {
-        return `₱${amount.toFixed(2)}`;
-    }
-}
+
 
 function getMimeType(ext: string) {
     const e = ext.toLowerCase();
@@ -719,6 +724,17 @@ export default function MarriageLicenseApplicationPage() {
     };
 
     const validateStep = (step: Step): boolean => {
+        if (step === "IDENTITY") {
+            if (form.app1BirthDate && calculateAge(form.app1BirthDate) < 18) {
+                toast.error("Applicant 1 must be 18 years of age or older. We cannot issue a marriage license to a minor.");
+                return false;
+            }
+            if (form.app2BirthDate && calculateAge(form.app2BirthDate) < 18) {
+                toast.error("Applicant 2 must be 18 years of age or older. We cannot issue a marriage license to a minor.");
+                return false;
+            }
+        }
+
         const errs: Record<string, string> = {};
         if (step === "IDENTITY") {
             if (!form.app1FullName) errs.app1FullName = "Required";

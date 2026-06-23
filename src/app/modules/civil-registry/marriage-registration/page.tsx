@@ -76,6 +76,18 @@ const STORAGE_KEY = "lcr_marriage_registration_draft";
 const BASE_FEE = 0;
 const LATE_FEE = 300;
 
+const calculateAge = (birthDateString: string): number => {
+    if (!birthDateString) return 0;
+    const today = new Date();
+    const birthDate = new Date(birthDateString);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+    }
+    return age;
+};
+
 function formatCurrency(amount: number) {
     try {
         return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(amount);
@@ -678,6 +690,17 @@ export default function MarriageRegistrationPage() {
     };
 
     const validateStep = (step: Step): boolean => {
+        if (step === "IDENTITY") {
+            if (form.app1BirthDate && calculateAge(form.app1BirthDate) < 18) {
+                toast.error("Applicant 1 must be 18 years of age or older. We cannot register a marriage of a minor.");
+                return false;
+            }
+            if (form.app2BirthDate && calculateAge(form.app2BirthDate) < 18) {
+                toast.error("Applicant 2 must be 18 years of age or older. We cannot register a marriage of a minor.");
+                return false;
+            }
+        }
+
         const errs: Record<string, string> = {};
         if (step === "IDENTITY") {
             if (!form.app1FullName) errs.app1FullName = "Required";

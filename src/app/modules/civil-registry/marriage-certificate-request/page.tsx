@@ -85,13 +85,7 @@ const LOCAL_FALLBACK_CITIES = [
   "MAPANDAN", "DAGUPAN", "URDANETA", "SAN CARLOS", "ALAMINOS", "MANGALDAN", "CALASIAO", "SAN JACINTO", "MANAOAG", "STA. BARBARA", "BINALONAN", "POZORRUBIO", "LAOAC"
 ];
 
-function formatCurrency(amount: number) {
-  try {
-    return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(amount);
-  } catch {
-    return `₱${amount.toFixed(2)}`;
-  }
-}
+
 
 export default function MarriageCertificateRequestPage() {
   const router = useRouter();
@@ -999,7 +993,7 @@ export default function MarriageCertificateRequestPage() {
       {/* Progress Stepper */}
       {currentStep !== "EXISTING" && currentStep !== "SUBMIT" && (
         <div className="mx-auto max-w-7xl mb-10">
-          <div className="grid grid-cols-3 max-w-2xl mx-auto gap-1 md:gap-4 relative px-1 md:px-2">
+          <div className="grid grid-cols-4 max-w-2xl mx-auto gap-1 md:gap-4 relative px-1 md:px-2">
             {STEPS.map((step, idx) => {
               const isActive = currentStep === step.id;
               const isCompleted = idx <= maxStepIdx;
@@ -1165,7 +1159,7 @@ export default function MarriageCertificateRequestPage() {
                 <Label className="text-[10px] font-black uppercase tracking-widest text-slate-800 dark:text-slate-400">Husband&apos;s Name <span className="text-red-500">*</span></Label>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div className="md:col-span-2 space-y-1.5">
-                    <Label className="text-[9px] font-black uppercase text-slate-700 dark:text-slate-400 italic">First Name</Label>
+                    <Label className="text-[9px] font-black uppercase text-slate-700 dark:text-slate-400 italic">First Name <span className="text-red-500">*</span></Label>
                     <Input
                       id="certFirstName"
                       className={cn(
@@ -1187,7 +1181,7 @@ export default function MarriageCertificateRequestPage() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-[9px] font-black uppercase text-slate-700 dark:text-slate-400 italic">Last Name</Label>
+                    <Label className="text-[9px] font-black uppercase text-slate-700 dark:text-slate-400 italic">Last Name <span className="text-red-500">*</span></Label>
                     <Input
                       id="certLastName"
                       className={cn(
@@ -1584,15 +1578,6 @@ export default function MarriageCertificateRequestPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between px-4 py-3 rounded-2xl bg-theme-primary/10 border border-theme-primary/20 mt-4">
-                  <div>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-800 dark:text-slate-400 italic">Certificate Request Fee</span>
-                    <p className="text-[9px] text-slate-600 dark:text-slate-400 italic mt-0.5">Municipal Local Civil Registry processing fee</p>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-lg font-black text-theme-primary tracking-tight">{formatCurrency(dbBaseFee)}</span>
-                  </div>
-                </div>
               </Card>
             }
             documentsSection={

@@ -54,8 +54,7 @@ import {
     getTransactionById,
     getBarangaysList,
     getExistingBirthRegistrations,
-    cancelBirthRegistration,
-    searchResidentsAction
+    cancelBirthRegistration
 } from "./actions";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -116,61 +115,7 @@ const EVIDENCE_OPTIONS = [
     { value: 'G', label: 'G. Affidavit of 2 disinterested persons' }
 ];
 
-const ResidentSearch = ({ onSelect, placeholder = "Search resident...", gender }: { onSelect: (r: any) => void; placeholder?: string; gender?: string }) => {
-    const [query, setQuery] = useState("");
-    const [results, setResults] = useState<any[]>([]);
-    const [timer, setTimer] = useState<NodeJS.Timeout | null>(null);
 
-    const handleQueryChange = (val: string) => {
-        setQuery(val);
-        if (timer) clearTimeout(timer);
-
-        if (val.trim().length > 2) {
-            const newTimer = setTimeout(async () => {
-                const res = await searchResidentsAction(val, gender);
-                if (res.success && res.data) setResults(res.data as any[]);
-                else setResults([]);
-            }, 300);
-            setTimer(newTimer);
-        } else {
-            setResults([]);
-        }
-    };
-
-    return (
-        <div className="relative w-full">
-            <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <Input
-                    placeholder={placeholder}
-                    value={query}
-                    onChange={(e) => handleQueryChange(e.target.value)}
-                    className="pl-12 h-12 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-950 dark:text-white font-bold rounded-2xl"
-                />
-            </div>
-            {results.length > 0 && (
-                <div className="absolute z-[110] w-full mt-2 bg-white dark:bg-[#151b2b] border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl max-h-60 overflow-y-auto p-2 space-y-1">
-                    {results.map(r => (
-                        <button
-                            key={r.id}
-                            type="button"
-                            onClick={() => { onSelect(r); setQuery(""); setResults([]); }}
-                            className="w-full text-left px-4 py-3 hover:bg-slate-50 dark:hover:bg-white/5 rounded-xl flex items-center gap-3 transition-colors text-slate-900 dark:text-white cursor-pointer"
-                        >
-                            <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-white/5 flex items-center justify-center">
-                                <User className="w-4 h-4 text-slate-400" />
-                            </div>
-                            <div>
-                                <p className="text-xs font-black uppercase italic text-slate-900 dark:text-white">{r.firstName} {r.lastName}</p>
-                                <p className="text-[10px] text-slate-700 dark:text-slate-400 font-bold uppercase tracking-wider">{r.barangay}</p>
-                            </div>
-                        </button>
-                    ))}
-                </div>
-            )}
-        </div>
-    );
-};
 
 // --- TYPES ---
 
@@ -260,7 +205,6 @@ export default function BirthRegistrationPage() {
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [resident, setResident] = useState<any>(null);
     const [revisionId, setRevisionId] = useState<string | null>(null);
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [_revisionTx, setRevisionTx] = useState<any>(null);
     const [userId, setUserId] = useState<string>("");
 

@@ -113,6 +113,29 @@ export async function submitCivilRegistryTransaction(formData: FormData, userId:
         const residentSnapshot = residentSnapshotRaw ? JSON.parse(residentSnapshotRaw) : {};
         const additionalData = additionalDataRaw ? JSON.parse(additionalDataRaw) : {};
 
+        // Validate applicant age (must be 18 or above)
+        const calculateAge = (birthDateString: string): number => {
+            if (!birthDateString) return 0;
+            const today = new Date();
+            const birthDate = new Date(birthDateString);
+            let age = today.getFullYear() - birthDate.getFullYear();
+            const m = today.getMonth() - birthDate.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+                age--;
+            }
+            return age;
+        };
+
+        const app1BirthDate = additionalData.applicant1?.birthDate;
+        const app2BirthDate = additionalData.applicant2?.birthDate;
+
+        if (app1BirthDate && calculateAge(app1BirthDate) < 18) {
+            return { success: false, error: "Applicant 1 must be 18 years of age or older. Minors are not permitted to register a marriage." };
+        }
+        if (app2BirthDate && calculateAge(app2BirthDate) < 18) {
+            return { success: false, error: "Applicant 2 must be 18 years of age or older. Minors are not permitted to register a marriage." };
+        }
+
         const transactionType = await prisma.transactionType.findUnique({ where: { id: typeId } });
         if (!transactionType) return { success: false, error: "Transaction type not found" };
 

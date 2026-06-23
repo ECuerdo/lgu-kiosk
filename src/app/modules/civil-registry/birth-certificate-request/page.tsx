@@ -525,7 +525,7 @@ export default function BirthCertificatePage() {
         sessionStorage.removeItem("birth-cert-back-name");
       }
     }
-  }, [currentStep, formData, idFrontHandoffUrl, idBackHandoffUrl, idFrontHandoffFileName, idBackHandoffFileName, loading, selectedApplication]);
+  }, [currentStep, formData, idFrontHandoffUrl, idBackHandoffUrl, idFrontHandoffFileName, idBackHandoffFileName, loading, selectedApplication, revisionId]);
 
   const handleFormChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));

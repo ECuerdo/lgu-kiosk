@@ -1523,17 +1523,6 @@ export default function MarriagePsaEndorsementPage() {
                                                 <p className="font-black text-slate-900 dark:text-white italic uppercase">{formData.placeOfMarriage}</p>
                                             </div>
                                         </div>
-
-                                        {/* Fee Display */}
-                                        <div className="flex items-center justify-between px-4 py-3 rounded-2xl bg-theme-primary/10 border border-theme-primary/20 mt-4">
-                                            <div>
-                                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 italic">PSA Endorsement Fee</span>
-                                                <p className="text-[9px] text-slate-400 italic mt-0.5">Standard processing fee for PSA endorsement</p>
-                                            </div>
-                                            <div className="text-right">
-                                                <span className="text-lg font-black text-theme-primary tracking-tight">₱{dbBaseFee.toFixed(2)}</span>
-                                            </div>
-                                        </div>
                                     </Card>
                                 }
                                 documentsSection={
