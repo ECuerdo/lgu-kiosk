@@ -8,7 +8,7 @@ import ThemeProvider from "@/components/shared/ThemeProvider";
 import DynamicTheme from "@/components/shared/DynamicTheme";
 import { Toaster } from "@/components/ui/sonner";
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
+const geist = Geist({ subsets: ['latin'], variable: '--font-sans' });
 
 export const metadata: Metadata = {
   title: "LGU Mapandan - Public Kiosk",
