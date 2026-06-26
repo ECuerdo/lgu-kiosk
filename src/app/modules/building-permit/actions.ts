@@ -134,7 +134,7 @@ export async function submitBuildingPermit(formData: FormData, userId: string) {
   }
 }
 
-export async function saveTransactionSignature(transactionId: string, signatureBase64: string, userId: string) {
+export async function saveTransactionSignature(transactionId: string, signatureUrl: string, userId: string) {
   try {
     if (!userId) {
       return { success: false, error: "Unauthorized" };
@@ -149,7 +149,7 @@ export async function saveTransactionSignature(transactionId: string, signatureB
     }
 
     const additionalData = transaction.additionalData as any || {};
-    additionalData.signature = signatureBase64;
+    additionalData.signature = signatureUrl;
 
     await prisma.transaction.update({
       where: { id: transactionId },
