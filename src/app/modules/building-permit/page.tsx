@@ -78,7 +78,6 @@ import { useRouter } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
 import DocumentViewerModal from "@/components/shared/DocumentViewerModal";
 import SecureQrUploadModal from "@/components/shared/SecureQrUploadModal";
-import { supabase } from "@/lib/supabase";
 
 
 const STEPS = [
@@ -1121,9 +1120,9 @@ export default function BuildingPermitPage() {
       const uploadRes = await fetch(res.signedUrl, {
         method: "PUT",
         headers: {
-          "Content-Type": file.type
+          "Content-Type": uploadFile.type
         },
-        body: file
+        body: uploadFile
       });
 
       if (!uploadRes.ok) {
