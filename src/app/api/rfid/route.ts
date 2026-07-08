@@ -67,6 +67,57 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    let userId = resident.userId;
+    let role = resident.user?.role || null;
+
+    if (!userId) {
+      const cleanRfid = cardId.trim();
+      
+      // Check if a User with this RFID already exists
+      let existingUser = await prisma.user.findFirst({
+        where: { rfid: cleanRfid }
+      });
+
+      // If no User has this RFID, check if a User has this email
+      if (!existingUser && resident.email) {
+        existingUser = await prisma.user.findUnique({
+          where: { email: resident.email }
+        });
+      }
+
+      if (existingUser) {
+        // Link resident to the existing user
+        await prisma.resident.update({
+          where: { id: resident.id },
+          data: { userId: existingUser.id }
+        });
+        userId = existingUser.id;
+        role = existingUser.role;
+      } else {
+        // Create a new User
+        const fullNameTemp = [resident.firstName, resident.middleName, resident.lastName]
+          .filter(Boolean)
+          .join(" ");
+
+        const newUser = await prisma.user.create({
+          data: {
+            name: fullNameTemp,
+            email: resident.email || null,
+            rfid: cleanRfid,
+            role: "USER"
+          }
+        });
+
+        await prisma.resident.update({
+          where: { id: resident.id },
+          data: { userId: newUser.id }
+        });
+
+        userId = newUser.id;
+        role = newUser.role;
+      }
+    }
+
     const fullName = [resident.firstName, resident.middleName, resident.lastName]
       .filter(Boolean)
       .join(" ");
@@ -80,13 +131,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       resident: {
         id: resident.id,
-        userId: resident.userId,
+        userId: userId,
         fullName,
         firstName: resident.firstName,
         photoUrl: resident.livenessUrl || resident.imageUrl || resident.idFrontUrl,
         barangay: resident.barangay,
         email: resident.email,
-        role: resident.user?.role || null,
+        role: role,
         hasFaceAuth: !!facialRecognitionObject,
         faceAuthSource: facialRecognitionObject?.mode || null,
         faceReferenceUrl: facialRecognitionObject?.referenceImageUrl || facialRecognitionObject?.selfieUrl || null,
