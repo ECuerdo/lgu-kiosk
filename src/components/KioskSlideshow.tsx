@@ -253,6 +253,7 @@ function AnnounceSlide({ data }: { data: Record<string, unknown> }) {
   );
 }
 
+// Custom programs background is handled nicely in programs slide logic
 function ProgramsSlide({ data }: { data: Record<string, unknown> }) {
   const programs = data.programs as Array<{
     icon: string;
@@ -480,7 +481,7 @@ export default function KioskSlideshow() {
   }
 
   return (
-    <div className="kiosk-container">
+    <div className="kiosk-container" style={{ backgroundColor: "#050816" }}>
       {/* Header */}
       <header className="kiosk-header">
         <div className="logo-area">
@@ -531,9 +532,13 @@ export default function KioskSlideshow() {
       </div>
 
       {/* Slides */}
-      <div className="slides-wrapper">
+      <div className="slides-wrapper" style={{ backgroundColor: "#050816" }}>
         {allSlides.map((slide, i) => (
-          <div key={slide.id} className={`slide ${i === current ? "active" : ""}`}>
+          <div 
+            key={slide.id} 
+            className={`slide ${i === current ? "active" : ""}`}
+            style={{ backgroundColor: "#050816" }}
+          >
             {renderSlide(slide)}
           </div>
         ))}
