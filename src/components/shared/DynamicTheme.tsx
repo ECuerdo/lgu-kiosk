@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { useTheme } from "next-themes";
 
 function hexToHsl(hex: string) {
   hex = hex.replace(/^#/, "");
@@ -57,7 +58,23 @@ function hslToHex(h: number, s: number, l: number) {
 }
 
 export default function DynamicTheme() {
+  const { resolvedTheme } = useTheme();
+
   useEffect(() => {
+    // 1. Immediately apply cached styles if they exist to prevent flash during client hydration
+    const cached = typeof window !== "undefined" ? localStorage.getItem("kiosk_theme_cache") : null;
+    if (cached) {
+      try {
+        const vars = JSON.parse(cached);
+        const root = document.documentElement;
+        for (const [key, val] of Object.entries(vars)) {
+          root.style.setProperty(key, val as string);
+        }
+      } catch (e) {
+        console.error("Failed to parse cached theme:", e);
+      }
+    }
+
     async function loadTheme() {
       try {
         const response = await fetch(`/api/system-settings/theme_color?t=${Date.now()}`, {
@@ -79,6 +96,8 @@ export default function DynamicTheme() {
           root.style.setProperty("--primary-theme-dark", darkHex);
           root.style.setProperty("--primary-theme-light", lightHex);
           root.style.setProperty("--primary-theme-secondary", secondaryHex);
+          const isDark = resolvedTheme === "dark" || root.classList.contains("dark");
+          root.style.setProperty("--page-bg", isDark ? "#050816" : "#ffffff");
           
           // Overwrite Tailwind color primary, secondary & emerald palette
           root.style.setProperty("--color-primary", baseHex);
@@ -101,7 +120,7 @@ export default function DynamicTheme() {
     }
     
     void loadTheme();
-  }, []);
+  }, [resolvedTheme]);
 
   return null;
 }

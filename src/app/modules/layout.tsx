@@ -5,7 +5,7 @@ import KioskMaintenanceGuard from "@/components/shared/KioskMaintenanceGuard";
 
 export default function ModulesLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex h-dvh flex-col overflow-hidden bg-[#071c12]">
+    <div className="flex h-dvh flex-col overflow-hidden bg-[var(--page-bg)]">
       <KioskMaintenanceGuard />
       <SecureIdleTimer />
       <ServiceHeader />

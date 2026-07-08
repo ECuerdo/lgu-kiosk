@@ -100,11 +100,15 @@ export async function getBarangaysList() {
     }
 }
 
-// ─── Ensure Civil Registry Transaction Types Exist ───────────────────────────
-
 export async function ensureCivilRegistryTransactionTypes() {
     const types = [
-        { code: "LCR_DEATH_REG", name: "Death Registration", category: "Civil Registry", baseFee: 0 },
+        { 
+            code: "LCR_DEATH_REG", 
+            name: "Death Registration", 
+            category: "Civil Registry", 
+            baseFee: 0,
+            defaultFees: []
+        },
         { code: "LCR_DEATH", name: "Death Certificate Request (True Copy)", category: "Civil Registry", baseFee: 100 },
     ];
 
@@ -112,7 +116,11 @@ export async function ensureCivilRegistryTransactionTypes() {
         await prisma.transactionType.upsert({
             where: { code: t.code },
             create: { ...t },
-            update: { name: t.name, category: t.category }
+            update: { 
+                name: t.name, 
+                category: t.category,
+                defaultFees: t.defaultFees ?? []
+            }
         });
     }
 }

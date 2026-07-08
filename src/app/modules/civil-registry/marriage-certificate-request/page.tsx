@@ -85,13 +85,7 @@ const LOCAL_FALLBACK_CITIES = [
   "MAPANDAN", "DAGUPAN", "URDANETA", "SAN CARLOS", "ALAMINOS", "MANGALDAN", "CALASIAO", "SAN JACINTO", "MANAOAG", "STA. BARBARA", "BINALONAN", "POZORRUBIO", "LAOAC"
 ];
 
-function formatCurrency(amount: number) {
-  try {
-    return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(amount);
-  } catch {
-    return `₱${amount.toFixed(2)}`;
-  }
-}
+
 
 export default function MarriageCertificateRequestPage() {
   const router = useRouter();
@@ -439,30 +433,32 @@ export default function MarriageCertificateRequestPage() {
           }
         }
 
-        if (existingRes.success && existingRes.data && existingRes.data.length > 0) {
+        if (existingRes.success && existingRes.data) {
           setExistingRequests(existingRes.data);
-          const returnedTransactionId = urlParams.get("transactionId");
-          const returnedApplication = returnedTransactionId
-            ? existingRes.data.find((app: any) => app.id === returnedTransactionId)
-            : null;
-          if (returnedApplication) {
-            setSelectedApplication(returnedApplication);
-            setCurrentStep("SUBMIT");
-          } else if (revId) {
-            setCurrentStep("IDENTITY");
+        }
+
+        const returnedTransactionId = urlParams.get("transactionId");
+        const returnedApplication = (existingRes.success && existingRes.data && returnedTransactionId)
+          ? existingRes.data.find((app: any) => app.id === returnedTransactionId)
+          : null;
+
+        if (returnedApplication) {
+          setSelectedApplication(returnedApplication);
+          setCurrentStep("SUBMIT");
+        } else if (revId) {
+          setCurrentStep("IDENTITY");
+        } else if (existingRes.success && existingRes.data && existingRes.data.length > 0) {
+          const savedStep = sessionStorage.getItem("marriage-request-step");
+          if (savedStep && savedStep !== "SUBMIT") {
+            setCurrentStep(savedStep as Step);
           } else {
-            const savedStep = sessionStorage.getItem("marriage-request-step");
-            if (savedStep && savedStep !== "SUBMIT") {
-              setCurrentStep(savedStep as Step);
-            } else {
-              setCurrentStep("EXISTING");
-            }
+            setCurrentStep("EXISTING");
           }
         } else {
           const savedStep = sessionStorage.getItem("marriage-request-step");
           if (savedStep && savedStep !== "SUBMIT") {
             setCurrentStep(savedStep as Step);
-          } else if (!revId) {
+          } else {
             setCurrentStep("IDENTITY");
           }
         }
@@ -997,7 +993,7 @@ export default function MarriageCertificateRequestPage() {
       {/* Progress Stepper */}
       {currentStep !== "EXISTING" && currentStep !== "SUBMIT" && (
         <div className="mx-auto max-w-7xl mb-10">
-          <div className="grid grid-cols-3 max-w-2xl mx-auto gap-1 md:gap-4 relative px-1 md:px-2">
+          <div className="grid grid-cols-4 max-w-2xl mx-auto gap-1 md:gap-4 relative px-1 md:px-2">
             {STEPS.map((step, idx) => {
               const isActive = currentStep === step.id;
               const isCompleted = idx <= maxStepIdx;
@@ -1012,22 +1008,22 @@ export default function MarriageCertificateRequestPage() {
                   }}
                   className={cn(
                     "flex flex-col items-center gap-2 md:gap-3 relative z-10 font-black cursor-pointer group",
-                    !isCompleted && "cursor-not-allowed opacity-50"
+                    !isCompleted && "cursor-not-allowed opacity-65"
                   )}
                 >
                   <div className={cn(
                     "w-10 h-10 md:w-16 md:h-16 rounded-xl md:rounded-2xl flex items-center justify-center transition-all duration-500 border",
-                    isActive ? "bg-slate-100/80 dark:bg-[#0d120f]/60 text-theme-primary border-2 border-theme-primary shadow-[0_0_20px_color-mix(in_srgb,var(--primary-theme)_35%,transparent)] scale-105 md:scale-110" :
+                    isActive ? "bg-white dark:bg-[#0d120f]/60 text-theme-primary border-2 border-theme-primary shadow-[0_0_20px_color-mix(in_srgb,var(--primary-theme)_35%,transparent)] scale-105 md:scale-110" :
                       isCompleted ? "bg-slate-50/50 dark:bg-white/[0.02] text-theme-primary border border-slate-200/80 dark:border-white/10" :
-                        "bg-transparent text-slate-600 dark:text-slate-600 border border-slate-200/40 dark:border-white/5 group-hover:border-theme-primary/30"
+                        "bg-transparent text-slate-600 dark:text-slate-400 border border-slate-250/50 dark:border-white/5 group-hover:border-theme-primary/30"
                   )}>
                     <Icon className="w-4 h-4 md:w-7 md:h-7" />
                   </div>
                   <span className={cn(
                     "text-[7px] md:text-[10px] uppercase tracking-widest text-center italic font-bold hidden sm:block",
                     isActive ? "text-slate-900 dark:text-white font-black" :
-                      isCompleted ? "text-slate-800 dark:text-slate-300" :
-                        "text-slate-700 dark:text-slate-500"
+                      isCompleted ? "text-slate-700 dark:text-slate-300" :
+                        "text-slate-600 dark:text-slate-400"
                   )}>
                     {step.label}
                   </span>
@@ -1163,7 +1159,7 @@ export default function MarriageCertificateRequestPage() {
                 <Label className="text-[10px] font-black uppercase tracking-widest text-slate-800 dark:text-slate-400">Husband&apos;s Name <span className="text-red-500">*</span></Label>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div className="md:col-span-2 space-y-1.5">
-                    <Label className="text-[9px] font-black uppercase text-slate-700 dark:text-slate-400 italic">First Name</Label>
+                    <Label className="text-[9px] font-black uppercase text-slate-700 dark:text-slate-400 italic">First Name <span className="text-red-500">*</span></Label>
                     <Input
                       id="certFirstName"
                       className={cn(
@@ -1185,7 +1181,7 @@ export default function MarriageCertificateRequestPage() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-[9px] font-black uppercase text-slate-700 dark:text-slate-400 italic">Last Name</Label>
+                    <Label className="text-[9px] font-black uppercase text-slate-700 dark:text-slate-400 italic">Last Name <span className="text-red-500">*</span></Label>
                     <Input
                       id="certLastName"
                       className={cn(
@@ -1485,9 +1481,10 @@ export default function MarriageCertificateRequestPage() {
             >
               <div className="space-y-2 max-w-md pt-4">
                 <Label className="text-[10px] font-black uppercase tracking-widest text-slate-800 dark:text-slate-400 ml-1">Government ID Type <span className="text-red-500">*</span></Label>
-                <Select
+                 <Select
                   value={formData.idType || residentData?.idType || ""}
                   onValueChange={(val) => handleFormChange("idType", val)}
+                  disabled={idChoice === "PROFILE"}
                 >
                   <SelectTrigger className={cn("h-10 rounded-xl border border-slate-200 dark:border-white/10 focus:ring-rose-500 shadow-sm text-xs bg-white dark:bg-slate-900 font-bold uppercase text-slate-950 dark:text-white", showValidationErrors && !formData.idType && !residentData?.idType && "border-red-500")}>
                     <SelectValue placeholder="SELECT ID TYPE" />
@@ -1537,6 +1534,30 @@ export default function MarriageCertificateRequestPage() {
             showErrors={showValidationErrors}
             submitting={isSubmitting}
             submitLabel="Submit Marriage Certificate Request"
+            feeSummary={
+              <div className="bg-slate-50/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden space-y-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center text-slate-900 dark:text-white">
+                    <CheckCircle2 size={18} className="stroke-[2.5] text-theme-primary" />
+                  </div>
+                  <h3 className="text-sm font-black uppercase tracking-widest text-slate-800 dark:text-slate-200">Fee Summary</h3>
+                </div>
+                <div className="space-y-3 text-xs md:text-sm font-bold">
+                  <div className="flex justify-between items-center border-b border-dashed border-slate-250 dark:border-white/10 pb-3">
+                    <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Service Request</span>
+                    <span className="text-slate-700 dark:text-slate-350 uppercase">Marriage Certificate Copy</span>
+                  </div>
+                  <div className="flex justify-between items-center border-b border-dashed border-slate-250 dark:border-white/10 pb-3">
+                    <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Base Filing Fee</span>
+                    <span className="text-slate-700 dark:text-slate-350">₱{dbBaseFee.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between items-center bg-gradient-to-r from-theme-primary to-theme-secondary/85 text-white rounded-2xl p-4 md:p-6 shadow-xl shadow-theme-primary/10 mt-6">
+                    <span className="font-black uppercase tracking-widest text-[10px] md:text-xs text-white/90">Total Amount Due</span>
+                    <span className="font-black text-xl md:text-2xl tracking-tight">₱{dbBaseFee.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+            }
             onSubmit={handleSubmitRequest}
             onBack={() => setCurrentStep("UPLOAD")}
             detailsCards={
@@ -1557,15 +1578,6 @@ export default function MarriageCertificateRequestPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between px-4 py-3 rounded-2xl bg-theme-primary/10 border border-theme-primary/20 mt-4">
-                  <div>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-800 dark:text-slate-400 italic">Certificate Request Fee</span>
-                    <p className="text-[9px] text-slate-600 dark:text-slate-400 italic mt-0.5">Municipal Local Civil Registry processing fee</p>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-lg font-black text-theme-primary tracking-tight">{formatCurrency(dbBaseFee)}</span>
-                  </div>
-                </div>
               </Card>
             }
             documentsSection={
@@ -1735,7 +1747,9 @@ export default function MarriageCertificateRequestPage() {
                 {selectedApplication.status === "FOR_REVISION" && !selectedApplication.isCancelled && (
                   <Button
                     type="button"
-                    onClick={() => router.push(`/modules/civil-registry/marriage-certificate-request?revisionId=${selectedApplication.id}`)}
+                    onClick={() => {
+                      window.location.href = `/modules/civil-registry/marriage-certificate-request?revisionId=${selectedApplication.id}`;
+                    }}
                     className="rounded-2xl bg-amber-600 hover:bg-amber-700 text-white px-8 py-5 text-xs font-black uppercase tracking-widest shadow-lg"
                   >
                     Revise Details
