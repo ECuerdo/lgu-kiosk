@@ -215,7 +215,7 @@ export default function CedulaTrackerPage() {
           <span className="text-slate-700 font-bold">/</span>
           <Link href="/modules/cedula" className="hover:text-white transition-colors duration-200">Requests</Link>
           <span className="text-slate-700 font-bold">/</span>
-          <span className="py-2 px-4 bg-theme-primary text-white font-black rounded-full shadow-lg shadow-theme-primary/40">Tracker</span>
+          <span className="py-2 px-4 bg-[#1a6b3a] text-white font-black rounded-full shadow-lg shadow-emerald-950/40">Tracker</span>
         </nav>
       </div>
 
@@ -617,11 +617,11 @@ export default function CedulaTrackerPage() {
             {request.paymentReference && (
               <div className="bg-[#11131a] rounded-[2.5rem] border border-white/5 p-8 shadow-2xl relative text-left space-y-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-950/40 text-theme-primary flex items-center justify-center font-bold text-sm">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-950/40 text-[#1a6b3a] flex items-center justify-center font-bold text-sm">
                     #
                   </div>
                   <div>
-                    <span className="block text-[8px] font-black uppercase text-theme-primary tracking-widest">PAYMENT REFERENCE</span>
+                    <span className="block text-[8px] font-black uppercase text-[#1a6b3a] tracking-widest">PAYMENT REFERENCE</span>
                     <span className="block text-sm font-black italic uppercase text-slate-200">REFERENCE NUMBER</span>
                   </div>
                 </div>
@@ -650,19 +650,19 @@ export default function CedulaTrackerPage() {
             {(request.status === "FOR_PROCESSING" || request.orUrl) && (
               <div className="bg-[#11131a] rounded-[2.5rem] border border-white/5 p-8 shadow-2xl relative text-left space-y-6 overflow-hidden">
                 <div className="absolute right-4 top-4 opacity-[0.05] pointer-events-none">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-24 h-24 text-theme-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-24 h-24 text-[#1a6b3a]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                   </svg>
                 </div>
                 
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-950/40 text-theme-primary flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-950/40 text-[#1a6b3a] flex items-center justify-center">
                     <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                     </svg>
                   </div>
                   <div>
-                    <span className="block text-[8px] font-black uppercase text-theme-primary tracking-widest">FINANCIAL RECORD SECURED</span>
+                    <span className="block text-[8px] font-black uppercase text-[#1a6b3a] tracking-widest">FINANCIAL RECORD SECURED</span>
                     <span className="block text-sm font-black italic uppercase text-slate-200">OFFICIAL RECEIPT (OR)</span>
                   </div>
                 </div>
@@ -679,7 +679,7 @@ export default function CedulaTrackerPage() {
                     }}
                     target="_blank"
                     rel="noreferrer"
-                    className="flex py-3 bg-theme-primary hover:bg-emerald-700 text-white rounded-xl font-bold uppercase tracking-wider text-[10px] items-center justify-center gap-1.5 transition-all shadow-md shadow-theme-primary/20 active:scale-95 cursor-pointer"
+                    className="flex py-3 bg-[#1a6b3a] hover:bg-emerald-700 text-white rounded-xl font-bold uppercase tracking-wider text-[10px] items-center justify-center gap-1.5 transition-all shadow-md shadow-emerald-950/20 active:scale-95 cursor-pointer"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
