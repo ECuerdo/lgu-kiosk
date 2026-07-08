@@ -71,7 +71,8 @@ import {
   saveBfpClearanceProofAction,
   saveZoningClearanceProofAction,
   getCurrentUserResident,
-  getBarangayNames
+  getBarangayNames,
+  getSecureUploadUrlAction
 } from "./actions";
 import { useRouter } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -1107,27 +1108,29 @@ export default function BuildingPermitPage() {
     try {
       const uploadFile = file.type.startsWith("image/") ? await compressImage(file) : file;
       const userId = (selectedApplication?.residentSnapshot || residentData)?.userId || (selectedApplication?.residentSnapshot || residentData)?.id || "anonymous";
-      const timestamp = Date.now();
-      const cleanFileName = uploadFile.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-      const filePath = `building-permits/${userId}/${folder}/${timestamp}-${cleanFileName}`;
+      const fileExt = file.name.split('.').pop() || 'bin';
+      const cleanKeyName = keyName.replace(/[^a-zA-Z0-9_-]/g, '_');
 
-      const { error } = await supabase.storage
-        .from("system-assets")
-        .upload(filePath, uploadFile, {
-          cacheControl: '3600',
-          upsert: true
-        });
-
-      if (error) {
-        console.error(`Upload error for ${keyName}:`, error);
-        throw error;
+      // Get signed upload URL via server action
+      const res = await getSecureUploadUrlAction(cleanKeyName, `building-permits/${folder}`, fileExt, userId);
+      if (!res.success || !res.signedUrl || !res.publicUrl) {
+        throw new Error(res.error || "Failed to generate secure upload destination");
       }
 
-      const { data: { publicUrl } } = supabase.storage
-        .from("system-assets")
-        .getPublicUrl(filePath);
+      // Upload file directly using the signed URL
+      const uploadRes = await fetch(res.signedUrl, {
+        method: "PUT",
+        headers: {
+          "Content-Type": file.type
+        },
+        body: file
+      });
 
-      return publicUrl;
+      if (!uploadRes.ok) {
+        throw new Error(`Failed to upload file to storage: ${uploadRes.statusText}`);
+      }
+
+      return res.publicUrl;
     } catch (err) {
       console.error(`Failed uploading ${keyName}:`, err);
       throw new Error(`Failed to upload ${file.name}`);
@@ -1283,11 +1286,23 @@ export default function BuildingPermitPage() {
           await saveTransactionSignature(result.transactionId!, signatureUrl!, userId);
         }
         
-        const permitsRes = await getExistingBuildingPermits(userId);
+        let permitsRes = await getExistingBuildingPermits(userId);
+        let newApp = null;
+        if (permitsRes.success) {
+          newApp = permitsRes.data.find((a: any) => a.id === result.transactionId);
+        }
+        
+        if (!newApp) {
+          await new Promise(resolve => setTimeout(resolve, 800));
+          permitsRes = await getExistingBuildingPermits(userId);
+          if (permitsRes.success) {
+            newApp = permitsRes.data.find((a: any) => a.id === result.transactionId);
+          }
+        }
+        
         if (permitsRes.success) {
           setExistingApplications(permitsRes.data);
-          const newApp = permitsRes.data.find((a: any) => a.id === result.transactionId);
-          if (newApp) setSelectedApplication(newApp);
+          setSelectedApplication(newApp || permitsRes.data[0] || null);
         }
         setCurrentStep("EVALUATION");
         window.scrollTo({ top: 0, behavior: "smooth" });
