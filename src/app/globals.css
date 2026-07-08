@@ -5,11 +5,31 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --color-primary: #1a6b3a;
-  --color-secondary: #4caf7d;
-  --color-accent: #e8f5e9;
+  --primary-theme: #1a6b3a;
+  --primary-theme-hover: #155b31;
+  --primary-theme-dark: #0f4423;
+  --primary-theme-light: #e8f5e9;
+  --primary-theme-secondary: #4caf7d;
+
+  /* Overwrite Tailwind's emerald palette with our dynamic primary theme */
+  --color-emerald-50: var(--primary-theme-light);
+  --color-emerald-100: var(--primary-theme-light);
+  --color-emerald-200: var(--primary-theme-light);
+  --color-emerald-300: var(--primary-theme-light);
+  --color-emerald-400: var(--primary-theme);
+  --color-emerald-500: var(--primary-theme);
+  --color-emerald-600: var(--primary-theme-hover);
+  --color-emerald-700: var(--primary-theme-dark);
+  --color-emerald-800: var(--primary-theme-dark);
+  --color-emerald-900: var(--primary-theme-dark);
+  --color-emerald-950: var(--primary-theme-dark);
+
+  --color-primary: var(--primary-theme);
+  --color-secondary: var(--primary-theme-secondary);
+  --color-accent: var(--primary-theme-light);
   --color-dark: #0d1b13;
-  --color-light: #f1f8f4;
+  --color-light: var(--primary-theme-light);
+  --page-bg: #ffffff;
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
@@ -51,8 +71,12 @@ body {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background-color: var(--color-dark);
+  background-color: var(--page-bg);
   font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+}
+
+.dark {
+  --page-bg: #050816;
 }
 
 body.hide-kiosk-cursor,
@@ -68,7 +92,15 @@ body.hide-kiosk-cursor * {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--color-dark);
+  background: var(--page-bg);
+}
+
+.light .kiosk-container {
+  background: #ffffff;
+}
+
+.dark .kiosk-container {
+  background: #050816;
 }
 
 /* Slide wrapper */
@@ -327,7 +359,7 @@ body.hide-kiosk-cursor * {
   display: flex;
   align-items: stretch;
   overflow: hidden;
-  background: radial-gradient(circle at 80% 20%, rgba(76, 175, 125, 0.15) 0%, rgba(13, 27, 19, 1) 100%);
+  background: radial-gradient(circle at 80% 20%, color-mix(in srgb, var(--primary-theme-secondary) 15%, transparent) 0%, rgba(13, 27, 19, 1) 100%);
   position: relative;
 }
 
@@ -339,7 +371,7 @@ body.hide-kiosk-cursor * {
   width: 50%;
   height: 50%;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(76, 175, 125, 0.12) 0%, transparent 70%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--primary-theme-secondary) 12%, transparent) 0%, transparent 70%);
   pointer-events: none;
   z-index: 0;
 }
@@ -368,7 +400,7 @@ body.hide-kiosk-cursor * {
   overflow: hidden;
   border-right: 1px solid rgba(255, 255, 255, 0.08);
   z-index: 1;
-  background: linear-gradient(160deg, rgba(26, 107, 58, 0.15) 0%, rgba(9, 17, 13, 0.98) 100%);
+  background: linear-gradient(160deg, color-mix(in srgb, var(--primary-theme) 15%, transparent) 0%, rgba(9, 17, 13, 0.98) 100%);
 }
 
 .slide-info .side-panel > * {
@@ -384,9 +416,9 @@ body.hide-kiosk-cursor * {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(76, 175, 125, 0.1);
-  border: 1px solid rgba(76, 175, 125, 0.2);
-  box-shadow: 0 12px 24px -10px rgba(76, 175, 125, 0.4);
+  background: color-mix(in srgb, var(--primary-theme-secondary) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary-theme-secondary) 20%, transparent);
+  box-shadow: 0 12px 24px -10px color-mix(in srgb, var(--primary-theme-secondary) 40%, transparent);
   animation: pulse-slow 3s ease-in-out infinite;
 }
 
@@ -481,7 +513,7 @@ body.hide-kiosk-cursor * {
   inset: 0;
   border-radius: 28px;
   padding: 1.5px;
-  background: linear-gradient(135deg, rgba(255,255,255,0.08), transparent 40%, rgba(76, 175, 125, 0.15));
+  background: linear-gradient(135deg, rgba(255,255,255,0.08), transparent 40%, color-mix(in srgb, var(--primary-theme-secondary) 15%, transparent));
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
@@ -490,9 +522,9 @@ body.hide-kiosk-cursor * {
 
 .service-card:hover {
   background: rgba(24, 48, 35, 0.6);
-  border-color: rgba(76, 175, 125, 0.45);
+  border-color: color-mix(in srgb, var(--primary-theme-secondary) 45%, transparent);
   transform: translateY(-6px) scale(1.01);
-  box-shadow: 0 20px 48px -12px rgba(76, 175, 125, 0.25), 0 24px 50px -15px rgba(0, 0, 0, 0.75);
+  box-shadow: 0 20px 48px -12px color-mix(in srgb, var(--primary-theme-secondary) 25%, transparent), 0 24px 50px -15px rgba(0, 0, 0, 0.75);
 }
 
 .service-card .card-top-content {
@@ -525,9 +557,9 @@ body.hide-kiosk-cursor * {
 
 .service-card:hover .card-icon {
   transform: scale(1.1) rotate(5deg);
-  border-color: rgba(76, 175, 125, 0.5);
-  background: rgba(76, 175, 125, 0.12);
-  box-shadow: 0 8px 20px -6px rgba(76, 175, 125, 0.3);
+  border-color: color-mix(in srgb, var(--primary-theme-secondary) 50%, transparent);
+  background: color-mix(in srgb, var(--primary-theme-secondary) 12%, transparent);
+  box-shadow: 0 8px 20px -6px color-mix(in srgb, var(--primary-theme-secondary) 30%, transparent);
 }
 
 .service-card .status-pill {
@@ -536,8 +568,8 @@ body.hide-kiosk-cursor * {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--color-secondary);
-  background: rgba(76, 175, 125, 0.12);
-  border: 1px solid rgba(76, 175, 125, 0.25);
+  background: color-mix(in srgb, var(--primary-theme-secondary) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary-theme-secondary) 25%, transparent);
   padding: 4px 12px;
   border-radius: 100px;
 }
@@ -718,7 +750,7 @@ body.hide-kiosk-cursor * {
   width: 600px;
   height: 600px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(26, 107, 58, 0.08) 0%, transparent 70%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--primary-theme) 8%, transparent) 0%, transparent 70%);
   pointer-events: none;
   z-index: 0;
 }
@@ -969,6 +1001,11 @@ body.hide-kiosk-cursor * {
 
 @theme inline {
   --font-sans: var(--font-sans);
+  --color-theme-primary: var(--primary-theme);
+  --color-theme-secondary: var(--primary-theme-secondary);
+  --color-theme-hover: var(--primary-theme-hover);
+  --color-theme-dark: var(--primary-theme-dark);
+  --color-theme-light: var(--primary-theme-light);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);

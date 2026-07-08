@@ -128,6 +128,8 @@ const slides: Slide[] = [
 ];
 
 const SLIDE_DURATION = 8000; // ms each slide stays
+const MANUAL_RFID_INPUT_ENABLED =
+  process.env.NEXT_PUBLIC_KIOSK_RFID_MANUAL_INPUT?.toLowerCase() === "true";
 
 // ────────── Sub-components ──────────
 
@@ -261,7 +263,7 @@ function ProgramsSlide({ data }: { data: Record<string, unknown> }) {
   return (
     <div className="slide-programs">
       <div className="announce-header pb-4">
-        <div className="tag bg-emerald-500/15 border-emerald-500/30 text-emerald-400">⚙️ LGU Initiatives</div>
+        <div className="tag bg-theme-primary/15 border-theme-primary/30 text-theme-primary">⚙️ LGU Initiatives</div>
         <h2>{data.heading as string}</h2>
       </div>
       <div className="programs-grid">
@@ -293,7 +295,7 @@ function NewsSlide({ data }: { data: Record<string, unknown> }) {
   return (
     <div className="slide-announce">
       <div className="announce-header">
-        <div className="tag bg-[#1a6b3a]/20 border-[#1a6b3a] text-[#1a6b3a]">📰 Latest News</div>
+        <div className="tag bg-theme-primary/20 border-theme-primary text-theme-primary">📰 Latest News</div>
         <h2>Local Updates & Stories</h2>
       </div>
       <div className="announce-list">
@@ -303,7 +305,7 @@ function NewsSlide({ data }: { data: Record<string, unknown> }) {
             key={i}
             style={{ animationDelay: `${i * 100}ms` }}
           >
-            <div className="item-num bg-[#1a6b3a]/20 border-[#1a6b3a] text-[#1a6b3a]">{i + 1}</div>
+            <div className="item-num bg-theme-primary/20 border-theme-primary text-theme-primary">{i + 1}</div>
             <div className="item-body">
               <div className="flex items-center gap-2 mb-1">
                  <span className="text-[10px] font-black bg-slate-800 text-slate-300 px-2 py-0.5 rounded uppercase tracking-widest">{item.category}</span>
@@ -490,7 +492,18 @@ export default function KioskSlideshow() {
             <p>Province of Pangasinan &nbsp;|&nbsp; Official Public Kiosk</p>
           </div>
         </div>
-        <KioskClock />
+        <div className="flex items-center gap-4">
+          {MANUAL_RFID_INPUT_ENABLED ? (
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new Event("open-rfid-overlay"))}
+              className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-[10px] font-black uppercase tracking-[0.25em] text-white/80 transition hover:bg-white/10 hover:text-white"
+            >
+              RFID Login
+            </button>
+          ) : null}
+          <KioskClock />
+        </div>
       </header>
 
       {/* Ticker */}

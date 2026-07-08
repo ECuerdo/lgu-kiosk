@@ -20,8 +20,10 @@ import {
   Search,
   ChevronRight,
   UserCircle,
-  Volume2
+  Volume2,
+  X
 } from "lucide-react";
+import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -230,7 +232,55 @@ function DashboardContent() {
     idFrontUrl?: string;
     barangay?: string;
     email?: string;
+    contactNumber?: string;
+    municipality?: string;
   } | null>(null);
+
+  const [profileOpen, setProfileOpen] = useState(false);
+  const { theme, setTheme, resolvedTheme } = useTheme();
+  const [activeFontSize, setActiveFontSize] = useState<string>("md");
+
+  React.useEffect(() => {
+    try {
+      const saved = localStorage.getItem("kiosk_font_size");
+      if (saved) {
+        setActiveFontSize(saved);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    const sizeMap: Record<string, string> = {
+      sm: "14px",
+      md: "16px",
+      lg: "18px",
+      xl: "20px"
+    };
+    try {
+      document.documentElement.style.fontSize = sizeMap[activeFontSize] || "16px";
+    } catch (e) {
+      console.error(e);
+    }
+  }, [activeFontSize]);
+
+  const applyFontSize = (size: string) => {
+    try {
+      localStorage.setItem("kiosk_font_size", size);
+      setActiveFontSize(size);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const isDarkMode = (resolvedTheme || theme) === "dark";
+
+  const logout = () => {
+    sessionStorage.removeItem("active_resident");
+    window.speechSynthesis?.cancel();
+    router.replace("/");
+  };
 
   React.useEffect(() => {
     const saved = sessionStorage.getItem("active_resident");
@@ -371,7 +421,7 @@ function DashboardContent() {
   }, [router]);
 
   return (
-    <div className="flex h-screen w-full bg-[#f8fafc] overflow-hidden font-sans select-none">
+    <div className="flex h-screen w-full bg-[var(--page-bg)] overflow-hidden font-sans select-none transition-colors duration-300 ease-out">
       {AUTO_LOGOUT_ENABLED && timeLeft <= 15 && (
         <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/70 p-6 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-[2rem] border border-amber-200 bg-white p-8 text-center shadow-2xl">
@@ -406,7 +456,7 @@ function DashboardContent() {
               <button
                 type="button"
                 onClick={() => setTimeLeft(60)}
-                className="flex-1 rounded-xl bg-[#1a6b3a] px-5 py-3 text-xs font-black uppercase tracking-wider text-white shadow-lg"
+                className="flex-1 rounded-xl bg-theme-primary px-5 py-3 text-xs font-black uppercase tracking-wider text-white shadow-lg"
               >
                 Continue Session
               </button>
@@ -416,9 +466,9 @@ function DashboardContent() {
       )}
 
       {/* SIDEBAR - HIGH END DARK MODERN */}
-      <aside className="w-24 md:w-28 bg-[#0F172A] flex flex-col items-center py-8 shadow-2xl relative z-30">
+      <aside className="w-24 md:w-28 bg-white dark:bg-[#0b1020] flex flex-col items-center py-8 shadow-2xl relative z-30 transition-colors duration-300 ease-out border-r border-slate-200 dark:border-white/10">
         <div className="mb-10">
-          <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center p-2 shadow-lg shadow-black/20">
+          <div className="w-16 h-16 rounded-full bg-white dark:bg-slate-950 flex items-center justify-center p-2 shadow-lg shadow-black/20 dark:shadow-black/50 transition-colors duration-300 ease-out">
             <Image
               src="/logo.png"
               alt="Mapandan Logo"
@@ -435,8 +485,8 @@ function DashboardContent() {
               key={cat}
               onClick={() => setActiveCategory(cat)}
               className={`w-full group flex flex-col items-center justify-center py-5 px-2 rounded-2xl transition-all duration-300 ${activeCategory === cat
-                ? "bg-[#1a6b3a] text-white shadow-lg shadow-emerald-900/30 scale-105"
-                : "text-slate-500 hover:bg-slate-800 hover:text-slate-300"
+                ? "bg-theme-primary text-white shadow-lg shadow-theme-primary/30 scale-105"
+                : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-800 dark:hover:text-white"
                 }`}
             >
               <div className="mb-2 transition-transform duration-300 group-hover:scale-110">
@@ -455,13 +505,13 @@ function DashboardContent() {
           ))}
         </nav>
 
-        <div className="mt-auto px-4 w-full pt-8 border-t border-slate-800">
+        <div className="mt-auto px-4 w-full pt-8 border-t border-slate-200 dark:border-white/10 transition-colors duration-300 ease-out">
           <button
             onClick={() => {
               sessionStorage.removeItem("active_resident");
               router.push("/");
             }}
-            className="w-full flex flex-col items-center justify-center py-6 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-2xl transition-all group"
+            className="w-full flex flex-col items-center justify-center py-6 text-red-500 dark:text-red-400 hover:text-red-400 dark:hover:text-red-300 hover:bg-red-500/10 rounded-2xl transition-all group"
           >
             <LogOut size={24} className="mb-2 transition-transform group-hover:translate-x-[-2px]" />
             <span className="text-[10px] font-black uppercase tracking-widest">{TRANSLATIONS[lang].exit}</span>
@@ -470,25 +520,25 @@ function DashboardContent() {
       </aside>
 
       {/* MAIN CONTENT WRAPPER */}
-      <div className="flex-1 flex flex-col relative min-w-0 h-full">
+      <div className="flex-1 flex flex-col relative min-w-0 h-full transition-colors duration-300 ease-out">
 
         {/* HEADER AREA - PREMIUM WHITE */}
-        <header className="h-[140px] bg-white border-b border-slate-200 flex items-center justify-between px-16 shadow-sm z-20 shrink-0">
+        <header className="h-[140px] bg-white dark:bg-[#0b1020] border-b border-slate-200 dark:border-white/10 flex items-center justify-between px-16 shadow-sm z-20 shrink-0 transition-colors duration-300 ease-out">
           <div className="flex items-center gap-6">
             <div className="hidden lg:block">
-              <div className="w-1.5 h-16 bg-[#1a6b3a] rounded-full"></div>
+              <div className="w-1.5 h-16 bg-theme-primary rounded-full"></div>
             </div>
             <div>
               <div className="flex items-center gap-3 mb-2">
-                <Badge className="bg-[#1a6b3a] border-none text-white font-black text-[9px] tracking-widest uppercase py-1 px-3">
+                <Badge className="bg-theme-primary border-none text-white font-black text-[9px] tracking-widest uppercase py-1 px-3">
                   {TRANSLATIONS[lang].verifiedSession}
                 </Badge>
                 <div className="flex items-center gap-1.5 text-slate-400 text-[10px] font-black uppercase tracking-[0.2em]">
-                  <Clock size={14} className="text-[#4caf7d]" />
+                  <Clock size={14} className="text-theme-secondary" />
                   <span>Kiosk Map-01</span>
                 </div>
               </div>
-              <h1 className="text-4xl font-black text-slate-900 tracking-tighter">
+              <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter transition-colors duration-300 ease-out">
                 {type === "municipal" ? TRANSLATIONS[lang].municipalCenter : TRANSLATIONS[lang].barangayCenter}
               </h1>
             </div>
@@ -498,7 +548,7 @@ function DashboardContent() {
             <Button
               onClick={toggleVoice}
               className={`font-bold rounded-2xl flex items-center gap-2.5 px-4 py-5 shadow-lg active:scale-95 transition-all shrink-0 ${isVoiceEnabled
-                ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-950/20"
+                ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-theme-primary/20"
                 : "bg-slate-200 hover:bg-slate-300 text-slate-700 shadow-slate-300/20"
                 }`}
             >
@@ -513,57 +563,80 @@ function DashboardContent() {
               </div>
             </Button>
 
-            <div className="text-right hidden sm:block">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">{TRANSLATIONS[lang].authenticatedResident}</p>
-              <div className="flex items-center gap-2 justify-end">
-                <span className="text-lg font-black text-slate-800">
-                  {resident ? resident.fullName : TRANSLATIONS[lang].localCitizen}
-                </span>
-                <Badge variant="outline" className="text-[#1a6b3a] border-[#4caf7d] uppercase font-black text-[9px]">{TRANSLATIONS[lang].portal}</Badge>
+            {resident ? (
+              <button
+                type="button"
+                onClick={() => setProfileOpen(true)}
+                className="flex items-center gap-6 text-left hover:opacity-80 transition-opacity"
+              >
+                <div className="text-right hidden sm:block">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">{TRANSLATIONS[lang].authenticatedResident}</p>
+                  <div className="flex items-center gap-2 justify-end">
+                    <span className="text-lg font-black text-slate-800">
+                      {resident.fullName}
+                    </span>
+                    <Badge variant="outline" className="text-theme-primary border-theme-secondary uppercase font-black text-[9px]">{TRANSLATIONS[lang].portal}</Badge>
+                  </div>
+                </div>
+                <div className="w-16 h-16 rounded-[2rem] bg-slate-50 border border-slate-200 flex items-center justify-center overflow-hidden shadow-inner relative">
+                  {residentPhotoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={residentPhotoUrl}
+                      alt={resident.fullName}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <UserCircle className="w-10 h-10 text-slate-300" />
+                  )}
+                </div>
+              </button>
+            ) : (
+              <div className="flex items-center gap-6 text-left">
+                <div className="text-right hidden sm:block">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">{TRANSLATIONS[lang].authenticatedResident}</p>
+                  <div className="flex items-center gap-2 justify-end">
+                    <span className="text-lg font-black text-slate-800">
+                      {TRANSLATIONS[lang].localCitizen}
+                    </span>
+                    <Badge variant="outline" className="text-theme-primary border-theme-secondary uppercase font-black text-[9px]">{TRANSLATIONS[lang].portal}</Badge>
+                  </div>
+                </div>
+                <div className="w-16 h-16 rounded-[2rem] bg-slate-50 border border-slate-200 flex items-center justify-center overflow-hidden shadow-inner relative">
+                  <UserCircle className="w-10 h-10 text-slate-300" />
+                </div>
               </div>
-            </div>
-            <div className="w-16 h-16 rounded-[2rem] bg-slate-50 border border-slate-200 flex items-center justify-center overflow-hidden shadow-inner relative">
-              {residentPhotoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={residentPhotoUrl}
-                  alt={resident.fullName}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <UserCircle className="w-10 h-10 text-slate-300" />
-              )}
-            </div>
+            )}
           </div>
         </header>
 
         {/* SERVICE GRID AREA - WITH STICKY CATEGORY LABEL */}
-        <main className="flex-1 overflow-y-auto bg-[#F1F5F9] relative flex flex-col">
+        <main className="flex-1 overflow-y-auto bg-[#F1F5F9] dark:bg-[#050816] relative flex flex-col transition-colors duration-300 ease-out">
 
           {/* STICKY SUB-HEADER */}
-          <div className="sticky top-0 bg-[#F1F5F9]/80 backdrop-blur-xl px-16 py-8 z-10 border-b border-white/40 flex items-baseline justify-between shadow-sm">
+          <div className="sticky top-0 bg-[#F1F5F9]/80 dark:bg-[#050816]/80 backdrop-blur-xl px-16 py-8 z-10 border-b border-white/40 dark:border-white/10 flex items-baseline justify-between shadow-sm transition-colors duration-300 ease-out">
             <div className="flex items-center gap-4">
-              <div className="bg-[#1a6b3a] text-white p-2 rounded-xl">
+              <div className="bg-theme-primary text-white p-2 rounded-xl">
                 {activeCategory === "All" ? <Search size={24} /> : <FileText size={24} />}
               </div>
               <div>
-                <h2 className="text-2xl font-black text-slate-800 tracking-tight uppercase">
+                <h2 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight uppercase transition-colors duration-300 ease-out">
                   {TRANSLATIONS[lang].categories[activeCategory as keyof typeof TRANSLATIONS.en.categories]} {activeCategory === "All" ? TRANSLATIONS[lang].services : ""}
                 </h2>
-                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-1">
+                <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mt-1 transition-colors duration-300 ease-out">
                   {TRANSLATIONS[lang].availableIn}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-4">
-              <div className={`flex items-center gap-2 px-4 py-2 rounded-full border ${timeLeft < 20 ? "bg-red-50 border-red-100 text-red-600 shadow-sm shadow-red-100" : "bg-white/60 border-slate-200 text-slate-500"} transition-all duration-300`}>
-                <Clock size={14} className={timeLeft < 10 ? "animate-pulse text-red-500" : "text-[#4caf7d]"} />
+              <div className={`flex items-center gap-2 px-4 py-2 rounded-full border ${timeLeft < 20 ? "bg-red-50 border-red-100 text-red-600 shadow-sm shadow-red-100 dark:bg-red-950/30 dark:border-red-900/40 dark:text-red-300" : "bg-white/60 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-300"} transition-all duration-300`}>
+                <Clock size={14} className={timeLeft < 10 ? "animate-pulse text-red-500" : "text-theme-secondary"} />
                 <span className="text-[10px] font-black uppercase tracking-widest leading-none">
                   {TRANSLATIONS[lang].session}: {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
                 </span>
               </div>
-              <div className="text-[10px] font-black text-slate-500 bg-white/60 px-4 py-2 rounded-full border border-slate-200 uppercase tracking-widest shadow-sm">
-                {TRANSLATIONS[lang].total}: <span className="text-[#1a6b3a]">{filteredServices.length}</span> {TRANSLATIONS[lang].servicesCount}
+              <div className="text-[10px] font-black text-slate-500 dark:text-slate-300 bg-white/60 dark:bg-white/5 px-4 py-2 rounded-full border border-slate-200 dark:border-white/10 uppercase tracking-widest shadow-sm transition-colors duration-300 ease-out">
+                {TRANSLATIONS[lang].total}: <span className="text-theme-primary">{filteredServices.length}</span> {TRANSLATIONS[lang].servicesCount}
               </div>
             </div>
           </div>
@@ -574,36 +647,36 @@ function DashboardContent() {
               <div
                 key={service.id}
                 onClick={() => handleServiceClick(service)}
-                className="group flex flex-col min-h-[300px] bg-white rounded-3xl border border-slate-200/60 shadow-xl shadow-slate-200/50 hover:shadow-2xl hover:shadow-emerald-900/10 hover:border-[#4caf7d]/50 hover:scale-[1.01] transition-all duration-500 cursor-pointer overflow-hidden p-10 relative"
+                className="group flex flex-col min-h-[300px] bg-white dark:bg-[#0c1120] rounded-3xl border border-slate-200/60 dark:border-white/10 shadow-xl shadow-slate-200/50 dark:shadow-black/20 hover:shadow-2xl hover:shadow-theme-primary/10 hover:border-theme-secondary/50 hover:scale-[1.01] transition-all duration-500 cursor-pointer overflow-hidden p-10 relative"
               >
                 {/* Top Section */}
                 <div className="flex items-start justify-between mb-8">
-                  <div className="w-20 h-20 rounded-2xl bg-slate-50 group-hover:bg-[#1a6b3a] flex items-center justify-center text-slate-400 group-hover:text-white transition-all duration-500 shadow-inner">
+                  <div className="w-20 h-20 rounded-2xl bg-slate-50 dark:bg-white/5 group-hover:bg-theme-primary flex items-center justify-center text-slate-400 dark:text-slate-200 group-hover:text-white transition-all duration-500 shadow-inner">
                     {service.icon}
                   </div>
                   <div className="text-right">
-                    <span className="bg-[#1a6b3a]/10 text-[#1a6b3a] text-[9px] font-black px-4 py-2 rounded-full uppercase tracking-widest opacity-80 group-hover:opacity-100 transition-opacity">
+                    <span className="bg-theme-primary/10 text-theme-primary text-[9px] font-black px-4 py-2 rounded-full uppercase tracking-widest opacity-100 transition-opacity">
                       {service.category}
                     </span>
                   </div>
                 </div>
 
                 <div className="flex-1 flex flex-col justify-center">
-                  <h3 className="text-3xl font-black text-slate-900 tracking-tighter mb-3 group-hover:text-[#1a6b3a] transition-colors leading-tight">
+                  <h3 className="text-3xl font-black text-slate-950 dark:text-slate-50 tracking-tighter mb-3 group-hover:text-theme-primary transition-colors leading-tight">
                     {service.title}
                   </h3>
-                  <p className="text-base text-slate-400 font-bold leading-relaxed group-hover:text-slate-600 transition-colors">
+                  <p className="text-base text-slate-600 dark:text-slate-300 font-bold leading-relaxed transition-colors">
                     {service.desc}
                   </p>
                 </div>
 
-                <div className="mt-8 flex items-center justify-between pt-8 border-t border-slate-50">
-                  <div className="flex items-center gap-2 text-[#1a6b3a] font-black text-xs uppercase tracking-[0.2em] transform translate-x-[-10px] transition-all duration-500 opacity-0 group-hover:opacity-100 group-hover:translate-x-0">
+                <div className="mt-8 flex items-center justify-between pt-8 border-t border-slate-50 dark:border-white/5">
+                  <div className="flex items-center gap-2 text-theme-primary font-black text-xs uppercase tracking-[0.2em] transition-all duration-500 opacity-100">
                     {TRANSLATIONS[lang].startApp}
                     <ChevronRight size={18} />
                   </div>
-                  <div className="h-14 w-14 bg-slate-50 group-hover:bg-[#1a6b3a] rounded-full flex items-center justify-center transition-all duration-500 shadow-inner group-hover:shadow-lg group-hover:shadow-emerald-900/30">
-                    <ChevronRight className="w-6 h-6 text-slate-300 group-hover:text-white transition-colors" />
+                  <div className="h-14 w-14 bg-slate-50 dark:bg-white/5 group-hover:bg-theme-primary rounded-full flex items-center justify-center transition-all duration-500 shadow-inner group-hover:shadow-lg group-hover:shadow-theme-primary/30">
+                    <ChevronRight className="w-6 h-6 text-slate-400 dark:text-slate-300 group-hover:text-white transition-colors" />
                   </div>
                 </div>
 
@@ -615,47 +688,127 @@ function DashboardContent() {
           </div>
         </main>
 
-        <footer className="h-16 bg-white border-t border-slate-200 px-16 flex items-center justify-between z-20 shrink-0">
-          <div className="flex items-center gap-12 text-[11px] font-black text-slate-400 uppercase tracking-widest h-full">
-            <div className="flex items-center gap-3 text-[#1a6b3a]">
+        <footer className="h-16 bg-white dark:bg-[#0b1020] border-t border-slate-200 dark:border-white/10 px-16 flex items-center justify-between z-20 shrink-0 transition-colors duration-300 ease-out">
+          <div className="flex items-center gap-12 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest h-full transition-colors duration-300 ease-out">
+            <div className="flex items-center gap-3 text-theme-primary">
               <span className="relative flex h-3 w-3">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-[#1a6b3a]"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-theme-primary"></span>
               </span>
               {TRANSLATIONS[lang].systemOnline}
             </div>
-            <div className="flex gap-6 h-full items-center">
+          <div className="flex gap-6 h-full items-center">
               <button
                 onClick={() => setLang("en")}
-                className={`font-black uppercase tracking-widest h-full transition-colors ${lang === "en" ? "text-[#1a6b3a] border-b-2 border-[#1a6b3a]" : "text-slate-400 hover:text-slate-600"}`}
+                className={`font-black uppercase tracking-widest h-full transition-colors ${lang === "en" ? "text-theme-primary border-b-2 border-theme-primary" : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"}`}
               >
                 English Mode
               </button>
               <button
                 onClick={() => setLang("fil")}
-                className={`font-black uppercase tracking-widest h-full transition-colors ${lang === "fil" ? "text-[#1a6b3a] border-b-2 border-[#1a6b3a]" : "text-slate-400 hover:text-slate-600"}`}
+                className={`font-black uppercase tracking-widest h-full transition-colors ${lang === "fil" ? "text-theme-primary border-b-2 border-theme-primary" : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"}`}
               >
                 Filipino Mode
               </button>
               <button
                 onClick={() => setLang("pang")}
-                className={`font-black uppercase tracking-widest h-full transition-colors ${lang === "pang" ? "text-[#1a6b3a] border-b-2 border-[#1a6b3a]" : "text-slate-400 hover:text-slate-600"}`}
+                className={`font-black uppercase tracking-widest h-full transition-colors ${lang === "pang" ? "text-theme-primary border-b-2 border-theme-primary" : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"}`}
               >
                 Pangasinan Mode
               </button>
               <button
                 onClick={() => setLang("ilo")}
-                className={`font-black uppercase tracking-widest h-full transition-colors ${lang === "ilo" ? "text-[#1a6b3a] border-b-2 border-[#1a6b3a]" : "text-slate-400 hover:text-slate-600"}`}
+                className={`font-black uppercase tracking-widest h-full transition-colors ${lang === "ilo" ? "text-theme-primary border-b-2 border-theme-primary" : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"}`}
               >
                 Ilocano Mode
               </button>
             </div>
           </div>
-          <div className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">
+          <div className="text-[10px] font-black text-slate-300 dark:text-slate-500 uppercase tracking-[0.2em] transition-colors duration-300 ease-out">
             Municipality of Mapandan • © 2026
           </div>
         </footer>
+
+        {profileOpen && resident && (
+          <div className="fixed inset-0 z-[500] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+            <div className="w-full max-w-md rounded-[2rem] bg-white dark:bg-[#0c1120] p-7 shadow-2xl transition-colors duration-300 ease-out dark:shadow-black/40 text-left">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[9px] font-black uppercase tracking-[0.25em] text-theme-primary">Resident Profile</p>
+                  <h2 className="mt-1 text-2xl font-black text-slate-900 dark:text-white">{resident.fullName}</h2>
+                </div>
+                <button type="button" onClick={() => setProfileOpen(false)} className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="mt-6 space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-5 text-sm dark:border-slate-800 dark:bg-slate-900/60">
+                <ProfileRow label="Email" value={resident.email} />
+                <ProfileRow label="Contact Number" value={resident.contactNumber} />
+                <ProfileRow label="Barangay" value={resident.barangay} />
+                <ProfileRow label="Municipality" value={resident.municipality || "Mapandan"} />
+              </div>
+
+              {/* Font Size Selector */}
+              <div className="mt-6 border-t border-slate-200 pt-5 dark:border-slate-800">
+                <span className="block text-[9px] font-black uppercase tracking-[0.25em] text-slate-400 dark:text-slate-500">Font Size</span>
+                <div className="mt-2 grid grid-cols-4 gap-2">
+                  {[
+                    { value: "sm", label: "Small", preview: "12px" },
+                    { value: "md", label: "Normal", preview: "16px" },
+                    { value: "lg", label: "Large", preview: "20px" },
+                    { value: "xl", label: "X-Large", preview: "24px" }
+                  ].map((sz) => (
+                    <button
+                      key={sz.value}
+                      type="button"
+                      onClick={() => applyFontSize(sz.value)}
+                      className={`flex flex-col items-center justify-center rounded-xl border py-2.5 transition-all ${
+                        activeFontSize === sz.value
+                          ? "border-theme-primary bg-emerald-50 text-theme-primary dark:border-theme-primary dark:bg-emerald-950/30 dark:text-emerald-300 font-bold"
+                          : "border-slate-200 bg-white text-slate-700 hover:border-emerald-300 hover:bg-emerald-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-emerald-700"
+                      }`}
+                    >
+                      <span style={{ fontSize: sz.preview }} className="leading-none font-sans">A</span>
+                      <span className="mt-1 text-[9px] font-black uppercase tracking-wider">{sz.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => setTheme(isDarkMode ? "light" : "dark")}
+                  className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 text-left transition hover:border-emerald-300 hover:bg-emerald-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-emerald-700 dark:hover:bg-slate-800"
+                >
+                  <span>
+                    <span className="block text-[9px] font-black uppercase tracking-[0.25em] text-slate-400 dark:text-slate-500">Theme</span>
+                    <span className="mt-1 block text-sm font-black text-slate-900 dark:text-white">
+                      {isDarkMode ? "Dark Mode" : "Light Mode"}
+                    </span>
+                  </span>
+                  <span className={`relative flex h-8 w-14 items-center rounded-full p-1 transition-colors ${isDarkMode ? "bg-theme-primary" : "bg-slate-200"}`}>
+                    <span className={`h-6 w-6 rounded-full bg-white shadow-md transition-transform ${isDarkMode ? "translate-x-6" : "translate-x-0"}`} />
+                  </span>
+                </button>
+                <button type="button" onClick={logout} className="flex items-center justify-center gap-2 rounded-xl bg-red-50 px-4 py-3 text-xs font-black uppercase tracking-widest text-red-600 transition hover:bg-red-100 dark:bg-red-950/30 dark:hover:bg-red-950/50">
+                  <LogOut className="h-4 w-4" />
+                  Logout
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
+    </div>
+  );
+}
+
+function ProfileRow({ label, value }: { label: string; value?: string }) {
+  return (
+    <div className="flex justify-between gap-4 border-b border-slate-200 pb-3 last:border-0 last:pb-0 dark:border-slate-800">
+      <span className="font-bold text-slate-400 dark:text-slate-500">{label}</span>
+      <span className="text-right font-black text-slate-700 dark:text-slate-100">{value || "Not provided"}</span>
     </div>
   );
 }
@@ -664,9 +817,9 @@ export default function DashboardPage() {
   return (
     <Suspense fallback={
       <div className="h-screen w-screen flex flex-col items-center justify-center bg-white gap-6">
-        <div className="w-24 h-24 border-8 border-slate-100 border-t-[#1a6b3a] rounded-full animate-spin"></div>
+        <div className="w-24 h-24 border-8 border-slate-100 border-t-theme-primary rounded-full animate-spin"></div>
         <div className="text-center">
-          <p className="text-[#1a6b3a] font-black text-xs uppercase tracking-[0.4em] animate-pulse">Initializing Interface</p>
+          <p className="text-theme-primary font-black text-xs uppercase tracking-[0.4em] animate-pulse">Initializing Interface</p>
           <p className="text-slate-400 text-[10px] font-bold uppercase mt-2">Please wait while we secure your connection</p>
         </div>
       </div>

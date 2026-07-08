@@ -20,6 +20,18 @@ export async function getCurrentUserResident(userId: string) {
   }
 }
 
+// ─── Get System Setting ──────────────────────────────────────────────────────
+export async function getSystemSettingAction(key: string) {
+  try {
+    const setting = await (prisma as any).systemSetting?.findUnique({
+      where: { key }
+    });
+    return { success: true, data: setting?.value ?? null };
+  } catch {
+    return { success: true, data: null };
+  }
+}
+
 export async function submitBirthCertificateRequest(formData: FormData, userId: string) {
   try {
     if (!userId) {
@@ -30,7 +42,7 @@ export async function submitBirthCertificateRequest(formData: FormData, userId: 
     const type = await prisma.transactionType.findFirst({
       where: { code: "LCR_BIRTH" }
     });
-    
+
     if (!type) {
       return { success: false, error: "Birth Certificate transaction type not found in database." };
     }
@@ -56,6 +68,7 @@ export async function submitBirthCertificateRequest(formData: FormData, userId: 
     const email = formData.get("email") as string;
     const occupation = formData.get("occupation") as string;
     const privacyConsentAccepted = formData.get("privacyConsentAccepted") === "true";
+    const revisionId = formData.get("revisionId") as string | null;
 
     // Validate required fields
     if (!certFirstName || !certLastName || !dateOfEventStr || !placeOfEvent || !sex) {
@@ -63,7 +76,7 @@ export async function submitBirthCertificateRequest(formData: FormData, userId: 
     }
 
     const dateOfEvent = new Date(dateOfEventStr);
-    
+
     // Construct names
     const subjectName = `${certFirstName} ${certMiddleName ? certMiddleName + ' ' : ''}${certLastName}${certSuffix ? ' ' + certSuffix : ''}`.trim();
     const fatherName = `${fatherFirstName} ${fatherMiddleName ? fatherMiddleName + ' ' : ''}${fatherLastName}`.trim() || "N/A";
@@ -122,12 +135,46 @@ export async function submitBirthCertificateRequest(formData: FormData, userId: 
       where: { userId: userId }
     });
 
+    if (revisionId) {
+      const existing = await prisma.transaction.findUnique({
+        where: { id: revisionId }
+      });
+      if (!existing || existing.userId !== userId) {
+        return { success: false, error: "Transaction not found or unauthorized" };
+      }
+
+      await prisma.transaction.update({
+        where: { id: revisionId },
+        data: {
+          status: "FOR_INSPECTION",
+          isCancelled: false,
+          additionalData: additionalData,
+          residentSnapshot: resident ? (resident as any) : {},
+          totalAmount: type.baseFee,
+          birthCertificateRequest: {
+            update: {
+              subjectName,
+              dateOfEvent,
+              placeOfEvent,
+              fatherName: fatherName || null,
+              motherName: motherName || null,
+              registryNumber: registryNumber || null,
+            }
+          }
+        }
+      });
+
+      revalidatePath("/user/transactions");
+      revalidatePath("/modules/civil-registry/birth-certificate-request");
+      return { success: true, transactionId: revisionId };
+    }
+
     // Create the transaction and associated BirthCertificateRequest in a transaction
     const transaction = await prisma.transaction.create({
       data: {
         userId: userId,
         typeId: type.id,
-        status: "FOR_REQUESTING",
+        status: "FOR_INSPECTION",
         residentSnapshot: resident ? (resident as any) : {},
         additionalData: additionalData,
         totalAmount: type.baseFee,
@@ -146,6 +193,7 @@ export async function submitBirthCertificateRequest(formData: FormData, userId: 
     });
 
     revalidatePath("/user/transactions");
+    revalidatePath("/modules/civil-registry/birth-certificate-request");
     return { success: true, transactionId: transaction.id };
 
   } catch (error) {
@@ -410,3 +458,54 @@ export async function getSecureUploadUrlAction(fieldName: string, folder: string
     return { success: false as const, error: "Upload service unavailable" };
   }
 }
+
+// ─── Get Transaction Types ───────────────────────────────────────────────────
+
+export async function getTransactionTypes() {
+  try {
+    const types = await prisma.transactionType.findMany({
+      orderBy: { name: "asc" }
+    });
+    return { success: true, data: types };
+  } catch (error) {
+    console.error("Get transaction types error:", error);
+    return { success: false, data: [] };
+  }
+}
+
+// ─── Ensure Civil Registry Transaction Types Exist ───────────────────────────
+
+export async function ensureCivilRegistryTransactionTypes() {
+  const types = [
+    { code: "LCR_BIRTH", name: "Birth Certificate Request", category: "Civil Registry", baseFee: 100 },
+  ];
+
+  for (const t of types) {
+    await prisma.transactionType.upsert({
+      where: { code: t.code },
+      create: { ...t },
+      update: { name: t.name, category: t.category }
+    });
+  }
+}
+
+// ─── Get Transaction By ID ───────────────────────────────────────────────────
+
+export async function getTransactionById(id: string, userId: string) {
+  try {
+    if (!userId) return { success: false, error: "Unauthorized" };
+
+    const tx = await prisma.transaction.findUnique({
+      where: { id },
+      include: {
+        birthCertificateRequest: true,
+      }
+    });
+    if (!tx || tx.userId !== userId) return { success: false, error: "Transaction not found" };
+    return { success: true, data: tx };
+  } catch (error) {
+    console.error("Get transaction by id error:", error);
+    return { success: false, error: "Failed to fetch transaction" };
+  }
+}
+

@@ -23,27 +23,52 @@ export default function PrivacyTermsModal({ isOpen, onClose, onAccept, onDecline
 
     const containerRef = useRef<HTMLDivElement>(null);
 
-    // Reset scroll when switching tabs so the scrollbar starts at the top
+    // Reset scroll and check if content is scrollable when switching tabs or when modal opens
     useEffect(() => {
+        if (!isOpen) {
+            const timer = setTimeout(() => {
+                setHasReadPrivacy(false);
+                setHasReadTerms(false);
+            }, 0);
+            return () => clearTimeout(timer);
+        }
+
+        const checkScrollability = () => {
+            const target = containerRef.current;
+            if (target) {
+                // If scrollHeight is less than or equal to clientHeight (plus a small subpixel tolerance),
+                // it means the content fits completely without needing to scroll.
+                const isScrollable = target.scrollHeight > target.clientHeight + 5;
+                if (!isScrollable) {
+                    if (activeTab === "PRIVACY") {
+                        setHasReadPrivacy(true);
+                    } else if (activeTab === "TERMS") {
+                        setHasReadTerms(true);
+                    }
+                }
+            }
+        };
+
         const resetScroll = () => {
             if (containerRef.current) {
                 containerRef.current.scrollTop = 0;
             }
+            checkScrollability();
         };
 
-        resetScroll();
-
-        // Multi-stage asynchronous resets to counteract DOM repaint lag and browser momentum scrolling
+        // Multi-stage asynchronous checks to counteract DOM repaint lag, layout shift, and browser momentum scrolling
         const t1 = setTimeout(resetScroll, 0);
         const t2 = setTimeout(resetScroll, 50);
         const t3 = setTimeout(resetScroll, 100);
+        const t4 = setTimeout(resetScroll, 250);
 
         return () => {
             clearTimeout(t1);
             clearTimeout(t2);
             clearTimeout(t3);
+            clearTimeout(t4);
         };
-    }, [activeTab]);
+    }, [activeTab, isOpen]);
 
     // Lock document.body background scrolling when modal is open
     useEffect(() => {
@@ -56,6 +81,30 @@ export default function PrivacyTermsModal({ isOpen, onClose, onAccept, onDecline
             document.body.style.overflow = "";
         };
     }, [isOpen]);
+
+    // Check scrollability on window resize in case modal/viewport sizes change dynamically
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const checkScrollability = () => {
+            const target = containerRef.current;
+            if (target) {
+                const isScrollable = target.scrollHeight > target.clientHeight + 5;
+                if (!isScrollable) {
+                    if (activeTab === "PRIVACY") {
+                        setHasReadPrivacy(true);
+                    } else if (activeTab === "TERMS") {
+                        setHasReadTerms(true);
+                    }
+                }
+            }
+        };
+
+        window.addEventListener("resize", checkScrollability);
+        return () => {
+            window.removeEventListener("resize", checkScrollability);
+        };
+    }, [isOpen, activeTab]);
 
     // Scroll tracking to encourage reading before accept (optional highlight)
     const handleScroll = (e: React.UIEvent<HTMLDivElement>, tab: TabType) => {
@@ -90,7 +139,7 @@ export default function PrivacyTermsModal({ isOpen, onClose, onAccept, onDecline
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 15 }}
                         transition={{ type: "spring", duration: 0.5 }}
-                        className="relative w-full max-w-lg bg-white dark:bg-[#0c0f16] border border-slate-200 dark:border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col z-10 max-h-[75vh]"
+                        className="relative w-full max-w-lg bg-white dark:bg-[#0c0f16] border border-slate-200 dark:border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col z-10 max-h-[75vh] touch-pan-y"
                     >
                         {/* Ambient Glow behind header */}
                         <div
@@ -150,7 +199,7 @@ export default function PrivacyTermsModal({ isOpen, onClose, onAccept, onDecline
                         <div
                             ref={containerRef}
                             onScroll={(e) => handleScroll(e, activeTab)}
-                            className="p-4 sm:p-6 md:p-8 overflow-y-auto space-y-4 flex-1 text-slate-600 dark:text-slate-300 scrollbar-thin max-h-[40vh] sm:max-h-[45vh]"
+                            className="p-4 sm:p-6 md:p-8 overflow-y-auto space-y-4 flex-1 text-slate-600 dark:text-slate-300 scrollbar-thin max-h-[40vh] sm:max-h-[45vh] overscroll-contain touch-pan-y [webkit-overflow-scrolling:touch]"
                         >
                             {activeTab === "PRIVACY" ? (
                                 <div className="space-y-3 sm:space-y-4 text-[11px] sm:text-xs md:text-sm font-medium leading-relaxed italic">

@@ -2,7 +2,7 @@
 
 import React, { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Eye, FileText, Download, ZoomIn, ZoomOut, RotateCw, RotateCcw, RefreshCw, Move, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { X, Eye, FileText, ZoomIn, ZoomOut, RotateCw, RotateCcw, RefreshCw, Move, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -107,7 +107,7 @@ export default function DocumentViewerModal({
 
     const activeUrl = React.useMemo(() => {
         // Prefer local File blob URL when available (avoids iframe embedding issues with remote storage)
-        if (file) {
+        if (file && file.size > 0) {
             return URL.createObjectURL(file);
         }
         if (currentDoc) {
@@ -119,14 +119,14 @@ export default function DocumentViewerModal({
     const activeTitle = currentDoc ? currentDoc.label : title;
 
     const fileExtension = React.useMemo(() => {
-        if (file?.name) return getFileExtension(file.name);
+        if (file && file.size > 0 && file.name) return getFileExtension(file.name);
         if (activeUrl) return getFileExtension(activeUrl);
         return "";
     }, [file, activeUrl]);
 
     const isLocalDocx = React.useMemo(() => {
         if (fileExtension !== "docx") return false;
-        if (file) return true;
+        if (file && file.size > 0) return true;
         if (activeUrl && (activeUrl.startsWith("blob:") || activeUrl.startsWith("data:"))) return true;
         return false;
     }, [fileExtension, file, activeUrl]);
@@ -152,7 +152,7 @@ export default function DocumentViewerModal({
         async function renderDocx() {
             try {
                 let docxBlob: Blob;
-                if (file) {
+                if (file && file.size > 0) {
                     docxBlob = file;
                 } else if (activeUrl) {
                     const response = await fetch(activeUrl);
@@ -197,7 +197,7 @@ export default function DocumentViewerModal({
     }, [isOpen, file, activeUrl, isLocalDocx]);
 
     const isPdf = React.useMemo(() => {
-        if (file) {
+        if (file && file.size > 0) {
             return file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
         }
         if (fetchedType) {
@@ -224,7 +224,7 @@ export default function DocumentViewerModal({
 
         let active = true;
 
-        if (file) {
+        if (file && file.size > 0) {
             const reader = new FileReader();
             reader.onloadend = () => {
                 if (active && typeof reader.result === "string") {
@@ -264,7 +264,7 @@ export default function DocumentViewerModal({
 
     const isDocument = React.useMemo(() => {
         if (isPdf) return true;
-        if (file) {
+        if (file && file.size > 0) {
             if (file.type.startsWith("image/")) return false;
             return documentExtensions.includes(fileExtension) || file.type.startsWith("application/");
         }
@@ -315,29 +315,6 @@ export default function DocumentViewerModal({
         setScale(1);
         setRotation(0);
         setPosition({ x: 0, y: 0 });
-    };
-
-    const handleDownload = async () => {
-        if (!activeUrl) return;
-        try {
-            const response = await fetch(activeUrl);
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.href = url;
-
-            const cleanTitle = activeTitle.trim().replace(/[^a-zA-Z0-9\-_]/g, "_") || "document";
-            const ext = fileExtension || (blob.type.includes("pdf") ? "pdf" : blob.type.split("/")[1] || "bin");
-            link.download = `${cleanTitle}.${ext}`;
-
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            window.URL.revokeObjectURL(url);
-        } catch (error) {
-            console.error("Direct download failed, falling back to new tab:", error);
-            window.open(activeUrl, "_blank");
-        }
     };
 
     return (
@@ -437,15 +414,6 @@ export default function DocumentViewerModal({
                                     </div>
                                 )}
 
-                                <Button
-                                    onClick={handleDownload}
-                                    variant="ghost"
-                                    size="icon"
-                                    className="w-8 h-8 rounded-full bg-slate-50 hover:bg-slate-100 dark:bg-white/5 dark:hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-primary transition-all shrink-0"
-                                    title="Download document"
-                                >
-                                    <Download className="w-4 h-4" />
-                                </Button>
                                 <button
                                     onClick={onClose}
                                     className="w-8 h-8 rounded-full bg-slate-50 hover:bg-slate-100 dark:bg-white/5 dark:hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-red-500 transition-colors"
@@ -506,9 +474,6 @@ export default function DocumentViewerModal({
                                         <div className="flex-grow flex flex-col items-center justify-center p-8 text-center">
                                             <p className="text-sm text-red-500 font-bold mb-2">Failed to render preview</p>
                                             <p className="text-xs text-slate-400 max-w-sm mb-4">{docxError}</p>
-                                            <Button onClick={handleDownload} style={{ backgroundColor: themeColor }}>
-                                                <Download className="w-4 h-4 mr-2" /> Download File
-                                            </Button>
                                         </div>
                                     )}
                                     <div
@@ -540,16 +505,8 @@ export default function DocumentViewerModal({
                                                 {activeTitle}
                                             </h4>
                                             <p className="mt-3 text-sm text-slate-400 leading-relaxed">
-                                                This file type cannot be previewed directly in the browser. Open it in a new tab to view or download the submitted document.
+                                                This file type cannot be previewed directly in the browser on this kiosk.
                                             </p>
-                                            <Button
-                                                onClick={handleDownload}
-                                                className="mt-6 h-11 rounded-xl px-6 text-xs font-black uppercase tracking-wider text-white"
-                                                style={{ backgroundColor: themeColor }}
-                                            >
-                                                <Download className="w-4 h-4 mr-2" />
-                                                Download Document
-                                            </Button>
                                         </div>
                                     </div>
                                 )

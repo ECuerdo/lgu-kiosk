@@ -36,6 +36,41 @@ export default function ServiceHeader() {
   const [resident, setResident] = useState<Resident | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
   const { theme, setTheme, resolvedTheme } = useTheme();
+  const [activeFontSize, setActiveFontSize] = useState<string>("md");
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("kiosk_font_size");
+      if (saved) {
+        setActiveFontSize(saved);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
+
+  useEffect(() => {
+    const sizeMap: Record<string, string> = {
+      sm: "14px",
+      md: "16px",
+      lg: "18px",
+      xl: "20px"
+    };
+    try {
+      document.documentElement.style.fontSize = sizeMap[activeFontSize] || "16px";
+    } catch (e) {
+      console.error(e);
+    }
+  }, [activeFontSize]);
+
+  const applyFontSize = (size: string) => {
+    try {
+      localStorage.setItem("kiosk_font_size", size);
+      setActiveFontSize(size);
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const serviceName = useMemo(() => {
     const segment = pathname.split("/").filter(Boolean)[1] || "Service";
@@ -76,10 +111,10 @@ export default function ServiceHeader() {
     <>
       <header className="z-50 flex h-24 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-6 shadow-sm transition-colors dark:border-slate-800 dark:bg-slate-950 md:px-10">
         <div className="flex min-w-0 items-center gap-4">
-          <Link href="/dashboard" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500 transition hover:bg-emerald-50 hover:text-[#1a6b3a] dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-emerald-950/50" aria-label="Dashboard">
+          <Link href="/dashboard" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500 transition hover:bg-emerald-50 hover:text-theme-primary dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-emerald-950/50" aria-label="Dashboard">
             <Home className="h-5 w-5" />
           </Link>
-          <span className="hidden h-12 w-1 rounded-full bg-[#1a6b3a] sm:block" />
+          <span className="hidden h-12 w-1 rounded-full bg-theme-primary sm:block" />
           <div className="min-w-0">
             <p className="text-[9px] font-black uppercase tracking-[0.25em] text-slate-400 dark:text-slate-500">Municipal Service</p>
             <h1 className="truncate text-xl font-black uppercase tracking-tight text-slate-900 dark:text-white md:text-3xl">
@@ -90,7 +125,7 @@ export default function ServiceHeader() {
 
         <div className="flex items-center gap-2 md:gap-3">
           <button type="button" onClick={() => setProfileOpen(true)} className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-left shadow-sm transition hover:border-emerald-300 hover:bg-emerald-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-emerald-700 dark:hover:bg-slate-800 md:px-4">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-emerald-100 text-[#1a6b3a] dark:bg-emerald-950/60 dark:text-emerald-300">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-emerald-100 text-theme-primary dark:bg-emerald-950/60 dark:text-emerald-300">
               {residentPhotoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={residentPhotoUrl} alt="" className="h-full w-full object-cover" />
@@ -109,7 +144,7 @@ export default function ServiceHeader() {
           <div className="w-full max-w-md rounded-[2rem] bg-white p-7 shadow-2xl transition-colors dark:bg-slate-950 dark:shadow-black/40">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[9px] font-black uppercase tracking-[0.25em] text-[#1a6b3a]">Resident Profile</p>
+                <p className="text-[9px] font-black uppercase tracking-[0.25em] text-theme-primary">Resident Profile</p>
                 <h2 className="mt-1 text-2xl font-black text-slate-900 dark:text-white">{displayName}</h2>
               </div>
               <button type="button" onClick={() => setProfileOpen(false)} className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700">
@@ -122,6 +157,34 @@ export default function ServiceHeader() {
               <ProfileRow label="Barangay" value={resident.barangay} />
               <ProfileRow label="Municipality" value={resident.municipality || "Mapandan"} />
             </div>
+
+            {/* Font Size Selector */}
+            <div className="mt-6 border-t border-slate-200 pt-5 dark:border-slate-800">
+              <span className="block text-[9px] font-black uppercase tracking-[0.25em] text-slate-400 dark:text-slate-500">Font Size</span>
+              <div className="mt-2 grid grid-cols-4 gap-2">
+                {[
+                  { value: "sm", label: "Small", preview: "12px" },
+                  { value: "md", label: "Normal", preview: "16px" },
+                  { value: "lg", label: "Large", preview: "20px" },
+                  { value: "xl", label: "X-Large", preview: "24px" }
+                ].map((sz) => (
+                  <button
+                    key={sz.value}
+                    type="button"
+                    onClick={() => applyFontSize(sz.value)}
+                    className={`flex flex-col items-center justify-center rounded-xl border py-2.5 transition-all ${
+                      activeFontSize === sz.value
+                        ? "border-theme-primary bg-emerald-50 text-theme-primary dark:border-theme-primary dark:bg-emerald-950/30 dark:text-emerald-300 font-bold"
+                        : "border-slate-200 bg-white text-slate-700 hover:border-emerald-300 hover:bg-emerald-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-emerald-700"
+                    }`}
+                  >
+                    <span style={{ fontSize: sz.preview }} className="leading-none font-sans">A</span>
+                    <span className="mt-1 text-[9px] font-black uppercase tracking-wider">{sz.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <button
                 type="button"
@@ -134,7 +197,7 @@ export default function ServiceHeader() {
                     {isDarkMode ? "Dark Mode" : "Light Mode"}
                   </span>
                 </span>
-                <span className={`relative flex h-8 w-14 items-center rounded-full p-1 transition-colors ${isDarkMode ? "bg-[#1a6b3a]" : "bg-slate-200"}`}>
+                <span className={`relative flex h-8 w-14 items-center rounded-full p-1 transition-colors ${isDarkMode ? "bg-theme-primary" : "bg-slate-200"}`}>
                   <span className={`h-6 w-6 rounded-full bg-white shadow-md transition-transform ${isDarkMode ? "translate-x-6" : "translate-x-0"}`} />
                 </span>
               </button>
