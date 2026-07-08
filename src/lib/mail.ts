@@ -14,7 +14,7 @@ const transporter = nodemailer.createTransport({
 
 export async function sendOtpEmail(to: string, otp: string, name: string) {
   const mailOptions = {
-    from: `"Mapandan Kiosk" <${process.env.SENDER_EMAIL || process.env.EMAIL_USER}>`,
+    from: `"Mapandan Kiosk" <${senderEmail}>`,
     to,
     subject: 'Your Authentication Code',
     html: `
