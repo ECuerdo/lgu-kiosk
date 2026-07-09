@@ -456,7 +456,7 @@ export default function FaceVerification({
           autoPlay
           muted
           playsInline
-          className="h-full w-full object-cover"
+          className="h-full w-full object-cover -scale-x-100"
         />
         <div className={`absolute inset-0 border-[20px] border-transparent transition-colors duration-300 ${
           livenessPassed 
