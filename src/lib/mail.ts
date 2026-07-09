@@ -3,12 +3,12 @@ import nodemailer from 'nodemailer';
 const senderEmail = process.env.SENDER_EMAIL || process.env.EMAIL_USER;
 
 const transporter = nodemailer.createTransport({
-  host: 'smtp-relay.brevo.com',
+  host: process.env.EMAIL_HOST || 'smtp.gmail.com',
   port: 587,
   secure: false, // true for 465, false for other ports
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+    pass: process.env.EMAIL_PASS ? process.env.EMAIL_PASS.replace(/\s+/g, "") : "",
   },
 });
 

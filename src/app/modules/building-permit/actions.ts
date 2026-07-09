@@ -4,6 +4,7 @@
 import { prisma } from "@/lib/prisma";
 import { uploadFile } from "@/lib/storage";
 import { revalidatePath } from "next/cache";
+import { supabaseAdmin } from "@/lib/supabase-admin";
 
 export async function getCurrentUserResident(userId: string) {
   try {
@@ -19,11 +20,50 @@ export async function getCurrentUserResident(userId: string) {
   }
 }
 
+async function resolveUserId(userId: string): Promise<string> {
+  if (!userId) return userId;
+
+  const residentForUser = await prisma.resident.findUnique({
+    where: { id: userId },
+    include: { user: true }
+  });
+
+  if (residentForUser) {
+    if (residentForUser.userId) {
+      return residentForUser.userId;
+    }
+
+    const fullNameTemp = [residentForUser.firstName, residentForUser.middleName, residentForUser.lastName]
+      .filter(Boolean)
+      .join(" ");
+
+    const newUser = await prisma.user.create({
+      data: {
+        name: fullNameTemp,
+        email: residentForUser.email || null,
+        rfid: residentForUser.rfid || null,
+        role: "USER"
+      }
+    });
+
+    await prisma.resident.update({
+      where: { id: residentForUser.id },
+      data: { userId: newUser.id }
+    });
+
+    return newUser.id;
+  }
+
+  return userId;
+}
+
 export async function submitBuildingPermit(formData: FormData, userId: string) {
   try {
     if (!userId) {
       return { success: false, error: "Unauthorized" };
     }
+
+    const targetUserId = await resolveUserId(userId);
 
     // Get Building Permit Transaction Type
     const type = await prisma.transactionType.findFirst({
@@ -110,13 +150,13 @@ export async function submitBuildingPermit(formData: FormData, userId: string) {
 
     // Get current resident data for snapshot
     const resident = await prisma.resident.findFirst({
-      where: { userId: userId }
+      where: { userId: targetUserId }
     });
 
     // Create the transaction (FOR_REQUESTING)
     const transaction = await prisma.transaction.create({
       data: {
-        userId: userId,
+        userId: targetUserId,
         typeId: type.id,
         status: "FOR_REQUESTING",
         residentSnapshot: resident ? (resident as any) : {},
@@ -140,11 +180,13 @@ export async function saveTransactionSignature(transactionId: string, signatureU
       return { success: false, error: "Unauthorized" };
     }
 
+    const targetUserId = await resolveUserId(userId);
+
     const transaction = await prisma.transaction.findUnique({
       where: { id: transactionId }
     });
 
-    if (!transaction || transaction.userId !== userId) {
+    if (!transaction || transaction.userId !== targetUserId) {
       return { success: false, error: "Transaction not found or unauthorized" };
     }
 
@@ -171,6 +213,8 @@ export async function getExistingBuildingPermits(userId: string) {
       return { success: false, data: [] };
     }
 
+    const targetUserId = await resolveUserId(userId);
+
     const type = await prisma.transactionType.findFirst({
       where: { code: "BUILDING_PERMIT" }
     });
@@ -181,7 +225,7 @@ export async function getExistingBuildingPermits(userId: string) {
 
     const transactions = await prisma.transaction.findMany({
       where: {
-        userId: userId,
+        userId: targetUserId,
         typeId: type.id
       },
       orderBy: { createdAt: 'desc' }
@@ -200,9 +244,11 @@ export async function resubmitBuildingPermit(transactionId: string, formData: Fo
       return { success: false, error: "Unauthorized" };
     }
 
+    const targetUserId = await resolveUserId(userId);
+
     // Fetch the existing transaction
     const transaction = await prisma.transaction.findUnique({
-      where: { id: transactionId, userId: userId }
+      where: { id: transactionId, userId: targetUserId }
     });
 
     if (!transaction || transaction.status !== "FOR_REVISION") {
@@ -623,5 +669,33 @@ export async function getBarangayNames() {
   } catch (error) {
     console.error("Get barangay names error:", error);
     return { success: false, data: [] as string[] };
+  }
+}
+
+export async function getSecureUploadUrlAction(fieldName: string, folder: string, fileExt: string, userId: string) {
+  try {
+    if (!userId) return { success: false as const, error: "Unauthorized" };
+
+    const sanitizedField = fieldName.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const timestamp = Date.now();
+    const path = `${folder}/${userId}/${sanitizedField}-${timestamp}.${fileExt}`;
+    const bucket = "system-assets";
+
+    const { data, error } = await supabaseAdmin.storage
+      .from(bucket)
+      .createSignedUploadUrl(path);
+
+    if (error || !data?.signedUrl) {
+      return { success: false as const, error: error?.message || "Failed to create signed URL" };
+    }
+
+    const { data: { publicUrl } } = supabaseAdmin.storage
+      .from(bucket)
+      .getPublicUrl(path);
+
+    return { success: true as const, signedUrl: data.signedUrl, publicUrl };
+  } catch (error) {
+    console.error("Get secure upload URL error:", error);
+    return { success: false as const, error: "Upload service unavailable" };
   }
 }
