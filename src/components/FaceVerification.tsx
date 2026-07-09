@@ -138,7 +138,7 @@ export default function FaceVerification({
   const [referenceDescriptor, setReferenceDescriptor] = useState<Float32Array | null>(null);
   const [matchState, setMatchState] = useState<"idle" | "matched" | "mismatch">("idle");
   const autoVerifyRef = useRef(false);
-  const [livenessPassed, setLivenessPassed] = useState(true);
+  const livenessPassed = true;
 
   const recognition = useMemo(() => getRecognitionObject(facialRecognition), [facialRecognition]);
 
