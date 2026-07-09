@@ -71,13 +71,10 @@ function preprocessImage(
   filter: string
 ): HTMLCanvasElement {
   const canvas = document.createElement("canvas");
-  if (source instanceof HTMLVideoElement) {
-    canvas.width = source.videoWidth || 640;
-    canvas.height = source.videoHeight || 480;
-  } else {
-    canvas.width = source.width || 640;
-    canvas.height = source.height || 480;
-  }
+  // Downscale the processing frame to a low-res size (320x240) to minimize CPU load on low-end kiosks
+  canvas.width = 320;
+  canvas.height = 240;
+  
   const ctx = canvas.getContext("2d");
   if (ctx) {
     ctx.filter = filter;
@@ -87,64 +84,38 @@ function preprocessImage(
 }
 
 async function detectReferenceFace(img: HTMLImageElement | HTMLVideoElement | HTMLCanvasElement) {
-  const configs = [
-    new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.3 }),
-    new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.2 }),
-    new faceapi.TinyFaceDetectorOptions({ inputSize: 512, scoreThreshold: 0.15 }), // Better for glasses/partial occlusion
-    new faceapi.TinyFaceDetectorOptions({ inputSize: 608, scoreThreshold: 0.15 }), // Higher detail fallback
-  ];
+  // Use a smaller 320 inputSize configuration to decrease CPU workload on low-end kiosk processors
+  const option = new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.15 });
 
-  for (const options of configs) {
-    const detection = await faceapi.detectSingleFace(img, options).withFaceLandmarks(true).withFaceDescriptor();
-    if (detection) return detection;
-  }
-
+  // If already a canvas, just run detection
   if (img instanceof HTMLCanvasElement) {
-    return null;
+    return await faceapi.detectSingleFace(img, option).withFaceLandmarks(true).withFaceDescriptor();
   }
 
+  // 1. Always prioritize the Kiosk camera optimization preset (anti-glare + anti-scanline)
+  // because the kiosk camera is consistently overexposed. This avoids the high cost of double scans per frame.
   try {
-    const canvasA = preprocessImage(img, "brightness(0.55) contrast(1.8) saturate(1.2) blur(0.8px)");
-    for (const options of configs) {
-      const detection = await faceapi.detectSingleFace(canvasA, options).withFaceLandmarks(true).withFaceDescriptor();
-      if (detection) return detection;
-    }
+    const canvas = preprocessImage(img, "brightness(0.6) contrast(1.7) saturate(1.1) blur(0.6px)");
+    const processedDetection = await faceapi.detectSingleFace(canvas, option).withFaceLandmarks(true).withFaceDescriptor();
+    if (processedDetection) return processedDetection;
   } catch (e) {
-    console.error("Preset A (anti-overexposure + anti-scanline) preprocessing failed:", e);
+    console.error("Kiosk camera preprocessing failed:", e);
   }
 
-  try {
-    const canvasB = preprocessImage(img, "brightness(0.65) contrast(1.5) blur(0.5px)");
-    for (const options of configs) {
-      const detection = await faceapi.detectSingleFace(canvasB, options).withFaceLandmarks(true).withFaceDescriptor();
-      if (detection) return detection;
-    }
-  } catch (e) {
-    console.error("Preset B (moderate washout) preprocessing failed:", e);
-  }
+  // 2. Fallback to raw frame detection
+  const rawDetection = await faceapi.detectSingleFace(img, option).withFaceLandmarks(true).withFaceDescriptor();
+  if (rawDetection) return rawDetection;
 
+  // 3. Fallback to backlight preset (if backlit)
   try {
-    const canvasC = preprocessImage(img, "brightness(1.25) contrast(1.3) saturate(1.05)");
-    for (const options of configs) {
-      const detection = await faceapi.detectSingleFace(canvasC, options).withFaceLandmarks(true).withFaceDescriptor();
-      if (detection) return detection;
-    }
+    const canvasBacklight = preprocessImage(img, "brightness(1.25) contrast(1.3)");
+    const backlightDetection = await faceapi.detectSingleFace(canvasBacklight, option).withFaceLandmarks(true).withFaceDescriptor();
+    if (backlightDetection) return backlightDetection;
   } catch (e) {
-    console.error("Preset C (anti-backlight) preprocessing failed:", e);
+    console.error("Backlight preprocessing failed:", e);
   }
 
   return null;
-}
-
-function distance(p1: faceapi.Point, p2: faceapi.Point) {
-  return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
-}
-
-function calculateEAR(eyePoints: faceapi.Point[]) {
-  const d_vertical1 = distance(eyePoints[1], eyePoints[5]);
-  const d_vertical2 = distance(eyePoints[2], eyePoints[4]);
-  const d_horizontal = distance(eyePoints[0], eyePoints[3]);
-  return (d_vertical1 + d_vertical2) / (2.0 * d_horizontal);
 }
 
 export default function FaceVerification({
@@ -168,9 +139,8 @@ export default function FaceVerification({
   const [matchState, setMatchState] = useState<"idle" | "matched" | "mismatch">("idle");
   const autoVerifyRef = useRef(false);
   const [livenessPassed, setLivenessPassed] = useState(false);
-  const eyeClosedRef = useRef(false);
 
-  const earHistoryRef = useRef<number[]>([]);
+  const noseHistoryRef = useRef<{ x: number; y: number }[]>([]);
 
   const recognition = useMemo(() => getRecognitionObject(facialRecognition), [facialRecognition]);
 
@@ -300,7 +270,7 @@ export default function FaceVerification({
     const detectLiveFace = async () => {
       const video = videoRef.current;
       if (!video || video.readyState < 2) {
-        if (!cancelled) timeoutId = setTimeout(detectLiveFace, 150);
+        if (!cancelled) timeoutId = setTimeout(detectLiveFace, 250);
         return;
       }
 
@@ -314,41 +284,34 @@ export default function FaceVerification({
           if (!result) {
             setError(null);
           } else {
-            // Calculate EAR for blink/liveness detection
+            // Calculate nose tip coordinates for micro-movement liveness detection
             const landmarks = result.landmarks;
-            const leftEye = landmarks.getLeftEye();
-            const rightEye = landmarks.getRightEye();
-            
-            const leftEAR = calculateEAR(leftEye);
-            const rightEAR = calculateEAR(rightEye);
-            const avgEAR = (leftEAR + rightEAR) / 2;
+            const noseTip = landmarks.positions[30]; // Nose tip index in 68-point models
 
-            // Keep history of last 15 frames for running average
-            const history = earHistoryRef.current;
-            history.push(avgEAR);
-            if (history.length > 15) {
+            const history = noseHistoryRef.current;
+            history.push({ x: noseTip.x, y: noseTip.y });
+            if (history.length > 12) {
               history.shift();
             }
 
-            // Exclude current frame for cleaner baseline baseline
-            const prevFrames = history.slice(0, -1);
-            const runningAvg = prevFrames.length > 0
-              ? prevFrames.reduce((a, b) => a + b, 0) / prevFrames.length
-              : avgEAR;
+            if (!livenessPassed && history.length >= 6) {
+              const xs = history.map((p) => p.x);
+              const ys = history.map((p) => p.y);
+              const minX = Math.min(...xs);
+              const maxX = Math.max(...xs);
+              const minY = Math.min(...ys);
+              const maxY = Math.max(...ys);
 
-            console.log(
-              `[Liveness] EAR: ${avgEAR.toFixed(3)} | Baseline: ${runningAvg.toFixed(3)} | Ratio: ${(avgEAR / runningAvg).toFixed(2)} | Closed State: ${eyeClosedRef.current}`
-            );
+              const rangeX = maxX - minX;
+              const rangeY = maxY - minY;
 
-            if (!livenessPassed && prevFrames.length >= 5) {
-              // If EAR drops below 83% of the baseline, count eyes as closed
-              if (avgEAR < runningAvg * 0.83) {
-                eyeClosedRef.current = true;
-              } 
-              // If eyes were closed and now recovered to at least 92% of baseline
-              else if (eyeClosedRef.current && avgEAR > runningAvg * 0.92) {
+              console.log(`[Liveness] Micro-movement range - X: ${rangeX.toFixed(3)}, Y: ${rangeY.toFixed(3)}`);
+
+              // Real people naturally sway, breathe, or exhibit micro-tremors (0.3px to 15px variation)
+              // Static photos positioned in front of the camera remain perfectly static (0.0px variation)
+              if ((rangeX > 0.3 || rangeY > 0.3) && rangeX < 15 && rangeY < 15) {
                 setLivenessPassed(true);
-                console.log("[Liveness] Blink detected! Liveness check passed.");
+                console.log("[Liveness] Micro-movements verified. Liveness passed.");
               }
             }
           }
@@ -357,7 +320,7 @@ export default function FaceVerification({
         if (!cancelled) setLiveDescriptor(null);
       } finally {
         if (!cancelled) {
-          timeoutId = setTimeout(detectLiveFace, 150);
+          timeoutId = setTimeout(detectLiveFace, 250);
         }
       }
     };
@@ -427,9 +390,7 @@ export default function FaceVerification({
     : !referenceReady
       ? "Preparing saved face reference..."
       : !livenessPassed
-        ? (eyeClosedRef.current 
-            ? "Eye closure detected! Now open your eyes..." 
-            : "Please blink your eyes to verify liveness.")
+        ? "Analyzing biometric liveness..."
         : matchState === "matched"
           ? "Face matched against the saved record."
           : matchState === "mismatch"
@@ -461,14 +422,12 @@ export default function FaceVerification({
         <div className={`absolute inset-0 border-[20px] border-transparent transition-colors duration-300 ${
           livenessPassed 
             ? 'border-t-green-500/30' 
-            : eyeClosedRef.current 
-              ? 'border-t-yellow-500/30' 
-              : 'border-t-theme-secondary/30'
+            : 'border-t-theme-secondary/30'
         } animate-pulse`} />
 
         {/* Liveness badge inside video */}
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-3 py-1 text-[10px] font-bold tracking-wider text-white uppercase backdrop-blur-sm border border-white/10">
-          {livenessPassed ? "🟢 Live" : eyeClosedRef.current ? "🟡 Open Eyes" : "🔵 Blink"}
+          {livenessPassed ? "🟢 Live" : "📷 Analyzing..."}
         </div>
 
         {verifying && (
