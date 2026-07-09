@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { getCivilRegistryStatus } from "./actions";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -37,6 +38,7 @@ interface RegistryService {
   requirements?: Record<string, string[]>;
   estimatedTime?: string;
   baseFee?: string;
+  dbCode?: string;
 }
 
 const CIVIL_REGISTRY_SERVICES: RegistryService[] = [
@@ -58,7 +60,8 @@ const CIVIL_REGISTRY_SERVICES: RegistryService[] = [
     },
     icon: <Clock className="w-8 h-8 text-theme-primary" />,
     status: "ACTIVE",
-    path: "/modules/civil-registry/birth-registration"
+    path: "/modules/civil-registry/birth-registration",
+    dbCode: "LCR_BIRTH_REG"
   },
   {
     id: "birth-request",
@@ -77,7 +80,8 @@ const CIVIL_REGISTRY_SERVICES: RegistryService[] = [
     },
     icon: <Copy className="w-8 h-8 text-theme-primary" />,
     status: "ACTIVE",
-    path: "/modules/civil-registry/birth-certificate-request"
+    path: "/modules/civil-registry/birth-certificate-request",
+    dbCode: "LCR_BIRTH"
   },
   {
     id: "birth-psa",
@@ -99,6 +103,7 @@ const CIVIL_REGISTRY_SERVICES: RegistryService[] = [
     path: "/modules/civil-registry/birth-psa-endorsement",
     estimatedTime: "3-5 Business Days",
     baseFee: "₱150.00",
+    dbCode: "LCR_PSA_ENDORSEMENT",
     requirements: {
       en: [
         "Verified Local Birth Certificate Copy",
@@ -134,6 +139,7 @@ const CIVIL_REGISTRY_SERVICES: RegistryService[] = [
     path: "/modules/civil-registry/death-registration",
     estimatedTime: "Same Day Processing",
     baseFee: "Free",
+    dbCode: "LCR_DEATH_REG",
     requirements: {
       en: [
         "Certificate of Death signed by attending physician",
@@ -169,6 +175,7 @@ const CIVIL_REGISTRY_SERVICES: RegistryService[] = [
     path: "/modules/civil-registry/death-certificate-request",
     estimatedTime: "1-2 Business Days",
     baseFee: "₱100.00",
+    dbCode: "LCR_DEATH",
     requirements: {
       en: [
         "Deceased person's full name",
@@ -204,6 +211,7 @@ const CIVIL_REGISTRY_SERVICES: RegistryService[] = [
     path: "/modules/civil-registry/death-psa-endorsement",
     estimatedTime: "3-5 Business Days",
     baseFee: "₱150.00",
+    dbCode: "LCR_DEATH_PSA_ENDORSEMENT",
     requirements: {
       en: [
         "Verified Local Death Certificate Copy",
@@ -239,6 +247,7 @@ const CIVIL_REGISTRY_SERVICES: RegistryService[] = [
     path: "/modules/civil-registry/marriage-license-application",
     estimatedTime: "10-12 Days",
     baseFee: "₱250.00",
+    dbCode: "LCR_MARRIAGE_LICENSE",
     requirements: {
       en: [
         "Birth Certificate (PSA copy) of both applicants",
@@ -276,6 +285,7 @@ const CIVIL_REGISTRY_SERVICES: RegistryService[] = [
     path: "/modules/civil-registry/marriage-registration",
     estimatedTime: "1-2 Business Days",
     baseFee: "Free (Standard Registration)",
+    dbCode: "LCR_MARRIAGE_REG",
     requirements: {
       en: [
         "Four (4) original copies of the Marriage Contract",
@@ -311,6 +321,7 @@ const CIVIL_REGISTRY_SERVICES: RegistryService[] = [
     path: "/modules/civil-registry/marriage-certificate-request",
     estimatedTime: "1-2 Business Days",
     baseFee: "₱150.00",
+    dbCode: "LCR_MARRIAGE",
     requirements: {
       en: [
         "Husband's full name",
@@ -346,6 +357,7 @@ const CIVIL_REGISTRY_SERVICES: RegistryService[] = [
     path: "/modules/civil-registry/marriage-psa-endorsement",
     estimatedTime: "3-5 Business Days",
     baseFee: "₱150.00",
+    dbCode: "LCR_MARRIAGE_PSA_ENDORSEMENT",
     requirements: {
       en: [
         "Verified Local Marriage Contract / Certificate Copy",
@@ -484,6 +496,21 @@ export default function CivilRegistryHubPage() {
     return "md";
   });
 
+  const [inactiveCodes, setInactiveCodes] = useState<string[]>([]);
+
+  useEffect(() => {
+    async function loadStatus() {
+      const res = await getCivilRegistryStatus();
+      if (res.success && res.data) {
+        const inactive = res.data
+          .filter((type: { code: string; isActive: boolean }) => !type.isActive)
+          .map((type: { code: string }) => type.code);
+        setInactiveCodes(inactive);
+      }
+    }
+    loadStatus();
+  }, []);
+
   const handleServiceClick = (service: RegistryService) => {
     if (service.status === "ACTIVE" && service.path) {
       router.push(service.path);
@@ -599,7 +626,9 @@ export default function CivilRegistryHubPage() {
           <div className="space-y-16">
             {(["BIRTH", "DEATH", "MARRIAGE"] as const).map((cat) => {
               const catTrans = CATEGORY_TRANSLATIONS[cat];
-              const services = CIVIL_REGISTRY_SERVICES.filter(s => s.category === cat);
+              const services = CIVIL_REGISTRY_SERVICES.filter(
+                s => s.category === cat && (!s.dbCode || !inactiveCodes.includes(s.dbCode))
+              );
 
               return (
                 <div key={cat} className="space-y-8">
