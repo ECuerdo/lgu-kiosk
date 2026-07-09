@@ -5,9 +5,6 @@ import { prisma } from "@/lib/prisma";
 export async function getCivilRegistryStatus() {
   try {
     const types = await prisma.transactionType.findMany({
-      where: {
-        category: "Civil Registry",
-      },
       select: {
         code: true,
         isActive: true,
