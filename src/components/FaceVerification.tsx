@@ -104,23 +104,33 @@ async function detectReferenceFace(img: HTMLImageElement | HTMLVideoElement | HT
   }
 
   try {
-    const canvasA = preprocessImage(img, "brightness(0.75) contrast(1.4) saturate(1.1)");
+    const canvasA = preprocessImage(img, "brightness(0.55) contrast(1.8) saturate(1.2) blur(0.8px)");
     for (const options of configs) {
       const detection = await faceapi.detectSingleFace(canvasA, options).withFaceLandmarks(true).withFaceDescriptor();
       if (detection) return detection;
     }
   } catch (e) {
-    console.error("Preset A (anti-overexposure) preprocessing failed:", e);
+    console.error("Preset A (anti-overexposure + anti-scanline) preprocessing failed:", e);
   }
 
   try {
-    const canvasB = preprocessImage(img, "brightness(1.25) contrast(1.3) saturate(1.05)");
+    const canvasB = preprocessImage(img, "brightness(0.65) contrast(1.5) blur(0.5px)");
     for (const options of configs) {
       const detection = await faceapi.detectSingleFace(canvasB, options).withFaceLandmarks(true).withFaceDescriptor();
       if (detection) return detection;
     }
   } catch (e) {
-    console.error("Preset B (anti-backlight) preprocessing failed:", e);
+    console.error("Preset B (moderate washout) preprocessing failed:", e);
+  }
+
+  try {
+    const canvasC = preprocessImage(img, "brightness(1.25) contrast(1.3) saturate(1.05)");
+    for (const options of configs) {
+      const detection = await faceapi.detectSingleFace(canvasC, options).withFaceLandmarks(true).withFaceDescriptor();
+      if (detection) return detection;
+    }
+  } catch (e) {
+    console.error("Preset C (anti-backlight) preprocessing failed:", e);
   }
 
   return null;
@@ -446,7 +456,7 @@ export default function FaceVerification({
           autoPlay
           muted
           playsInline
-          className="h-full w-full object-cover -scale-x-100"
+          className="h-full w-full object-cover"
         />
         <div className={`absolute inset-0 border-[20px] border-transparent transition-colors duration-300 ${
           livenessPassed 
