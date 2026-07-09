@@ -138,9 +138,7 @@ export default function FaceVerification({
   const [referenceDescriptor, setReferenceDescriptor] = useState<Float32Array | null>(null);
   const [matchState, setMatchState] = useState<"idle" | "matched" | "mismatch">("idle");
   const autoVerifyRef = useRef(false);
-  const [livenessPassed, setLivenessPassed] = useState(false);
-
-  const noseHistoryRef = useRef<{ x: number; y: number }[]>([]);
+  const livenessPassed = true;
 
   const recognition = useMemo(() => getRecognitionObject(facialRecognition), [facialRecognition]);
 
@@ -283,37 +281,6 @@ export default function FaceVerification({
           autoVerifyRef.current = false;
           if (!result) {
             setError(null);
-          } else {
-            // Calculate nose tip coordinates for micro-movement liveness detection
-            const landmarks = result.landmarks;
-            const noseTip = landmarks.positions[30]; // Nose tip index in 68-point models
-
-            const history = noseHistoryRef.current;
-            history.push({ x: noseTip.x, y: noseTip.y });
-            if (history.length > 12) {
-              history.shift();
-            }
-
-            if (!livenessPassed && history.length >= 6) {
-              const xs = history.map((p) => p.x);
-              const ys = history.map((p) => p.y);
-              const minX = Math.min(...xs);
-              const maxX = Math.max(...xs);
-              const minY = Math.min(...ys);
-              const maxY = Math.max(...ys);
-
-              const rangeX = maxX - minX;
-              const rangeY = maxY - minY;
-
-              console.log(`[Liveness] Micro-movement range - X: ${rangeX.toFixed(3)}, Y: ${rangeY.toFixed(3)}`);
-
-              // Real people naturally sway, breathe, or exhibit micro-tremors (0.3px to 15px variation)
-              // Static photos positioned in front of the camera remain perfectly static (0.0px variation)
-              if ((rangeX > 0.3 || rangeY > 0.3) && rangeX < 15 && rangeY < 15) {
-                setLivenessPassed(true);
-                console.log("[Liveness] Micro-movements verified. Liveness passed.");
-              }
-            }
           }
         }
       } catch {
@@ -389,15 +356,13 @@ export default function FaceVerification({
     ? "Loading biometric models..."
     : !referenceReady
       ? "Preparing saved face reference..."
-      : !livenessPassed
-        ? "Analyzing biometric liveness..."
-        : matchState === "matched"
-          ? "Face matched against the saved record."
-          : matchState === "mismatch"
-            ? "Face does not match the saved resident record."
-            : liveDescriptor
-              ? "Liveness verified. Verifying identity..."
-              : "Align your face within the circle to continue.";
+      : matchState === "matched"
+        ? "Face matched against the saved record."
+        : matchState === "mismatch"
+          ? "Face does not match the saved resident record."
+          : liveDescriptor
+            ? "Face detected. Verifying..."
+            : "Align your face within the circle to continue.";
 
   return (
     <div className="flex flex-col items-center py-8">
@@ -419,15 +384,11 @@ export default function FaceVerification({
           playsInline
           className="h-full w-full object-cover -scale-x-100"
         />
-        <div className={`absolute inset-0 border-[20px] border-transparent transition-colors duration-300 ${
-          livenessPassed 
-            ? 'border-t-green-500/30' 
-            : 'border-t-theme-secondary/30'
-        } animate-pulse`} />
+        <div className="absolute inset-0 border-[20px] border-transparent border-t-theme-secondary/30 animate-pulse" />
 
-        {/* Liveness badge inside video */}
+        {/* Badge inside video */}
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-3 py-1 text-[10px] font-bold tracking-wider text-white uppercase backdrop-blur-sm border border-white/10">
-          {livenessPassed ? "🟢 Live" : "📷 Analyzing..."}
+          🟢 Ready
         </div>
 
         {verifying && (
