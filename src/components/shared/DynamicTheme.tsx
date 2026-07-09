@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect } from "react";
-import { useTheme } from "next-themes";
 
 function hexToHsl(hex: string) {
     hex = hex.replace(/^#/, "");

@@ -117,6 +117,40 @@ const CIVIL_REGISTRY_SERVICES: RegistryService[] = [
       ]
     }
   },
+  {
+    id: "appointment-birth-psa-endorsement",
+    category: "BIRTH",
+    title: {
+      en: "Birth PSA Appointment Endorsement",
+      fil: "Tipanan sa Endorso ng Kapanganakan sa PSA",
+      pang: "Tipanan ed Endorso na Inyanak ed PSA",
+      ilo: "Tipanan ti Endorso ti Nayanak iti PSA"
+    },
+    desc: {
+      en: "Schedule appointment and request endorsement of a verified local birth certificate record to the PSA.",
+      fil: "Mag-iskedyul ng tipanan at humiling ng endorso ng lokal na sertipiko ng kapanganakan sa PSA.",
+      pang: "Mag-schedule na tipanan tan kerew na endorso na lokal ya sertipiko na niyanak ed PSA.",
+      ilo: "Mag-schedule ti tipanan ken agdawat ti endorso ti lokal a sertipiko ti pannakayanak iti PSA."
+    },
+    icon: <FileCheck className="w-8 h-8 text-theme-primary" />,
+    status: "ACTIVE",
+    path: "/modules/civil-registry/appointment-birth-psa-endorsement",
+    estimatedTime: "3-5 Business Days",
+    baseFee: "₱150.00",
+    dbCode: "LCR_PSA_APPOINTMENT_ENDORSEMENT",
+    requirements: {
+      en: [
+        "Verified Local Birth Certificate Copy",
+        "Valid ID of the requestor/parent",
+        "PSA Negative Certification"
+      ],
+      fil: [
+        "Beripikadong Kopya ng Lokal na Sertipiko ng Kapanganakan",
+        "Valid ID ng nagre-request o magulang",
+        "PSA Negative Certification"
+      ]
+    }
+  },
 
   // DEATH REGISTRY SERVICES
   {
@@ -212,6 +246,40 @@ const CIVIL_REGISTRY_SERVICES: RegistryService[] = [
     estimatedTime: "3-5 Business Days",
     baseFee: "₱150.00",
     dbCode: "LCR_DEATH_PSA_ENDORSEMENT",
+    requirements: {
+      en: [
+        "Verified Local Death Certificate Copy",
+        "Valid ID of the requestor",
+        "LCR Certification of Death record"
+      ],
+      fil: [
+        "Beripikadong Kopya ng Lokal na Sertipiko ng Pagpanaw",
+        "Valid ID ng nagre-request",
+        "LCR Certification"
+      ]
+    }
+  },
+  {
+    id: "appointment-death-psa-endorsement",
+    category: "DEATH",
+    title: {
+      en: "Death PSA Appointment Endorsement",
+      fil: "Tipanan sa Endorso ng Pagpanaw sa PSA",
+      pang: "Tipanan ed Endorso na Inatey ed PSA",
+      ilo: "Tipanan ti Endorso ti Ipupusay iti PSA"
+    },
+    desc: {
+      en: "Schedule an appointment and request endorsement of a verified local death certificate record to the PSA.",
+      fil: "Mag-iskedyul ng tipanan at humiling ng endorso ng lokal na sertipiko ng kamatayan sa PSA.",
+      pang: "Mag-schedule na tipanan tan kerew na endorso na lokal ya sertipiko na inatey ed PSA.",
+      ilo: "Mag-schedule ti tipanan ken agdawat ti endorso ti lokal a sertipiko ti ipupusay iti PSA."
+    },
+    icon: <FileCheck className="w-8 h-8 text-theme-primary" />,
+    status: "ACTIVE",
+    path: "/modules/civil-registry/appointment-death-psa-endorsement",
+    estimatedTime: "3-5 Business Days",
+    baseFee: "₱150.00",
+    dbCode: "LCR_DEATH_PSA_APPOINTMENT_ENDORSEMENT",
     requirements: {
       en: [
         "Verified Local Death Certificate Copy",
@@ -358,6 +426,40 @@ const CIVIL_REGISTRY_SERVICES: RegistryService[] = [
     estimatedTime: "3-5 Business Days",
     baseFee: "₱150.00",
     dbCode: "LCR_MARRIAGE_PSA_ENDORSEMENT",
+    requirements: {
+      en: [
+        "Verified Local Marriage Contract / Certificate Copy",
+        "Valid ID of the requestor",
+        "LCR Certification of Marriage record"
+      ],
+      fil: [
+        "Beripikadong Kopya ng Lokal na Kontrata ng Kasal",
+        "Valid ID ng nagre-request",
+        "LCR Certification"
+      ]
+    }
+  },
+  {
+    id: "appointment-marriage-psa-endorsement",
+    category: "MARRIAGE",
+    title: {
+      en: "Marriage PSA Appointment Endorsement",
+      fil: "Tipanan sa Endorso ng Kasal sa PSA",
+      pang: "Tipanan ed Endorso na Kasal ed PSA",
+      ilo: "Tipanan ti Endorso ti Kasar iti PSA"
+    },
+    desc: {
+      en: "Schedule an appointment and request endorsement of a verified local marriage certificate record to the PSA.",
+      fil: "Mag-iskedyul ng tipanan at humiling ng endorso ng lokal na sertipiko ng kasal sa PSA.",
+      pang: "Mag-schedule na tipanan tan kerew na endorso na lokal ya sertipiko na kasal ed PSA.",
+      ilo: "Mag-schedule ti tipanan ken agdawat ti endorso ti lokal a sertipiko ti kasar iti PSA."
+    },
+    icon: <FileCheck className="w-8 h-8 text-theme-primary" />,
+    status: "ACTIVE",
+    path: "/modules/civil-registry/appointment-marriage-psa-endorsement",
+    estimatedTime: "3-5 Business Days",
+    baseFee: "₱150.00",
+    dbCode: "LCR_MARRIAGE_PSA_APPOINTMENT_ENDORSEMENT",
     requirements: {
       en: [
         "Verified Local Marriage Contract / Certificate Copy",
