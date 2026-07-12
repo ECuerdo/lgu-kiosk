@@ -10,7 +10,6 @@ model User {
   id                   String        @id @default(cuid())
   name                 String?
   email                String?       @unique
-  rfid                 String?       @unique
   emailVerified        DateTime?
   password             String?
   role                 UserRole      @default(USER)
@@ -19,6 +18,7 @@ model User {
   isEmailVerified      Boolean       @default(false)
   isPasswordChanged    Boolean       @default(false)
   rejectionCount       Int           @default(0)
+  rejectionResetAt     DateTime?
   managedBarangay      String?
   department           String?
   accessiblePages      String[]      @default([])
@@ -30,6 +30,9 @@ model User {
   sessions             Session[]
   transactions         Transaction[] @relation("ResidentTransactions")
   driverTransactions   Transaction[] @relation("DriverTransactions")
+  isSynced             Boolean       @default(false)
+  rfid                 String?       @unique
+  reviews              Review[]
 }
 
 model Account {
@@ -83,6 +86,7 @@ model Dining {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   barangay      String?
+  reviews       Review[]
 }
 
 model Accommodation {
@@ -103,6 +107,7 @@ model Accommodation {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   barangay      String?
+  reviews       Review[]
 }
 
 model TourismSpot {
@@ -294,6 +299,7 @@ model Resident {
   tin                   String?
   gsis                  String?
   sss                   String?
+  philhealthNumber      String?
   occupation            String?
   employer              String?
   motherFirstName       String?
@@ -326,6 +332,7 @@ model Resident {
   updatedAt             DateTime          @updatedAt
   facialRecognition     Json?
   isDead                Boolean           @default(false)
+  isSynced              Boolean           @default(false)
   registrationStatus    ResidentStatus    @default(PENDING)
   registrationType      String?           @default("SELF")
   rfid                  String?           @unique
@@ -415,24 +422,27 @@ model ResidentCategory {
 }
 
 model Report {
-  id           String       @id @default(cuid())
+  id           String        @id @default(cuid())
   userId       String
   category     String
   description  String
-  status       ReportStatus @default(PENDING)
-  images       String[]     @default([])
+  status       ReportStatus  @default(PENDING)
+  images       String[]      @default([])
   latitude     Float?
   longitude    Float?
   address      String?
   adminComment String?
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-  user         User         @relation(fields: [userId], references: [id])
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  user         User          @relation(fields: [userId], references: [id])
+  barangayId   String?
+  barangay     BarangayInfo? @relation(fields: [barangayId], references: [id])
 
   @@index([userId])
   @@index([status])
   @@index([category])
   @@index([createdAt])
+  @@index([barangayId])
 }
 
 model AboutPage {
@@ -530,6 +540,8 @@ model BarangayInfo {
   deliveryFee           Float   @default(0)
   isLogisticsActive     Boolean @default(true)
   estimatedDeliveryDays Int     @default(3)
+
+  reports Report[]
 }
 
 enum UserRole {
@@ -541,6 +553,7 @@ enum UserRole {
   ADMIN_AIDE
   RIDER
   ENGINEER
+  MPDC_ZONING
 }
 
 enum ResidentStatus {
@@ -576,16 +589,19 @@ model TransactionType {
   supportsECopy        Boolean @default(false)
 
   // Dynamic Configuration
-  requiredDocs Json    @default("[]") // e.g., ["Valid ID", "Proof of Income"]
-  formSchema   Json    @default("{}") // Definitions for extra fields needed
-  logicCode    String? // Code-hook for backend calculator (e.g., "cedula_calc_v1")
-  defaultFees  Json    @default("[]")
+  requiredDocs   Json    @default("[]") // e.g., ["Valid ID", "Proof of Income"]
+  formSchema     Json    @default("{}") // Definitions for extra fields needed
+  logicCode      String? // Code-hook for backend calculator (e.g., "cedula_calc_v1")
+  defaultFees    Json    @default("[]")
+  pickupAddress  String? // The physical location/office where the document or certificate should be claimed
+  processingTime String? // Estimated minutes or days of process for the transaction
 
   // Operations
   slaDays       Int      @default(3)
   processorRole UserRole @default(TREASURY_STAFF)
   isActive      Boolean  @default(true)
   studentFee    Float?   @default(0)
+  lateFee       Float?   @default(0)
 
   transactions Transaction[]
   createdAt    DateTime      @default(now())
@@ -627,6 +643,7 @@ model Transaction {
   eCopyUrl     String? // Link to generated digital file
   orUrl        String? // Link to Official Receipt file
   isStudent    Boolean @default(false)
+  isPaid       Boolean @default(false)
 
   // Audit & Workflow
   processedBy      String? // User ID of the Treasury Staff who handled it
@@ -643,16 +660,24 @@ model Transaction {
   disputeRemarks  String?
   disputeProofUrl String?
 
-  cedula                     Cedula? // One-to-one link to the issued document
-  businessPermit             BusinessPermit? // One-to-one link to the issued business permit
-  buildingPermit             BuildingPermit? // One-to-one link to the issued building permit
-  birthCertificateRequest    BirthCertificateRequest? // One-to-one link to the birth certificate request
-  birthCertificateRegistry   BirthCertificateRegistry? // One-to-one link for new registrations
-  deathRegistration          DeathRegistration? // One-to-one link for death registrations
-  deathCertificateRequest    DeathCertificateRequest? // One-to-one link to the death certificate request
-  marriageRegistration       MarriageRegistration? // One-to-one link for marriage registrations
-  marriageLicenseApplication MarriageLicenseApplication? // One-to-one link for marriage license applications
-  marriageCertificateRequest MarriageCertificateRequest? // One-to-one link to the marriage certificate request
+  cedula                        Cedula? // One-to-one link to the issued document
+  businessPermit                BusinessPermit? // One-to-one link to the issued business permit
+  buildingPermit                BuildingPermit? // One-to-one link to the issued building permit
+  birthCertificateRequest       BirthCertificateRequest? // One-to-one link to the birth certificate request
+  birthCertificateRegistry      BirthCertificateRegistry? // One-to-one link for new registrations
+  deathRegistration             DeathRegistration? // One-to-one link for death registrations
+  deathCertificateRequest       DeathCertificateRequest? // One-to-one link to the death certificate request
+  marriageRegistration          MarriageRegistration? // One-to-one link for marriage registrations
+  marriageLicenseApplication    MarriageLicenseApplication? // One-to-one link for marriage license applications
+  marriageCertificateRequest    MarriageCertificateRequest? // One-to-one link to the marriage certificate request
+  marriagePsaEndorsementRequest MarriagePsaEndorsementRequest? // One-to-one link to the marriage psa endorsement request
+  birthPsaEndorsementRequest    BirthPsaEndorsementRequest? // One-to-one link to the birth psa endorsement request
+  deathPsaEndorsementRequest    DeathPsaEndorsementRequest? // One-to-one link to the death psa endorsement request
+
+  appointmentDate DateTime?
+  appointmentSlot String?
+  queueNumber     String? // Formatted queue ticket number (e.g. 06272026-AM-P002)
+  isPriority      Boolean   @default(false)
 
   isCancelled Boolean  @default(false)
   createdAt   DateTime @default(now())
@@ -663,6 +688,8 @@ model Transaction {
   @@index([status])
   @@index([typeId])
   @@index([createdAt])
+  @@index([appointmentDate])
+  @@index([appointmentDate, appointmentSlot])
 }
 
 model Cedula {
@@ -883,6 +910,130 @@ model MarriageCertificateRequest {
   updatedAt DateTime @updatedAt
 }
 
+model MarriagePsaEndorsementRequest {
+  id            String      @id @default(cuid())
+  transactionId String      @unique
+  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  registryNumber String?  @unique // Book/Page number or Registry ID
+  dateIssued     DateTime @default(now())
+
+  // Contracting Couple details
+  husbandFullName String // Husband's Full Name
+  wifeFullName    String // Wife's Maiden Full Name
+  dateOfMarriage  DateTime // Date of Marriage
+  placeOfMarriage String // Location of the Marriage
+
+  // Informant / Requester Details
+  relationship         String
+  contactNumber        String
+  email                String?
+  informantFirstName   String
+  informantMiddleName  String?
+  informantLastName    String
+  informantSuffix      String?
+  informantBirthDate   DateTime?
+  informantAge         Int?
+  informantCivilStatus String?
+  informantCitizenship String?
+  informantOccupation  String?
+  informantAddress     String?
+
+  // Required documents
+  psaNegativeCert String // PSA Negative Certification URL
+  form3a          String // Form 3A URL
+
+  documentUrl    String? // Link to official generated E-Copy PDF / proof of endorsement
+  issuedBy       String? // LCR Officer Name
+  verificationId String  @unique @default(cuid()) // Secure hash for verification QR Code
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model BirthPsaEndorsementRequest {
+  id            String      @id @default(cuid())
+  transactionId String      @unique
+  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  registryNumber String?  @unique // Book/Page number or Registry ID
+  dateIssued     DateTime @default(now())
+
+  // Subject (Child) details
+  subjectFullName    String // Full name of the child
+  subjectDateOfBirth DateTime? // Date of birth
+  mothersMaidenName  String? // Mother's maiden name
+
+  // Informant / Requester Details
+  relationship         String
+  contactNumber        String
+  email                String?
+  informantFirstName   String
+  informantMiddleName  String?
+  informantLastName    String
+  informantSuffix      String?
+  informantBirthDate   DateTime?
+  informantAge         Int?
+  informantCivilStatus String?
+  informantCitizenship String?
+  informantOccupation  String?
+  informantAddress     String?
+
+  // Required documents
+  psaNegativeCert String // PSA Negative Certification URL
+  form1a          String // Form 1A URL
+
+  documentUrl    String? // Link to official generated E-Copy PDF / proof of endorsement
+  issuedBy       String? // LCR Officer Name
+  verificationId String  @unique @default(cuid()) // Secure hash for verification QR Code
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model DeathPsaEndorsementRequest {
+  id            String      @id @default(cuid())
+  transactionId String      @unique
+  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  registryNumber String?  @unique // Book/Page number or Registry ID
+  dateIssued     DateTime @default(now())
+
+  // Subject (Deceased) details
+  subjectFullName    String // Full name of the deceased
+  subjectDateOfDeath DateTime? // Date of death
+  mothersMaidenName  String? // Mother's maiden name
+  fathersName        String? // Father's name
+  placeOfDeath       String? // Place of death
+  causeOfDeath       String? // Cause of death
+
+  // Informant / Requester Details
+  relationship         String
+  contactNumber        String
+  email                String?
+  informantFirstName   String
+  informantMiddleName  String?
+  informantLastName    String
+  informantSuffix      String?
+  informantBirthDate   DateTime?
+  informantAge         Int?
+  informantCivilStatus String?
+  informantCitizenship String?
+  informantOccupation  String?
+  informantAddress     String?
+
+  // Required documents
+  psaNegativeCert String // PSA Negative Certification URL
+  form2a          String // Form 2A URL
+
+  documentUrl    String? // Link to official generated E-Copy PDF / proof of endorsement
+  issuedBy       String? // LCR Officer Name
+  verificationId String  @unique @default(cuid()) // Secure hash for verification QR Code
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model BirthCertificateRegistry {
   id            String       @id @default(cuid())
   transactionId String?      @unique
@@ -965,6 +1116,7 @@ model Payment {
   method        PaymentType   @default(CASH)
   status        PaymentStatus @default(PENDING)
   reference     String?
+  orNumber      String?
   meta          Json?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
@@ -991,4 +1143,40 @@ model PasswordResetToken {
 
   @@index([email])
   @@index([expiresAt])
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  rating    Int // Rating from 1 to 5
+  comment   String?
+  mediaUrl  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  accommodationId String?
+  accommodation   Accommodation? @relation(fields: [accommodationId], references: [id], onDelete: Cascade)
+
+  diningId String?
+  dining   Dining? @relation(fields: [diningId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([accommodationId])
+  @@index([diningId])
+}
+
+model AppointmentConfig {
+  id           String   @id @default(cuid())
+  department   String   @unique // "TREASURY", "BPLO", "REGISTRAR", "ENGINEER"
+  maxSlots     Int      @default(50)
+  maxSlotsAM   Int      @default(25)
+  maxSlotsPM   Int      @default(25)
+  amTimeLabel  String   @default("08:00 AM - 11:00 AM")
+  pmTimeLabel  String   @default("01:00 PM - 04:00 PM")
+  blockedDates String[] @default([]) // Array of ISO strings (e.g., ["2026-12-25"])
+  activeDays   Int[]    @default([1, 2, 3, 4, 5]) // Days of week active (1 = Monday, 5 = Friday, etc.)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
