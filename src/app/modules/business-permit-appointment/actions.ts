@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { generateQueueNumber } from "@/lib/queue";
 import { revalidatePath } from "next/cache";
+import { uploadFile } from "@/lib/storage";
 
 export async function getCurrentUserResident(userId: string) {
   try {
@@ -100,6 +101,18 @@ export async function getPreviousPermits(userId: string) {
   }
 }
 
+export async function getSystemThemeColor() {
+  try {
+    const setting = await prisma.systemSetting.findUnique({
+      where: { key: "theme_color" }
+    });
+    return { success: true, data: setting?.value || "#059669" };
+  } catch (error) {
+    console.error("Get system theme color error:", error);
+    return { success: false, data: "#059669" };
+  }
+}
+
 export async function cleanupPastDueBusinessAppointments(userId?: string) {
   try {
     const manilaDateString = new Intl.DateTimeFormat("en-US", {
@@ -138,6 +151,19 @@ export async function cleanupPastDueBusinessAppointments(userId?: string) {
     });
   } catch (error) {
     console.error("Error cleaning up past-due business appointments:", error);
+  }
+}
+
+async function processFileUpload(file: File | null, userId: string, folder: string): Promise<string | null> {
+  if (!file || file.size === 0 || typeof file === "string") return null;
+  try {
+    const timestamp = Date.now();
+    const path = `business-permit-appointments/${userId}/${folder}/${timestamp}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+    const url = await uploadFile(file, path);
+    return url;
+  } catch (error) {
+    console.error("File upload error:", error);
+    return null;
   }
 }
 
@@ -182,16 +208,53 @@ export async function submitBusinessAppointment(formData: FormData, userId: stri
     const residentSnapshot = JSON.parse(formData.get("residentSnapshot") as string);
     const additionalData = JSON.parse(formData.get("additionalData") as string);
 
-    // Kiosk handles file upload URLs via handoff/session.
-    const idUrl = formData.get("existingIdUrl") as string || null;
-    const brgyUrl = formData.get("existingBrgyUrl") as string || null;
-    const dtiSecUrl = formData.get("existingDtiSecUrl") as string || null;
-    const ctcUrl = formData.get("existingCtcUrl") as string || null;
-    const sanitaryPermitUrl = formData.get("existingSanitaryPermitUrl") as string || null;
-    const fireSafetyUrl = formData.get("existingFireSafetyUrl") as string || null;
-    const previousPermitUrl = formData.get("existingPreviousPermitUrl") as string || null;
-    const birCorUrl = formData.get("existingBirCorUrl") as string || null;
-    const locationPhotoUrl = formData.get("existingLocationPhotoUrl") as string || null;
+    // File inputs (uploaded directly) or existing URLs from handoff/session
+    const idFile = formData.get("idFile") as File | null;
+    const brgyClearanceFile = formData.get("brgyClearanceFile") as File | null;
+    const dtiSecFile = formData.get("dtiSecFile") as File | null;
+    const ctcFile = formData.get("ctcFile") as File | null;
+    const sanitaryPermitFile = formData.get("sanitaryPermitFile") as File | null;
+    const fireSafetyFile = formData.get("fireSafetyFile") as File | null;
+    const previousPermitFile = formData.get("previousPermitFile") as File | null;
+    const birCorFile = formData.get("birCorFile") as File | null;
+    const locationPhotoFile = formData.get("locationPhotoFile") as File | null;
+
+    const existingIdUrl = formData.get("existingIdUrl") as string || null;
+    const existingBrgyUrl = formData.get("existingBrgyUrl") as string || null;
+    const existingDtiSecUrl = formData.get("existingDtiSecUrl") as string || null;
+    const existingCtcUrl = formData.get("existingCtcUrl") as string || null;
+    const existingSanitaryPermitUrl = formData.get("existingSanitaryPermitUrl") as string || null;
+    const existingFireSafetyUrl = formData.get("existingFireSafetyUrl") as string || null;
+    const existingPreviousPermitUrl = formData.get("existingPreviousPermitUrl") as string || null;
+    const existingBirCorUrl = formData.get("existingBirCorUrl") as string || null;
+    const existingLocationPhotoUrl = formData.get("existingLocationPhotoUrl") as string || null;
+
+    let idUrl = await processFileUpload(idFile, userId, "ids");
+    if (!idUrl) idUrl = existingIdUrl;
+
+    let brgyUrl = await processFileUpload(brgyClearanceFile, userId, "brgy");
+    if (!brgyUrl) brgyUrl = existingBrgyUrl;
+
+    let dtiSecUrl = await processFileUpload(dtiSecFile, userId, "dti_sec");
+    if (!dtiSecUrl) dtiSecUrl = existingDtiSecUrl;
+
+    let ctcUrl = await processFileUpload(ctcFile, userId, "ctc");
+    if (!ctcUrl) ctcUrl = existingCtcUrl;
+
+    let sanitaryPermitUrl = await processFileUpload(sanitaryPermitFile, userId, "sanitary");
+    if (!sanitaryPermitUrl) sanitaryPermitUrl = existingSanitaryPermitUrl;
+
+    let fireSafetyUrl = await processFileUpload(fireSafetyFile, userId, "fire_safety");
+    if (!fireSafetyUrl) fireSafetyUrl = existingFireSafetyUrl;
+
+    let previousPermitUrl = await processFileUpload(previousPermitFile, userId, "prev_permit");
+    if (!previousPermitUrl) previousPermitUrl = existingPreviousPermitUrl;
+
+    let birCorUrl = await processFileUpload(birCorFile, userId, "bir_cor");
+    if (!birCorUrl) birCorUrl = existingBirCorUrl;
+
+    let locationPhotoUrl = await processFileUpload(locationPhotoFile, userId, "location_photo");
+    if (!locationPhotoUrl) locationPhotoUrl = existingLocationPhotoUrl;
 
     const updatedAdditionalData = {
       ...additionalData,
@@ -296,5 +359,48 @@ export async function submitBusinessAppointment(formData: FormData, userId: stri
   } catch (error) {
     console.error("Submit business appointment error:", error);
     return { success: false, error: "Failed to book business permit appointment" };
+  }
+}
+
+export async function getBploSettings() {
+  try {
+    const settingsList = await prisma.systemSetting.findMany({
+      where: {
+        key: {
+          in: [
+            "bplo_tax_rate_new",
+            "bplo_health_card_fee",
+            "bplo_retail_tax_rate_low",
+            "bplo_retail_tax_rate_high",
+            "bplo_manufacturer_tax_rate",
+            "bplo_wholesaler_tax_rate",
+            "bplo_mayors_permit_matrix",
+            "bplo_sanitary_fee_matrix",
+            "bplo_garbage_fee_matrix"
+          ]
+        }
+      }
+    });
+    
+    const settingsMap: Record<string, string> = {
+      bplo_tax_rate_new: "0.0005",
+      bplo_health_card_fee: "100.00",
+      bplo_retail_tax_rate_low: "0.022",
+      bplo_retail_tax_rate_high: "0.011",
+      bplo_manufacturer_tax_rate: "0.004125",
+      bplo_wholesaler_tax_rate: "0.0055",
+      bplo_mayors_permit_matrix: "",
+      bplo_sanitary_fee_matrix: "",
+      bplo_garbage_fee_matrix: ""
+    };
+    
+    settingsList.forEach(s => {
+      settingsMap[s.key] = s.value;
+    });
+    
+    return { success: true, data: settingsMap };
+  } catch (error) {
+    console.error("Get BPLO settings error:", error);
+    return { success: false, error: "Failed to fetch BPLO settings" };
   }
 }

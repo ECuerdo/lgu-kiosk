@@ -74,6 +74,7 @@ interface CedulaAppointmentClientProps {
   bookedSlots: { appointmentDate: Date; appointmentSlot: string }[];
   hasActiveIndividual: boolean;
   hasActiveJuridical: boolean;
+  themeColor: string;
 }
 
 export function CedulaAppointmentClient({
@@ -82,7 +83,8 @@ export function CedulaAppointmentClient({
   config,
   bookedSlots,
   hasActiveIndividual,
-  hasActiveJuridical
+  hasActiveJuridical,
+  themeColor
 }: CedulaAppointmentClientProps) {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState<Step>("STATUS");
@@ -96,7 +98,6 @@ export function CedulaAppointmentClient({
   const [isPriorityLane, setIsPriorityLane] = useState(false);
   const [printTriggered, setPrintTriggered] = useState(false);
 
-  const themeColor = "#10B981"; // Emerald
   const branding = {
     logo: "/logo.png",
     word1: "MUNICIPALITY",

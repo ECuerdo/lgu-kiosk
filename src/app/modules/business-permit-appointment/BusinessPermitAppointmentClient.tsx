@@ -29,6 +29,8 @@ import { Separator } from "@/components/ui/separator";
 import PrivacyTermsModal from "@/components/shared/PrivacyTermsModal";
 import DocumentViewerModal from "@/components/shared/DocumentViewerModal";
 import SchedulePicker from "@/components/shared/SchedulePicker";
+import QRCode from "qrcode";
+import SecureQrUploadModal from "@/components/shared/SecureQrUploadModal";
 import { compressImage } from "@/lib/image-compression";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -130,6 +132,7 @@ interface BusinessPermitAppointmentClientProps {
   bookedSlots: { appointmentDate: Date; appointmentSlot: string }[];
   hasActivePermit: boolean;
   previousPermits: any[];
+  themeColor: string;
 }
 
 export function BusinessPermitAppointmentClient({
@@ -138,7 +141,8 @@ export function BusinessPermitAppointmentClient({
   config,
   bookedSlots,
   hasActivePermit,
-  previousPermits
+  previousPermits,
+  themeColor
 }: BusinessPermitAppointmentClientProps) {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState<Step>("PATHWAY");
@@ -155,7 +159,6 @@ export function BusinessPermitAppointmentClient({
   const [queueNumber, setQueueNumber] = useState<string | null>(null);
   const [printTriggered, setPrintTriggered] = useState(false);
 
-  const themeColor = "#3B82F6"; // Blue
   const branding = {
     logo: "/logo.png",
     word1: "MUNICIPALITY",
@@ -269,7 +272,34 @@ export function BusinessPermitAppointmentClient({
   const [birCorFile, setBirCorFile] = useState<File | null>(null);
   const [locationPhotoFile, setLocationPhotoFile] = useState<File | null>(null);
 
-  const [existingIdUrl] = useState<string | null>(resident?.idFrontUrl || null);
+  const [existingIdUrl, setExistingIdUrl] = useState<string | null>(resident?.idFrontUrl || null);
+  const [existingCtcUrl, setExistingCtcUrl] = useState<string | null>(null);
+  const [existingDtiSecUrl, setExistingDtiSecUrl] = useState<string | null>(null);
+  const [existingBrgyClearanceUrl, setExistingBrgyClearanceUrl] = useState<string | null>(null);
+  const [existingSanitaryPermitUrl, setExistingSanitaryPermitUrl] = useState<string | null>(null);
+  const [existingFireSafetyUrl, setExistingFireSafetyUrl] = useState<string | null>(null);
+  const [existingPreviousPermitUrl, setExistingPreviousPermitUrl] = useState<string | null>(null);
+  const [existingBirCorUrl, setExistingBirCorUrl] = useState<string | null>(null);
+  const [existingLocationPhotoUrl, setExistingLocationPhotoUrl] = useState<string | null>(null);
+
+  // Document File Names (for mobile QR uploads display)
+  const [idFileName, setIdFileName] = useState("");
+  const [ctcFileName, setCtcFileName] = useState("");
+  const [dtiSecFileName, setDtiSecFileName] = useState("");
+  const [brgyClearanceFileName, setBrgyClearanceFileName] = useState("");
+  const [sanitaryPermitFileName, setSanitaryPermitFileName] = useState("");
+  const [fireSafetyFileName, setFireSafetyFileName] = useState("");
+  const [previousPermitFileName, setPreviousPermitFileName] = useState("");
+  const [birCorFileName, setBirCorFileName] = useState("");
+  const [locationPhotoFileName, setLocationPhotoFileName] = useState("");
+
+  // QR Handoff States
+  const [handoffToken, setHandoffToken] = useState("");
+  const [handoffQrCode, setHandoffQrCode] = useState("");
+  const [handoffExpiresAt, setHandoffExpiresAt] = useState(0);
+  const [isHandoffOpen, setIsHandoffOpen] = useState(false);
+  const [isCreatingHandoff, setIsCreatingHandoff] = useState(false);
+  const [handoffSessionSlot, setHandoffSessionSlot] = useState("");
   const [showValidationErrors, setShowValidationErrors] = useState(false);
 
   // Document Viewers
@@ -283,6 +313,100 @@ export function BusinessPermitAppointmentClient({
     setViewerUrl(url);
     setViewerTitle(title);
     setViewerOpen(true);
+  };
+
+  // QR Handoff Polling
+  useEffect(() => {
+    if (!handoffToken) return;
+    const poll = window.setInterval(async () => {
+      try {
+        const response = await fetch(`/api/upload-handoff/${encodeURIComponent(handoffToken)}`, {
+          cache: "no-store",
+        });
+        const result = await response.json();
+        if (result.status === "uploaded") {
+          const files = result.files || [];
+          if (files[0]) {
+            const uploadedUrl = files[0].url;
+            const originalName = files[0].fileName || "Upload Completed";
+            
+            // Map bp_ field to correct url state and filename state
+            if (handoffSessionSlot === "bp_idFile") {
+              setExistingIdUrl(uploadedUrl);
+              setIdFileName(originalName);
+            } else if (handoffSessionSlot === "bp_ctcFile") {
+              setExistingCtcUrl(uploadedUrl);
+              setCtcFileName(originalName);
+            } else if (handoffSessionSlot === "bp_dtiSecFile") {
+              setExistingDtiSecUrl(uploadedUrl);
+              setDtiSecFileName(originalName);
+            } else if (handoffSessionSlot === "bp_brgyClearanceFile") {
+              setExistingBrgyClearanceUrl(uploadedUrl);
+              setBrgyClearanceFileName(originalName);
+            } else if (handoffSessionSlot === "bp_sanitaryPermitFile") {
+              setExistingSanitaryPermitUrl(uploadedUrl);
+              setSanitaryPermitFileName(originalName);
+            } else if (handoffSessionSlot === "bp_fireSafetyFile") {
+              setExistingFireSafetyUrl(uploadedUrl);
+              setFireSafetyFileName(originalName);
+            } else if (handoffSessionSlot === "bp_previousPermitFile") {
+              setExistingPreviousPermitUrl(uploadedUrl);
+              setPreviousPermitFileName(originalName);
+            } else if (handoffSessionSlot === "bp_birCorFile") {
+              setExistingBirCorUrl(uploadedUrl);
+              setBirCorFileName(originalName);
+            } else if (handoffSessionSlot === "bp_locationPhotoFile") {
+              setExistingLocationPhotoUrl(uploadedUrl);
+              setLocationPhotoFileName(originalName);
+            }
+            
+            setIsHandoffOpen(false);
+            setHandoffToken("");
+            toast.success("Document uploaded successfully from mobile device!");
+          }
+        } else if (!response.ok) {
+          setIsHandoffOpen(false);
+          setHandoffToken("");
+          toast.error("QR Code session expired.");
+        }
+      } catch (error) {
+        console.error("Poller error:", error);
+      }
+    }, 2500);
+    return () => window.clearInterval(poll);
+  }, [handoffToken, handoffSessionSlot]);
+
+  const startHandoff = async (field: string) => {
+    if (!resident || isCreatingHandoff) return;
+    setIsCreatingHandoff(true);
+    try {
+      const userId = resident.userId || resident.id;
+      // We prefix with bp_ for business permit slots
+      const slot = `bp_${field}`;
+      const response = await fetch("/api/upload-handoff", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, slot }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Unable to create QR upload session.");
+      
+      const qrDataUrl = await QRCode.toDataURL(result.uploadUrl, {
+        width: 320,
+        margin: 2,
+        color: { dark: "#0f172a", light: "#ffffff" },
+      });
+      
+      setHandoffToken(result.token);
+      setHandoffSessionSlot(slot);
+      setHandoffQrCode(qrDataUrl);
+      setHandoffExpiresAt(result.expiresAt);
+      setIsHandoffOpen(true);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to configure handoff.");
+    } finally {
+      setIsCreatingHandoff(false);
+    }
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, setter: (f: File | null) => void) => {
@@ -360,9 +484,7 @@ export function BusinessPermitAppointmentClient({
       return !hasActivePermit;
     }
     if (step === "PROFILE") {
-      const hasCapital = businessType === "NEW" ? !!formState.capitalInvestment : !!formState.grossSales;
-      const hasRegistration = businessType === "NEW" ? (!!formState.registrationType && !!formState.dtiSecNumber && !!formState.dtiSecDate) : !!formState.permitNumber;
-      return !!formState.businessName && !!formState.lineOfBusiness && !!formState.barangay && hasCapital && !!formState.businessBranch && !!formState.tinNumber && hasRegistration;
+      return true;
     }
     if (step === "CHECKLIST") {
       return true;
@@ -440,6 +562,14 @@ export function BusinessPermitAppointmentClient({
       if (locationPhotoFile) formDataPayload.append("locationPhotoFile", locationPhotoFile);
 
       if (existingIdUrl) formDataPayload.append("existingIdUrl", existingIdUrl);
+      if (existingCtcUrl) formDataPayload.append("existingCtcUrl", existingCtcUrl);
+      if (existingDtiSecUrl) formDataPayload.append("existingDtiSecUrl", existingDtiSecUrl);
+      if (existingBrgyClearanceUrl) formDataPayload.append("existingBrgyUrl", existingBrgyClearanceUrl);
+      if (existingSanitaryPermitUrl) formDataPayload.append("existingSanitaryPermitUrl", existingSanitaryPermitUrl);
+      if (existingFireSafetyUrl) formDataPayload.append("existingFireSafetyUrl", existingFireSafetyUrl);
+      if (existingPreviousPermitUrl) formDataPayload.append("existingPreviousPermitUrl", existingPreviousPermitUrl);
+      if (existingBirCorUrl) formDataPayload.append("existingBirCorUrl", existingBirCorUrl);
+      if (existingLocationPhotoUrl) formDataPayload.append("existingLocationPhotoUrl", existingLocationPhotoUrl);
 
       const res = await submitBusinessAppointment(formDataPayload, userId);
       if (res.success && res.data) {
@@ -624,10 +754,10 @@ export function BusinessPermitAppointmentClient({
               {currentStep === "PROFILE" && (
                 <motion.div
                   key="profile"
-                  initial={{ opacity: 0, y: 10 }}
+                  initial={{ opacity: 0, y: 15 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="space-y-6"
+                  exit={{ opacity: 0, y: -15 }}
+                  className="space-y-8"
                 >
                   <div className="border-b border-slate-100 dark:border-white/5 pb-4">
                     <h2 className="text-2xl font-black uppercase italic tracking-tighter">Business Details</h2>
@@ -636,57 +766,94 @@ export function BusinessPermitAppointmentClient({
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">Business Name <span className="text-rose-500">*</span></Label>
+                      <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">Official Business Name (DTI/SEC)</Label>
                       <Input
                         type="text"
                         value={formState.businessName}
                         onChange={e => handleInputChange("businessName", e.target.value)}
-                        placeholder="Official registered name"
-                        className="rounded-xl h-12"
+                        placeholder="e.g. Mapandan Express Café Inc."
+                        className="rounded-xl h-12 border-slate-200 transition-all duration-200"
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">Organization Type <span className="text-rose-500">*</span></Label>
+                      <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">Trade / Signage Name</Label>
+                      <Input
+                        type="text"
+                        value={formState.tradeName}
+                        onChange={e => handleInputChange("tradeName", e.target.value)}
+                        placeholder="e.g. Mapandan Express Café"
+                        className="rounded-xl h-12 border-slate-200"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">Organization Type</Label>
                       <div className="relative">
                         <select
                           value={formState.orgType}
                           onChange={e => handleInputChange("orgType", e.target.value)}
-                          className="w-full appearance-none rounded-xl h-12 border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0c0d12]/50 px-4 pr-10 text-xs md:text-sm font-bold text-slate-900 dark:text-white focus:outline-none cursor-pointer"
+                          className="w-full appearance-none rounded-xl h-12 border border-slate-200 dark:border-white bg-white dark:bg-[#0c0d12]/50 px-4 pr-10 text-xs md:text-sm font-bold text-slate-900 dark:text-white focus:outline-none transition-all cursor-pointer shadow-sm hover:border-slate-300 dark:hover:border-white/20"
                         >
                           <option value="SOLE_PROPRIETORSHIP">Sole Proprietorship</option>
                           <option value="PARTNERSHIP">Partnership</option>
                           <option value="CORPORATION">Corporation</option>
                         </select>
-                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                          <ChevronDown className="w-4 h-4" />
+                        </div>
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">Barangay Location <span className="text-rose-500">*</span></Label>
+                      <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">Business Barangay Location</Label>
                       <div className="relative">
                         <select
                           value={formState.barangay}
                           onChange={e => handleInputChange("barangay", e.target.value)}
-                          className="w-full appearance-none rounded-xl h-12 border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0c0d12]/50 px-4 pr-10 text-xs md:text-sm font-bold text-slate-900 dark:text-white focus:outline-none cursor-pointer"
+                          className="w-full appearance-none rounded-xl h-12 border border-slate-200 dark:border-white bg-white dark:bg-[#0c0d12]/50 px-4 pr-10 text-xs md:text-sm font-bold text-slate-900 dark:text-white focus:outline-none transition-all cursor-pointer shadow-sm hover:border-slate-300 dark:hover:border-white/20"
                         >
                           <option value="" disabled>Select Barangay...</option>
                           {MAPANDAN_BARANGAYS.map((b) => (
                             <option key={b} value={b}>{b}</option>
                           ))}
                         </select>
-                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                          <ChevronDown className="w-4 h-4" />
+                        </div>
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">Line of Business <span className="text-rose-500">*</span></Label>
+                      <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">Building / House No. / Unit</Label>
+                      <Input
+                        type="text"
+                        value={formState.building}
+                        onChange={e => handleInputChange("building", e.target.value)}
+                        placeholder="e.g. Bldg 4A, Green Meadows (Optional)"
+                        className="rounded-xl h-12 border-slate-200"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">Street Address</Label>
+                      <Input
+                        type="text"
+                        value={formState.street}
+                        onChange={e => handleInputChange("street", e.target.value)}
+                        placeholder="e.g. Rizal Avenue (Optional)"
+                        className="rounded-xl h-12 border-slate-200"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">Line of Business / Classification</Label>
                       {!isOtherLine ? (
                         <div className="relative">
                           <select
                             value={formState.lineOfBusiness || ""}
                             onChange={e => handleLineOfBusinessSelect(e.target.value)}
-                            className="w-full appearance-none rounded-xl h-12 border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0c0d12]/50 px-4 pr-10 text-xs md:text-sm font-bold text-slate-900 dark:text-white focus:outline-none cursor-pointer"
+                            className="w-full appearance-none rounded-xl h-12 border border-slate-200 dark:border-white bg-white dark:bg-[#0c0d12]/50 px-4 pr-10 text-xs md:text-sm font-bold text-slate-900 dark:text-white focus:outline-none transition-all cursor-pointer shadow-sm hover:border-slate-300 dark:hover:border-white/20"
                           >
                             <option value="" disabled>Select Line of Business...</option>
                             {LINE_OF_BUSINESS_OPTIONS.map((opt) => (
@@ -694,7 +861,9 @@ export function BusinessPermitAppointmentClient({
                             ))}
                             <option value="Other">Other...</option>
                           </select>
-                          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                          <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                            <ChevronDown className="w-4 h-4" />
+                          </div>
                         </div>
                       ) : (
                         <div className="relative">
@@ -702,8 +871,8 @@ export function BusinessPermitAppointmentClient({
                             type="text"
                             value={formState.lineOfBusiness}
                             onChange={e => handleInputChange("lineOfBusiness", e.target.value)}
-                            placeholder="Enter custom business type"
-                            className="rounded-xl h-12 pr-10"
+                            placeholder="Enter your custom line of business..."
+                            className="rounded-xl h-12 border-slate-200 pr-10 font-bold"
                           />
                           <button
                             type="button"
@@ -711,7 +880,7 @@ export function BusinessPermitAppointmentClient({
                               setIsOtherLine(false);
                               handleInputChange("lineOfBusiness", "");
                             }}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-650"
+                            className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-full text-slate-400 hover:text-slate-650"
                           >
                             <X className="w-3.5 h-3.5" />
                           </button>
@@ -719,89 +888,170 @@ export function BusinessPermitAppointmentClient({
                       )}
                     </div>
 
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">Employee Count</Label>
+                      <Input
+                        type="number"
+                        value={formState.employeeCount}
+                        onChange={e => handleInputChange("employeeCount", e.target.value)}
+                        min="0"
+                        className="rounded-xl h-12 border-slate-200"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">Store Area (in Sqm)</Label>
+                      <Input
+                        type="number"
+                        value={formState.businessArea}
+                        onChange={e => handleInputChange("businessArea", e.target.value)}
+                        placeholder="e.g. 120"
+                        className="rounded-xl h-12 border-slate-200"
+                      />
+                    </div>
+
                     {businessType === "NEW" ? (
-                      <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">Initial Capitalization (₱) <span className="text-rose-500">*</span></Label>
+                      <div className="space-y-2 relative">
+                        <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">Initial Capitalization (₱)</Label>
                         <Input
                           type="text"
                           value={formState.capitalInvestment}
-                          onChange={e => handleInputChange("capitalInvestment", e.target.value.replace(/[^0-9.,]/g, ""))}
-                          placeholder="e.g. 150,000"
-                          className="rounded-xl h-12"
+                          onChange={e => {
+                            const cleanVal = e.target.value.replace(/[^0-9.,]/g, "");
+                            handleInputChange("capitalInvestment", cleanVal);
+                          }}
+                          placeholder="e.g. 250,000"
+                          className="rounded-xl h-12 border-slate-200 font-mono font-bold"
                         />
                       </div>
                     ) : (
-                      <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">Annual Gross Sales (₱) <span className="text-rose-500">*</span></Label>
+                      <div className="space-y-2 relative">
+                        <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">Annual Gross Sales In The Previous Year (₱)</Label>
                         <Input
                           type="text"
                           value={formState.grossSales}
-                          onChange={e => handleInputChange("grossSales", e.target.value.replace(/[^0-9.,]/g, ""))}
-                          placeholder="e.g. 500,000"
-                          className="rounded-xl h-12"
+                          onChange={e => {
+                            const cleanVal = e.target.value.replace(/[^0-9.,]/g, "");
+                            handleInputChange("grossSales", cleanVal);
+                          }}
+                          placeholder="e.g. 1,200,000"
+                          className="rounded-xl h-12 border-slate-200 font-mono font-bold"
                         />
                       </div>
                     )}
 
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">TIN Number <span className="text-rose-500">*</span></Label>
+                      <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">Branch of Business</Label>
+                      <div className="relative">
+                        <select
+                          value={formState.businessBranch}
+                          onChange={e => handleInputChange("businessBranch", e.target.value)}
+                          className="w-full appearance-none rounded-xl h-12 border border-slate-200 dark:border-white bg-white dark:bg-[#0c0d12]/50 px-4 pr-10 text-xs md:text-sm font-bold text-slate-900 dark:text-white focus:outline-none transition-all cursor-pointer shadow-sm hover:border-slate-300 dark:hover:border-white/20"
+                        >
+                          <option value="MAIN">Main</option>
+                          <option value="BRANCH">Branch</option>
+                        </select>
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                          <ChevronDown className="w-4 h-4" />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">TIN No. of the Business</Label>
                       <Input
                         type="text"
                         value={formState.tinNumber}
                         onChange={e => handleInputChange("tinNumber", e.target.value)}
                         placeholder="e.g. 123-456-789-000"
-                        className="rounded-xl h-12"
+                        className="rounded-xl h-12 border-slate-200 font-bold"
                       />
                     </div>
 
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">PhilHealth Number <span className="text-slate-400 font-normal ml-1">(Optional)</span></Label>
+                      <Input
+                        type="text"
+                        value={formState.philhealthNumber}
+                        onChange={e => handleInputChange("philhealthNumber", e.target.value)}
+                        placeholder="e.g. 12-345678901-2"
+                        className="rounded-xl h-12 border-slate-200 font-bold"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">Pag-Ibig MID Number <span className="text-slate-400 font-normal ml-1">(Optional)</span></Label>
+                      <Input
+                        type="text"
+                        value={formState.pagibigNumber}
+                        onChange={e => handleInputChange("pagibigNumber", e.target.value)}
+                        placeholder="e.g. 1234-5678-9012"
+                        className="rounded-xl h-12 border-slate-200 font-bold"
+                      />
+                    </div>
+
+                    <div className="space-y-2 col-span-1 md:col-span-2">
+                      <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">SSS Number <span className="text-slate-400 font-normal ml-1">(Optional)</span></Label>
+                      <Input
+                        type="text"
+                        value={formState.sssNumber}
+                        onChange={e => handleInputChange("sssNumber", e.target.value)}
+                        placeholder="e.g. 12-3456789-0"
+                        className="rounded-xl h-12 border-slate-200 font-bold"
+                      />
+                    </div>
+
+                    {/* Pathway Specific Inputs */}
                     {businessType === "NEW" ? (
                       <div className="space-y-2 col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="space-y-2">
-                          <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">Registration <span className="text-rose-500">*</span></Label>
+                          <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">Registration Type</Label>
                           <div className="relative">
                             <select
                               value={formState.registrationType}
                               onChange={e => handleInputChange("registrationType", e.target.value)}
-                              className="w-full appearance-none rounded-xl h-12 border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0c0d12]/50 px-4 pr-10 text-xs md:text-sm font-bold text-slate-900 dark:text-white focus:outline-none cursor-pointer"
+                              className="w-full appearance-none rounded-xl h-12 border border-slate-200 dark:border-white bg-white dark:bg-[#0c0d12]/50 px-4 pr-10 text-xs md:text-sm font-bold text-slate-900 dark:text-white focus:outline-none transition-all cursor-pointer shadow-sm hover:border-slate-300 dark:hover:border-white/20"
                             >
                               <option value="DTI">DTI</option>
                               <option value="SEC">SEC</option>
                               <option value="COA">COA</option>
                             </select>
-                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                              <ChevronDown className="w-4 h-4" />
+                            </div>
                           </div>
                         </div>
 
                         <div className="space-y-2">
-                          <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">Number <span className="text-rose-500">*</span></Label>
+                          <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">{formState.registrationType} Registration Number</Label>
                           <Input
                             type="text"
                             value={formState.dtiSecNumber}
                             onChange={e => handleInputChange("dtiSecNumber", e.target.value)}
-                            placeholder="Cert No."
-                            className="rounded-xl h-12"
+                            placeholder={`Cert No.`}
+                            className="rounded-xl h-12 border-slate-200 font-bold"
                           />
                         </div>
 
                         <div className="space-y-2">
-                          <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">Date <span className="text-rose-500">*</span></Label>
+                          <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">{formState.registrationType} Registration Date</Label>
                           <Input
                             type="date"
                             value={formState.dtiSecDate}
                             onChange={e => handleInputChange("dtiSecDate", e.target.value)}
-                            className="rounded-xl h-12"
+                            className="rounded-xl h-12 border-slate-200 font-bold"
                           />
                         </div>
                       </div>
                     ) : (
                       <div className="space-y-2 col-span-1 md:col-span-2">
-                        <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">Permit Number <span className="text-rose-500">*</span></Label>
+                        <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">Existing Permit License Number</Label>
                         <Input
                           type="text"
                           value={formState.permitNumber}
                           onChange={e => handleInputChange("permitNumber", e.target.value)}
-                          placeholder="BP-2025-XXXXX"
-                          className="rounded-xl h-12"
+                          placeholder="e.g. BP-2025-00123"
+                          className="rounded-xl h-12 border-slate-200 font-bold"
                         />
                       </div>
                     )}
@@ -840,39 +1090,69 @@ export function BusinessPermitAppointmentClient({
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  className="space-y-6"
+                  className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300"
                 >
                   <div className="border-b border-slate-100 dark:border-white/5 pb-4">
-                    <h2 className="text-2xl font-black uppercase italic tracking-tighter">Document Checklists</h2>
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Verify requirements to facilitate processing</p>
+                    <h2 className="text-2xl font-black uppercase italic tracking-tighter text-slate-800 dark:text-white">Required Document Checklist</h2>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Provide the required legal, registrations and clearances to complete your submission</p>
+                  </div>
+
+                  {/* Warning Alert Box */}
+                  <div className="p-4 rounded-2xl border border-amber-500/20 bg-amber-500/5 dark:bg-amber-500/10 flex items-start gap-3 text-left">
+                    <div className="p-1.5 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-500 shrink-0">
+                      <ShieldAlert className="w-4 h-4" />
+                    </div>
+                    <div className="space-y-1">
+                      <h5 className="text-[10px] font-black uppercase tracking-widest text-amber-600 dark:text-amber-500">
+                        Notice for Multiple Pages/Images
+                      </h5>
+                      <p className="text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 leading-relaxed">
+                        If your document has more than 1 image/page, please compile them into a single PDF file before uploading.
+                      </p>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {((businessType === "NEW"
                       ? [
-                        { label: "1. Owner's Valid ID", field: "idFile", file: idFile, setter: setIdFile, existingUrl: existingIdUrl, optional: true },
-                        { label: "2. Barangay Clearance", field: "brgyClearanceFile", file: brgyClearanceFile, setter: setBrgyClearanceFile, optional: true },
-                        { label: "3. DTI / SEC Registration Certificate", field: "dtiSecFile", file: dtiSecFile, setter: setDtiSecFile, optional: true },
-                        { label: "4. CTC (Cedula)", field: "ctcFile", file: ctcFile, setter: setCtcFile, optional: true },
-                        { label: "5. Location Photo of Business", field: "locationPhotoFile", file: locationPhotoFile, setter: setLocationPhotoFile, optional: true }
+                        { label: "1. Owner's Valid ID", field: "idFile", file: idFile, setter: setIdFile, existingUrl: existingIdUrl, fileName: idFileName, optional: true },
+                        { label: "2. Community Tax Certificate (CTC/Cedula)", field: "ctcFile", file: ctcFile, setter: setCtcFile, existingUrl: existingCtcUrl, fileName: ctcFileName, optional: true },
+                        { label: "3. DTI / SEC / CDA Registration", field: "dtiSecFile", file: dtiSecFile, setter: setDtiSecFile, existingUrl: existingDtiSecUrl, fileName: dtiSecFileName, optional: true },
+                        { label: "4. BIR Certificate of Registration (COR)", field: "birCorFile", file: birCorFile, setter: setBirCorFile, existingUrl: existingBirCorUrl, fileName: birCorFileName, optional: true },
+                        { label: "5. Barangay Clearance", field: "brgyClearanceFile", file: brgyClearanceFile, setter: setBrgyClearanceFile, existingUrl: existingBrgyClearanceUrl, fileName: brgyClearanceFileName, optional: true },
+                        { label: "6. Location Photo of Business", field: "locationPhotoFile", file: locationPhotoFile, setter: setLocationPhotoFile, existingUrl: existingLocationPhotoUrl, fileName: locationPhotoFileName, optional: true },
+                        { label: "7. Sanitary Permit", field: "sanitaryPermitFile", file: sanitaryPermitFile, setter: setSanitaryPermitFile, existingUrl: existingSanitaryPermitUrl, fileName: sanitaryPermitFileName, optional: true },
+                        { label: "8. Fire Safety Inspection Certificate", field: "fireSafetyFile", file: fireSafetyFile, setter: setFireSafetyFile, existingUrl: existingFireSafetyUrl, fileName: fireSafetyFileName, optional: true }
                       ]
                       : [
-                        { label: "1. Owner's Valid ID", field: "idFile", file: idFile, setter: setIdFile, existingUrl: existingIdUrl, optional: true },
-                        { label: "2. CTC (Cedula)", field: "ctcFile", file: ctcFile, setter: setCtcFile, optional: true },
-                        { label: "3. Previous Business Permit License", field: "previousPermitFile", file: previousPermitFile, setter: setPreviousPermitFile, optional: true }
+                        { label: "1. Owner's Valid ID", field: "idFile", file: idFile, setter: setIdFile, existingUrl: existingIdUrl, fileName: idFileName, optional: true },
+                        { label: "2. CTC (Cedula)", field: "ctcFile", file: ctcFile, setter: setCtcFile, existingUrl: existingCtcUrl, fileName: ctcFileName, optional: true },
+                        { label: "3. Previous Business Permit License", field: "previousPermitFile", file: previousPermitFile, setter: setPreviousPermitFile, existingUrl: existingPreviousPermitUrl, fileName: previousPermitFileName, optional: true }
                       ]
                     ) as any[]).map(item => {
                       const hasFile = !!item.file || !!item.existingUrl;
                       return (
                         <div key={item.field} className="space-y-2">
-                          <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">{item.label}</Label>
+                          <div className="flex justify-between items-center px-1">
+                            <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">
+                              {item.label}
+                            </Label>
+                            {item.optional && (
+                              <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">
+                                (OPTIONAL)
+                              </span>
+                            )}
+                          </div>
 
                           <div className={cn(
                             "p-4 rounded-3xl border border-dashed flex flex-col gap-4 relative overflow-hidden transition-all duration-300 hover:border-primary/45",
                             hasFile ? "border-primary dark:border-primary/30" : "border-slate-200 dark:border-white/10"
                           )}>
                             <div className="flex items-center gap-3.5 w-full text-left">
-                              <div className="w-10 h-10 border rounded-xl flex items-center justify-center text-primary shrink-0 bg-slate-50/50" style={{ color: themeColor }}>
+                              <div className={cn(
+                                "w-10 h-10 border rounded-xl flex items-center justify-center shrink-0 bg-slate-50/50",
+                                hasFile ? "text-emerald-500 border-emerald-500/20" : "text-primary border-slate-200"
+                              )} style={!hasFile ? { color: themeColor } : {}}>
                                 <Upload className="w-4 h-4" />
                               </div>
                               <div className="space-y-0.5 min-w-0">
@@ -880,7 +1160,12 @@ export function BusinessPermitAppointmentClient({
                                   {item.label.replace(/^\d+\.\s*/, "")}
                                 </h4>
                                 <p className="text-[8px] text-slate-400 font-bold italic uppercase tracking-tighter">
-                                  {item.file ? `Uploaded (${(item.file.size / 1024).toFixed(1)} KB)` : item.existingUrl ? "Preloaded from Profile" : "PDF / IMAGE (MAX 5MB)"}
+                                  {item.file 
+                                    ? `Uploaded (${(item.file.size / 1024).toFixed(1)} KB)` 
+                                    : item.existingUrl 
+                                      ? `Preloaded (${item.fileName || "Document URL"})` 
+                                      : "Scan QR code to upload"
+                                  }
                                 </p>
                               </div>
                             </div>
@@ -892,55 +1177,67 @@ export function BusinessPermitAppointmentClient({
                                 onClick={() => handleViewFile(null, item.existingUrl!, item.label)}
                                 className="relative rounded-2xl overflow-hidden border border-slate-100 dark:border-white/5 bg-slate-100 dark:bg-black/30 h-24 flex items-center justify-center group/preview cursor-pointer"
                               >
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img
-                                  src={item.existingUrl}
-                                  alt="Preloaded Document"
-                                  className="object-cover w-full h-full group-hover/preview:scale-105 transition-all"
-                                />
-                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/preview:opacity-100 transition-opacity flex items-center justify-center">
-                                  <span className="text-[9px] text-white font-black uppercase tracking-widest">🔍 VIEW FULL SIZE</span>
-                                </div>
+                                {item.existingUrl.toLowerCase().endsWith(".pdf") ? (
+                                  <div className="flex flex-col items-center justify-center gap-1 text-slate-500">
+                                    <FileText className="w-8 h-8 text-rose-500" />
+                                    <span className="text-[8px] font-black uppercase tracking-wider">{item.fileName || "PDF Document"}</span>
+                                  </div>
+                                ) : (
+                                  <>
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img
+                                      src={item.existingUrl}
+                                      alt="Preloaded Document"
+                                      className="object-cover w-full h-full group-hover/preview:scale-105 transition-all"
+                                    />
+                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/preview:opacity-100 transition-opacity flex items-center justify-center">
+                                      <span className="text-[9px] text-white font-black uppercase tracking-widest">🔍 VIEW FULL SIZE</span>
+                                    </div>
+                                  </>
+                                )}
                               </div>
                             ) : null}
 
                             <div className="flex items-center justify-between w-full mt-1">
-                              <input
-                                type="file"
-                                onChange={(e) => handleFileChange(e, item.setter)}
-                                className="hidden"
-                                id={`upload-${item.field}`}
-                                accept=".pdf,.png,.jpg,.jpeg"
-                              />
                               {hasFile ? (
                                 <div className="flex gap-2 w-full">
                                   <Button
                                     type="button"
                                     variant="outline"
-                                    onClick={() => document.getElementById(`upload-${item.field}`)?.click()}
+                                    onClick={() => startHandoff(item.field)}
                                     className="flex-1 font-black italic uppercase tracking-widest text-[9px] h-10 rounded-2xl border-slate-200 text-slate-700 bg-transparent"
                                   >
                                     Change File
                                   </Button>
-                                  {!(item.field === "idFile" && item.existingUrl && !item.file) && (
-                                    <Button
-                                      type="button"
-                                      variant="outline"
-                                      onClick={() => item.setter(null)}
-                                      className="flex-1 font-black italic uppercase tracking-widest text-[9px] h-10 rounded-2xl border-rose-200 text-rose-500 bg-transparent"
-                                    >
-                                      Remove
-                                    </Button>
-                                  )}
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => {
+                                      if (item.file) item.setter(null);
+                                      // Clear preloaded URL state
+                                      if (item.field === "idFile") { setExistingIdUrl(null); setIdFileName(""); }
+                                      else if (item.field === "ctcFile") { setExistingCtcUrl(null); setCtcFileName(""); }
+                                      else if (item.field === "dtiSecFile") { setExistingDtiSecUrl(null); setDtiSecFileName(""); }
+                                      else if (item.field === "birCorFile") { setExistingBirCorUrl(null); setBirCorFileName(""); }
+                                      else if (item.field === "brgyClearanceFile") { setExistingBrgyClearanceUrl(null); setBrgyClearanceFileName(""); }
+                                      else if (item.field === "locationPhotoFile") { setExistingLocationPhotoUrl(null); setLocationPhotoFileName(""); }
+                                      else if (item.field === "sanitaryPermitFile") { setExistingSanitaryPermitUrl(null); setSanitaryPermitFileName(""); }
+                                      else if (item.field === "fireSafetyFile") { setExistingFireSafetyUrl(null); setFireSafetyFileName(""); }
+                                      else if (item.field === "previousPermitFile") { setExistingPreviousPermitUrl(null); setPreviousPermitFileName(""); }
+                                    }}
+                                    className="flex-1 font-black italic uppercase tracking-widest text-[9px] h-10 rounded-2xl border-rose-200 text-rose-500 bg-transparent"
+                                  >
+                                    Remove
+                                  </Button>
                                 </div>
                               ) : (
                                 <Button
                                   type="button"
-                                  onClick={() => document.getElementById(`upload-${item.field}`)?.click()}
-                                  className="font-black italic uppercase tracking-widest text-[9px] h-10 w-full rounded-2xl text-white"
+                                  onClick={() => startHandoff(item.field)}
+                                  className="font-black italic uppercase tracking-widest text-[9px] h-10 w-full rounded-2xl text-white hover:opacity-90 transition-all flex items-center justify-center gap-1.5"
                                   style={{ backgroundColor: themeColor }}
                                 >
-                                  Upload
+                                  Upload via QR
                                 </Button>
                               )}
                             </div>
@@ -1285,6 +1582,17 @@ export function BusinessPermitAppointmentClient({
           </div>
         )}
       </AnimatePresence>
+
+      <SecureQrUploadModal
+        isOpen={isHandoffOpen}
+        onClose={() => {
+          setIsHandoffOpen(false);
+          setHandoffToken("");
+        }}
+        qrCode={handoffQrCode}
+        expiresAt={handoffExpiresAt}
+        slotLabel={handoffSessionSlot.replace("bp_", "").replace(/([A-Z])/g, " $1").trim()}
+      />
     </div>
   );
 }

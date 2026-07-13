@@ -6,7 +6,8 @@ import {
   getCurrentUserResident,
   getTransactionTypes,
   getAppointmentConfig,
-  getBookedSlots
+  getBookedSlots,
+  getSystemThemeColor
 } from "./actions";
 import { CedulaAppointmentClient } from "./CedulaAppointmentClient";
 
@@ -19,6 +20,7 @@ function CedulaAppointmentWrapper() {
   const [bookedSlots, setBookedSlots] = useState<any[]>([]);
   const [hasActiveIndividual, setHasActiveIndividual] = useState(false);
   const [hasActiveJuridical, setHasActiveJuridical] = useState(false);
+  const [themeColor, setThemeColor] = useState<string>("#059669");
 
   useEffect(() => {
     async function init() {
@@ -32,11 +34,12 @@ function CedulaAppointmentWrapper() {
         const resident = JSON.parse(savedResident);
         const userId = resident.userId || resident.id;
 
-        const [typesRes, configRes, bookedRes, residentRes] = await Promise.all([
+        const [typesRes, configRes, bookedRes, residentRes, themeRes] = await Promise.all([
           getTransactionTypes(),
           getAppointmentConfig(),
           getBookedSlots(),
-          getCurrentUserResident(userId)
+          getCurrentUserResident(userId),
+          getSystemThemeColor()
         ]);
 
         if (typesRes.success) {
@@ -50,6 +53,9 @@ function CedulaAppointmentWrapper() {
         }
         if (residentRes.success && residentRes.data) {
           setResidentData(residentRes.data);
+        }
+        if (themeRes && themeRes.success && themeRes.data) {
+          setThemeColor(themeRes.data);
         }
       } catch (err) {
         console.error("Initialization error:", err);
@@ -81,6 +87,7 @@ function CedulaAppointmentWrapper() {
       bookedSlots={bookedSlots}
       hasActiveIndividual={hasActiveIndividual}
       hasActiveJuridical={hasActiveJuridical}
+      themeColor={themeColor}
     />
   );
 }

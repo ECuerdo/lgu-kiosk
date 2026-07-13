@@ -76,6 +76,18 @@ export async function getBookedSlots() {
   }
 }
 
+export async function getSystemThemeColor() {
+  try {
+    const setting = await prisma.systemSetting.findUnique({
+      where: { key: "theme_color" }
+    });
+    return { success: true, data: setting?.value || "#059669" };
+  } catch (error) {
+    console.error("Get system theme color error:", error);
+    return { success: false, data: "#059669" };
+  }
+}
+
 export async function cleanupPastDueCedulaAppointments(userId?: string) {
   try {
     const manilaDateString = new Intl.DateTimeFormat("en-US", {

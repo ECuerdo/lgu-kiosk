@@ -7,7 +7,9 @@ import {
   getTransactionTypes,
   getAppointmentConfig,
   getBookedSlots,
-  getPreviousPermits
+  getPreviousPermits,
+  getSystemThemeColor,
+  getBploSettings
 } from "./actions";
 import { BusinessPermitAppointmentClient } from "./BusinessPermitAppointmentClient";
 
@@ -20,6 +22,8 @@ function BusinessPermitAppointmentWrapper() {
   const [bookedSlots, setBookedSlots] = useState<any[]>([]);
   const [hasActivePermit, setHasActivePermit] = useState(false);
   const [previousPermits, setPreviousPermits] = useState<any[]>([]);
+  const [themeColor, setThemeColor] = useState<string>("#059669");
+  const [bploSettings, setBploSettings] = useState<Record<string, string> | null>(null);
 
   useEffect(() => {
     async function init() {
@@ -33,12 +37,14 @@ function BusinessPermitAppointmentWrapper() {
         const resident = JSON.parse(savedResident);
         const userId = resident.userId || resident.id;
 
-        const [typesRes, configRes, bookedRes, residentRes, permitsRes] = await Promise.all([
+        const [typesRes, configRes, bookedRes, residentRes, permitsRes, themeRes, settingsRes] = await Promise.all([
           getTransactionTypes(),
           getAppointmentConfig(),
           getBookedSlots(),
           getCurrentUserResident(userId),
-          getPreviousPermits(userId)
+          getPreviousPermits(userId),
+          getSystemThemeColor(),
+          getBploSettings()
         ]);
 
         if (typesRes.success) {
@@ -55,6 +61,12 @@ function BusinessPermitAppointmentWrapper() {
         }
         if (permitsRes.success) {
           setPreviousPermits(permitsRes.data || []);
+        }
+        if (themeRes && themeRes.success && themeRes.data) {
+          setThemeColor(themeRes.data);
+        }
+        if (settingsRes && settingsRes.success) {
+          setBploSettings(settingsRes.data);
         }
       } catch (err) {
         console.error("Initialization error:", err);
@@ -86,6 +98,8 @@ function BusinessPermitAppointmentWrapper() {
       bookedSlots={bookedSlots}
       hasActivePermit={hasActivePermit}
       previousPermits={previousPermits}
+      themeColor={themeColor}
+      bploSettings={bploSettings}
     />
   );
 }
