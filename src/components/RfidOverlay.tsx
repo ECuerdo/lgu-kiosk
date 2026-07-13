@@ -10,6 +10,8 @@ type Resident = {
   id: string;
   fullName: string;
   firstName: string;
+  lastName?: string;
+  middleName?: string;
   photoUrl?: string;
   faceReferenceUrl?: string | null;
   faceAuthSource?: string | null;
@@ -94,6 +96,8 @@ export default function RfidOverlay() {
           id: "dev-01",
           fullName: "Development Tester",
           firstName: "Tester",
+          lastName: "Tester",
+          middleName: "",
           hasFaceAuth: false,
           barangay: "Poblacion",
           email: "tester@mapandan.gov.ph"

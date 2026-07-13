@@ -134,6 +134,8 @@ export async function GET(req: NextRequest) {
         userId: userId,
         fullName,
         firstName: resident.firstName,
+        lastName: resident.lastName,
+        middleName: resident.middleName,
         photoUrl: resident.livenessUrl || resident.imageUrl || resident.idFrontUrl,
         barangay: resident.barangay,
         email: resident.email,
