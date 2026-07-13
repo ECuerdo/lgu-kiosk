@@ -38,6 +38,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { submitBusinessAppointment } from "./actions";
 import PrintQueueTicket from "@/components/shared/PrintQueueTicket";
+import { calculateBusinessPermit } from "@/lib/business-permit";
 
 import SecureIdleTimer from "@/components/shared/SecureIdleTimer";
 
@@ -104,9 +105,16 @@ const MAPANDAN_BARANGAYS = [
 ];
 
 const LINE_OF_BUSINESS_OPTIONS = [
-  "Agriculture & Forestry", "Manufacturing", "Wholesale & Retail", "Food & Beverage Services",
-  "IT & Computer Services", "Construction", "Real Estate", "Transportation & Storage",
-  "Healthcare & Social", "Education"
+  "Retail Store",
+  "Wholesaler / Distributor",
+  "Eatery / Restaurant / Food Service",
+  "Services / Contractors",
+  "Banking / Financial Institution",
+  "Manufacturers / Producers",
+  "Agriculture / Farming / Fishery",
+  "Amusement / Recreation",
+  "Real Estate / Rental",
+  "Others / General Services"
 ];
 
 type Step = "PATHWAY" | "PROFILE" | "SCHEDULE" | "CHECKLIST" | "SUBMIT" | "SUCCESS";
@@ -133,6 +141,7 @@ interface BusinessPermitAppointmentClientProps {
   hasActivePermit: boolean;
   previousPermits: any[];
   themeColor: string;
+  bploSettings?: Record<string, string> | null;
 }
 
 export function BusinessPermitAppointmentClient({
@@ -142,7 +151,8 @@ export function BusinessPermitAppointmentClient({
   bookedSlots,
   hasActivePermit,
   previousPermits,
-  themeColor
+  themeColor,
+  bploSettings
 }: BusinessPermitAppointmentClientProps) {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState<Step>("PATHWAY");
@@ -186,7 +196,9 @@ export function BusinessPermitAppointmentClient({
     sssNumber: "",
     businessBranch: "MAIN",
     registrationType: "DTI",
-    dtiSecDate: ""
+    dtiSecDate: "",
+    assets: "",
+    healthCardCount: "0"
   });
 
   const residentState = {
@@ -247,6 +259,8 @@ export function BusinessPermitAppointmentClient({
       businessBranch: addData.businessBranch === "BRANCH" ? "BRANCH" : "MAIN",
       registrationType: addData.registrationType === "SEC" ? "SEC" : addData.registrationType === "COA" ? "COA" : "DTI",
       dtiSecDate: addData.dtiSecDate || "",
+      assets: addData.assets ? addData.assets.toString() : "",
+      healthCardCount: addData.healthCardCount ? addData.healthCardCount.toString() : "0",
     }));
 
     setShowRenewalModal(false);
@@ -484,7 +498,9 @@ export function BusinessPermitAppointmentClient({
       return !hasActivePermit;
     }
     if (step === "PROFILE") {
-      return true;
+      const hasCapital = businessType === "NEW" ? !!formState.capitalInvestment : !!formState.grossSales;
+      const hasRegistration = businessType === "NEW" ? (!!formState.registrationType && !!formState.dtiSecNumber && !!formState.dtiSecDate) : !!formState.permitNumber;
+      return !!formState.businessName && !!formState.lineOfBusiness && !!formState.barangay && hasCapital && !!formState.businessBranch && !!formState.tinNumber && hasRegistration && !!formState.assets;
     }
     if (step === "CHECKLIST") {
       return true;
@@ -502,6 +518,21 @@ export function BusinessPermitAppointmentClient({
     if (!isStepValid(currentStep)) {
       setShowValidationErrors(true);
       toast.error("Please fill in all required fields to proceed.");
+      
+      if (currentStep === "PROFILE") {
+        setTimeout(() => {
+          const firstInvalid = document.querySelector(".border-red-500, .ring-red-500");
+          if (firstInvalid) {
+            firstInvalid.scrollIntoView({ behavior: "smooth", block: "center" });
+            const inputOrSelect = firstInvalid.tagName === "INPUT" || firstInvalid.tagName === "SELECT" 
+              ? firstInvalid 
+              : firstInvalid.querySelector("input, select");
+            if (inputOrSelect instanceof HTMLElement) {
+              inputOrSelect.focus();
+            }
+          }
+        }, 100);
+      }
       return;
     }
     setShowValidationErrors(false);
@@ -548,6 +579,8 @@ export function BusinessPermitAppointmentClient({
         isPriorityLane,
         capitalInvestment: parseFloat(formState.capitalInvestment.replace(/,/g, "")) || 0,
         grossSales: parseFloat(formState.grossSales.replace(/,/g, "")) || 0,
+        assets: parseFloat(formState.assets.replace(/,/g, "")) || 0,
+        healthCardCount: parseInt(formState.healthCardCount, 10) || 0,
       };
       formDataPayload.append("additionalData", JSON.stringify(addData));
 
@@ -766,13 +799,16 @@ export function BusinessPermitAppointmentClient({
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">Official Business Name (DTI/SEC)</Label>
+                      <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">Official Business Name (DTI/SEC) <span className="text-rose-500 ml-0.5">*</span></Label>
                       <Input
                         type="text"
                         value={formState.businessName}
                         onChange={e => handleInputChange("businessName", e.target.value)}
                         placeholder="e.g. Mapandan Express Café Inc."
-                        className="rounded-xl h-12 border-slate-200 transition-all duration-200"
+                        className={cn(
+                          "rounded-xl h-12 border-slate-200 transition-all duration-200",
+                          showValidationErrors && !formState.businessName && "border-red-500 focus-visible:ring-red-500/20 dark:border-red-500/50"
+                        )}
                       />
                     </div>
 
@@ -788,12 +824,15 @@ export function BusinessPermitAppointmentClient({
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">Organization Type</Label>
+                      <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">Organization Type <span className="text-rose-500 ml-0.5">*</span></Label>
                       <div className="relative">
                         <select
                           value={formState.orgType}
                           onChange={e => handleInputChange("orgType", e.target.value)}
-                          className="w-full appearance-none rounded-xl h-12 border border-slate-200 dark:border-white bg-white dark:bg-[#0c0d12]/50 px-4 pr-10 text-xs md:text-sm font-bold text-slate-900 dark:text-white focus:outline-none transition-all cursor-pointer shadow-sm hover:border-slate-300 dark:hover:border-white/20"
+                          className={cn(
+                            "w-full appearance-none rounded-xl h-12 border border-slate-200 dark:border-white bg-white dark:bg-[#0c0d12]/50 px-4 pr-10 text-xs md:text-sm font-bold text-slate-900 dark:text-white focus:outline-none transition-all cursor-pointer shadow-sm hover:border-slate-300 dark:hover:border-white/20",
+                            showValidationErrors && !formState.orgType && "border-red-500 ring-2 ring-red-500/20 dark:border-red-500/50"
+                          )}
                         >
                           <option value="SOLE_PROPRIETORSHIP">Sole Proprietorship</option>
                           <option value="PARTNERSHIP">Partnership</option>
@@ -806,12 +845,15 @@ export function BusinessPermitAppointmentClient({
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">Business Barangay Location</Label>
+                      <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">Business Barangay Location <span className="text-rose-500 ml-0.5">*</span></Label>
                       <div className="relative">
                         <select
                           value={formState.barangay}
                           onChange={e => handleInputChange("barangay", e.target.value)}
-                          className="w-full appearance-none rounded-xl h-12 border border-slate-200 dark:border-white bg-white dark:bg-[#0c0d12]/50 px-4 pr-10 text-xs md:text-sm font-bold text-slate-900 dark:text-white focus:outline-none transition-all cursor-pointer shadow-sm hover:border-slate-300 dark:hover:border-white/20"
+                          className={cn(
+                            "w-full appearance-none rounded-xl h-12 border border-slate-200 dark:border-white bg-white dark:bg-[#0c0d12]/50 px-4 pr-10 text-xs md:text-sm font-bold text-slate-900 dark:text-white focus:outline-none transition-all cursor-pointer shadow-sm hover:border-slate-300 dark:hover:border-white/20",
+                            showValidationErrors && !formState.barangay && "border-red-500 ring-2 ring-red-500/20 dark:border-red-500/50"
+                          )}
                         >
                           <option value="" disabled>Select Barangay...</option>
                           {MAPANDAN_BARANGAYS.map((b) => (
@@ -847,13 +889,16 @@ export function BusinessPermitAppointmentClient({
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">Line of Business / Classification</Label>
+                      <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">Line of Business / Classification <span className="text-rose-500 ml-0.5">*</span></Label>
                       {!isOtherLine ? (
                         <div className="relative">
                           <select
                             value={formState.lineOfBusiness || ""}
                             onChange={e => handleLineOfBusinessSelect(e.target.value)}
-                            className="w-full appearance-none rounded-xl h-12 border border-slate-200 dark:border-white bg-white dark:bg-[#0c0d12]/50 px-4 pr-10 text-xs md:text-sm font-bold text-slate-900 dark:text-white focus:outline-none transition-all cursor-pointer shadow-sm hover:border-slate-300 dark:hover:border-white/20"
+                            className={cn(
+                              "w-full appearance-none rounded-xl h-12 border border-slate-200 dark:border-white bg-white dark:bg-[#0c0d12]/50 px-4 pr-10 text-xs md:text-sm font-bold text-slate-900 dark:text-white focus:outline-none transition-all cursor-pointer shadow-sm hover:border-slate-300 dark:hover:border-white/20",
+                              showValidationErrors && !formState.lineOfBusiness && "border-red-500 ring-2 ring-red-500/20 dark:border-red-500/50"
+                            )}
                           >
                             <option value="" disabled>Select Line of Business...</option>
                             {LINE_OF_BUSINESS_OPTIONS.map((opt) => (
@@ -872,7 +917,10 @@ export function BusinessPermitAppointmentClient({
                             value={formState.lineOfBusiness}
                             onChange={e => handleInputChange("lineOfBusiness", e.target.value)}
                             placeholder="Enter your custom line of business..."
-                            className="rounded-xl h-12 border-slate-200 pr-10 font-bold"
+                            className={cn(
+                              "rounded-xl h-12 border-slate-200 pr-10 font-bold",
+                              showValidationErrors && !formState.lineOfBusiness && "border-red-500 focus-visible:ring-red-500/20 dark:border-red-500/50"
+                            )}
                           />
                           <button
                             type="button"
@@ -900,6 +948,21 @@ export function BusinessPermitAppointmentClient({
                     </div>
 
                     <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">Number of Health Card Applications</Label>
+                      <p className="text-[9px] text-slate-400 dark:text-slate-500 font-bold italic -mt-1 leading-normal">
+                        Required for all food-handling, hospitality, and medical personnel.
+                      </p>
+                      <Input
+                        type="number"
+                        value={formState.healthCardCount}
+                        onChange={e => handleInputChange("healthCardCount", e.target.value)}
+                        min="0"
+                        placeholder="e.g. 5"
+                        className="rounded-xl h-12 border-slate-200"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
                       <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">Store Area (in Sqm)</Label>
                       <Input
                         type="number"
@@ -910,9 +973,26 @@ export function BusinessPermitAppointmentClient({
                       />
                     </div>
 
+                    <div className="space-y-2 relative">
+                      <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">Total Business Assets (₱) <span className="text-rose-500 ml-0.5">*</span></Label>
+                      <Input
+                        type="text"
+                        value={formState.assets}
+                        onChange={e => {
+                          const cleanVal = e.target.value.replace(/[^0-9.,]/g, "");
+                          handleInputChange("assets", cleanVal);
+                        }}
+                        placeholder="e.g. 1,500,000"
+                        className={cn(
+                          "rounded-xl h-12 border-slate-200 font-mono font-bold",
+                          showValidationErrors && !formState.assets && "border-red-500 focus-visible:ring-red-500/20 dark:border-red-500/50"
+                        )}
+                      />
+                    </div>
+
                     {businessType === "NEW" ? (
                       <div className="space-y-2 relative">
-                        <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">Initial Capitalization (₱)</Label>
+                        <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">Initial Capitalization (₱) <span className="text-rose-500 ml-0.5">*</span></Label>
                         <Input
                           type="text"
                           value={formState.capitalInvestment}
@@ -921,12 +1001,15 @@ export function BusinessPermitAppointmentClient({
                             handleInputChange("capitalInvestment", cleanVal);
                           }}
                           placeholder="e.g. 250,000"
-                          className="rounded-xl h-12 border-slate-200 font-mono font-bold"
+                          className={cn(
+                            "rounded-xl h-12 border-slate-200 font-mono font-bold",
+                            showValidationErrors && !formState.capitalInvestment && "border-red-500 focus-visible:ring-red-500/20 dark:border-red-500/50"
+                          )}
                         />
                       </div>
                     ) : (
                       <div className="space-y-2 relative">
-                        <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">Annual Gross Sales In The Previous Year (₱)</Label>
+                        <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">Annual Gross Sales In The Previous Year (₱) <span className="text-rose-500 ml-0.5">*</span></Label>
                         <Input
                           type="text"
                           value={formState.grossSales}
@@ -935,18 +1018,24 @@ export function BusinessPermitAppointmentClient({
                             handleInputChange("grossSales", cleanVal);
                           }}
                           placeholder="e.g. 1,200,000"
-                          className="rounded-xl h-12 border-slate-200 font-mono font-bold"
+                          className={cn(
+                            "rounded-xl h-12 border-slate-200 font-mono font-bold",
+                            showValidationErrors && !formState.grossSales && "border-red-500 focus-visible:ring-red-500/20 dark:border-red-500/50"
+                          )}
                         />
                       </div>
                     )}
 
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">Branch of Business</Label>
+                      <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">Branch of Business <span className="text-rose-500 ml-0.5">*</span></Label>
                       <div className="relative">
                         <select
                           value={formState.businessBranch}
                           onChange={e => handleInputChange("businessBranch", e.target.value)}
-                          className="w-full appearance-none rounded-xl h-12 border border-slate-200 dark:border-white bg-white dark:bg-[#0c0d12]/50 px-4 pr-10 text-xs md:text-sm font-bold text-slate-900 dark:text-white focus:outline-none transition-all cursor-pointer shadow-sm hover:border-slate-300 dark:hover:border-white/20"
+                          className={cn(
+                            "w-full appearance-none rounded-xl h-12 border border-slate-200 dark:border-white bg-white dark:bg-[#0c0d12]/50 px-4 pr-10 text-xs md:text-sm font-bold text-slate-900 dark:text-white focus:outline-none transition-all cursor-pointer shadow-sm hover:border-slate-300 dark:hover:border-white/20",
+                            showValidationErrors && !formState.businessBranch && "border-red-500 ring-2 ring-red-500/20 dark:border-red-500/50"
+                          )}
                         >
                           <option value="MAIN">Main</option>
                           <option value="BRANCH">Branch</option>
@@ -958,13 +1047,16 @@ export function BusinessPermitAppointmentClient({
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">TIN No. of the Business</Label>
+                      <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">TIN No. of the Business <span className="text-rose-500 ml-0.5">*</span></Label>
                       <Input
                         type="text"
                         value={formState.tinNumber}
                         onChange={e => handleInputChange("tinNumber", e.target.value)}
                         placeholder="e.g. 123-456-789-000"
-                        className="rounded-xl h-12 border-slate-200 font-bold"
+                        className={cn(
+                          "rounded-xl h-12 border-slate-200 font-bold",
+                          showValidationErrors && !formState.tinNumber && "border-red-500 focus-visible:ring-red-500/20 dark:border-red-500/50"
+                        )}
                       />
                     </div>
 
@@ -1005,12 +1097,15 @@ export function BusinessPermitAppointmentClient({
                     {businessType === "NEW" ? (
                       <div className="space-y-2 col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="space-y-2">
-                          <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">Registration Type</Label>
+                          <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">Registration Type <span className="text-rose-500 ml-0.5">*</span></Label>
                           <div className="relative">
                             <select
                               value={formState.registrationType}
                               onChange={e => handleInputChange("registrationType", e.target.value)}
-                              className="w-full appearance-none rounded-xl h-12 border border-slate-200 dark:border-white bg-white dark:bg-[#0c0d12]/50 px-4 pr-10 text-xs md:text-sm font-bold text-slate-900 dark:text-white focus:outline-none transition-all cursor-pointer shadow-sm hover:border-slate-300 dark:hover:border-white/20"
+                              className={cn(
+                                "w-full appearance-none rounded-xl h-12 border border-slate-200 dark:border-white bg-white dark:bg-[#0c0d12]/50 px-4 pr-10 text-xs md:text-sm font-bold text-slate-900 dark:text-white focus:outline-none transition-all cursor-pointer shadow-sm hover:border-slate-300 dark:hover:border-white/20",
+                                showValidationErrors && !formState.registrationType && "border-red-500 ring-2 ring-red-500/20 dark:border-red-500/50"
+                              )}
                             >
                               <option value="DTI">DTI</option>
                               <option value="SEC">SEC</option>
@@ -1023,35 +1118,44 @@ export function BusinessPermitAppointmentClient({
                         </div>
 
                         <div className="space-y-2">
-                          <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">{formState.registrationType} Registration Number</Label>
+                          <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">{formState.registrationType} Registration Number <span className="text-rose-500 ml-0.5">*</span></Label>
                           <Input
                             type="text"
                             value={formState.dtiSecNumber}
                             onChange={e => handleInputChange("dtiSecNumber", e.target.value)}
                             placeholder={`Cert No.`}
-                            className="rounded-xl h-12 border-slate-200 font-bold"
+                            className={cn(
+                              "rounded-xl h-12 border-slate-200 font-bold",
+                              showValidationErrors && !formState.dtiSecNumber && "border-red-500 focus-visible:ring-red-500/20 dark:border-red-500/50"
+                            )}
                           />
                         </div>
 
                         <div className="space-y-2">
-                          <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">{formState.registrationType} Registration Date</Label>
+                          <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">{formState.registrationType} Registration Date <span className="text-rose-500 ml-0.5">*</span></Label>
                           <Input
                             type="date"
                             value={formState.dtiSecDate}
                             onChange={e => handleInputChange("dtiSecDate", e.target.value)}
-                            className="rounded-xl h-12 border-slate-200 font-bold"
+                            className={cn(
+                              "rounded-xl h-12 border-slate-200 font-bold",
+                              showValidationErrors && !formState.dtiSecDate && "border-red-500 focus-visible:ring-red-500/20 dark:border-red-500/50"
+                            )}
                           />
                         </div>
                       </div>
                     ) : (
                       <div className="space-y-2 col-span-1 md:col-span-2">
-                        <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">Existing Permit License Number</Label>
+                        <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">Existing Permit License Number <span className="text-rose-500 ml-0.5">*</span></Label>
                         <Input
                           type="text"
                           value={formState.permitNumber}
                           onChange={e => handleInputChange("permitNumber", e.target.value)}
                           placeholder="e.g. BP-2025-00123"
-                          className="rounded-xl h-12 border-slate-200 font-bold"
+                          className={cn(
+                            "rounded-xl h-12 border-slate-200 font-bold",
+                            showValidationErrors && !formState.permitNumber && "border-red-500 focus-visible:ring-red-500/20 dark:border-red-500/50"
+                          )}
                         />
                       </div>
                     )}
@@ -1249,57 +1353,123 @@ export function BusinessPermitAppointmentClient({
                 </motion.div>
               )}
 
-              {currentStep === "SUBMIT" && (
-                <motion.div
-                  key="submit"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="space-y-8"
-                >
-                  <div className="space-y-1">
-                    <h3 className="text-lg font-black uppercase italic tracking-tighter text-slate-800 dark:text-white">Review Appointment Parameters</h3>
-                    <p className="text-[10px] text-slate-400 italic">Verify all information before submitting to the queue.</p>
-                  </div>
+              {currentStep === "SUBMIT" && (() => {
+                const parsedCapital = parseFloat(formState.capitalInvestment.replace(/,/g, "")) || 0;
+                const parsedGross = parseFloat(formState.grossSales.replace(/,/g, "")) || 0;
+                const parsedAssets = parseFloat(formState.assets.replace(/,/g, "")) || 0;
+                const parsedWorkforce = parseInt(formState.employeeCount, 10) || 0;
+                const parsedArea = parseFloat(formState.businessArea) || 0;
+                const parsedHealth = parseInt(formState.healthCardCount, 10) || 0;
 
-                  <div className="bg-slate-50 dark:bg-white/[0.01] border border-slate-100 dark:border-white/5 p-6 rounded-2xl space-y-4 text-xs leading-relaxed">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="space-y-1">
-                        <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">Business Name</span>
-                        <p className="font-black text-slate-900 dark:text-white uppercase">{formState.businessName}</p>
-                      </div>
-                      <div className="space-y-1">
-                        <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">Filing Route</span>
-                        <p className="font-black uppercase text-slate-900 dark:text-white">{businessType === "NEW" ? "New Business License" : "Renewal Submission"}</p>
-                      </div>
-                      <div className="space-y-1">
-                        <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">Appointment Date</span>
-                        <p className="font-black text-slate-900 dark:text-white">{selectedDate}</p>
-                      </div>
-                      <div className="space-y-1">
-                        <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">Time Session</span>
-                        <p className="font-black text-slate-900 dark:text-white">{selectedSlot}</p>
-                      </div>
-                    </div>
-                  </div>
+                const assessment = calculateBusinessPermit({
+                  type: businessType,
+                  capitalization: parsedCapital,
+                  grossSales: parsedGross,
+                  assets: parsedAssets,
+                  workforceCount: parsedWorkforce,
+                  lineOfBusiness: formState.lineOfBusiness,
+                  floorArea: parsedArea,
+                  healthCardCount: parsedHealth,
+                  settings: bploSettings || undefined
+                });
 
-                  {/* Priority Lane */}
-                  <div
-                    onClick={() => setIsPriorityLane(!isPriorityLane)}
-                    className="p-5 rounded-2xl border-2 transition-all cursor-pointer flex items-start gap-4 select-none bg-slate-50 dark:bg-white/[0.02]"
-                    style={isPriorityLane ? { borderColor: themeColor, backgroundColor: `${themeColor}0a` } : {}}
+                return (
+                  <motion.div
+                    key="submit"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="space-y-8"
                   >
-                    <div className={cn(
-                      "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all shrink-0 mt-0.5",
-                      isPriorityLane ? "bg-primary border-primary text-white" : "border-slate-300 dark:border-white/10"
-                    )} style={isPriorityLane ? { backgroundColor: themeColor, borderColor: themeColor } : {}}>
-                      {isPriorityLane && <Check className="w-3.5 h-3.5" />}
+                    <div className="space-y-1">
+                      <h3 className="text-lg font-black uppercase italic tracking-tighter text-slate-800 dark:text-white">Review Appointment Parameters & Assessment</h3>
+                      <p className="text-[10px] text-slate-400 italic">Verify all information and estimated fees before submitting to the queue.</p>
                     </div>
-                    <div className="space-y-1 text-left">
-                      <p className="text-xs font-black italic uppercase tracking-tight text-slate-900 dark:text-white">♿ REQUEST PRIORITY LANE SERVICE</p>
-                      <p className="text-[8px] text-slate-400 font-bold uppercase tracking-widest">For Senior Citizens, PWDs, or Pregnant applicants.</p>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Appointment Summary */}
+                      <div className="bg-slate-50 dark:bg-white/[0.01] border border-slate-100 dark:border-white/5 p-6 rounded-2xl space-y-4 text-xs leading-relaxed">
+                        <div className="border-b border-slate-200/50 dark:border-white/5 pb-2">
+                          <h4 className="font-black uppercase tracking-wider text-[10px] text-primary" style={{ color: themeColor }}>Appointment Summary</h4>
+                        </div>
+                        <div className="grid grid-cols-1 gap-4 text-left">
+                          <div className="space-y-1">
+                            <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">Business Name</span>
+                            <p className="font-black text-slate-900 dark:text-white uppercase">{formState.businessName}</p>
+                          </div>
+                          <div className="space-y-1">
+                            <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">Filing Route</span>
+                            <p className="font-black uppercase text-slate-900 dark:text-white">{businessType === "NEW" ? "New Business License" : "Renewal Submission"}</p>
+                          </div>
+                          <div className="space-y-1">
+                            <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">Appointment Date</span>
+                            <p className="font-black text-slate-900 dark:text-white">{selectedDate}</p>
+                          </div>
+                          <div className="space-y-1">
+                            <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">Time Session</span>
+                            <p className="font-black text-slate-900 dark:text-white">{selectedSlot}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Fee Assessment Breakdown */}
+                      <div className="bg-slate-950 text-white dark:bg-black/40 border border-slate-800 dark:border-white/5 p-6 rounded-2xl space-y-4 text-xs leading-relaxed shadow-lg">
+                        <div className="border-b border-white/10 pb-2 flex justify-between items-center">
+                          <div className="flex items-center gap-1.5">
+                            <h4 className="font-black uppercase tracking-wider text-[10px] text-primary" style={{ color: themeColor }}>Estimated Assessment Bill</h4>
+                          </div>
+                          <span className="text-[8px] font-black uppercase tracking-widest bg-white/10 px-2 py-0.5 rounded text-white/90">
+                            Scale: {assessment.classificationSize}
+                          </span>
+                        </div>
+                        <div className="space-y-2.5 text-left">
+                          <div className="flex justify-between items-center">
+                            <span className="text-slate-400 font-bold uppercase tracking-wider text-[8.5px]">Mayor&apos;s Permit Fee</span>
+                            <span className="font-mono font-bold">₱{assessment.baseFee.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-slate-400 font-bold uppercase tracking-wider text-[8.5px]">Graded Business Tax</span>
+                            <span className="font-mono font-bold">₱{assessment.taxAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-slate-400 font-bold uppercase tracking-wider text-[8.5px]">Sanitary Inspection Fee</span>
+                            <span className="font-mono font-bold">₱{assessment.sanitaryInspectionFee.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-slate-400 font-bold uppercase tracking-wider text-[8.5px]">Garbage Collection Fee</span>
+                            <span className="font-mono font-bold">₱{assessment.garbageFee.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-slate-400 font-bold uppercase tracking-wider text-[8.5px]">Health Certificate Fee</span>
+                            <span className="font-mono font-bold">₱{assessment.healthCertificateFee.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          </div>
+                          <div className="border-t border-white/10 pt-2.5 mt-1.5 flex justify-between items-center">
+                            <span className="font-black uppercase tracking-widest text-[9px]" style={{ color: themeColor }}>Total Assessed Amount</span>
+                            <span className="font-mono font-black text-sm" style={{ color: themeColor }}>
+                              ₱{assessment.totalAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  </div>
+
+                    {/* Priority Lane */}
+                    <div
+                      onClick={() => setIsPriorityLane(!isPriorityLane)}
+                      className="p-5 rounded-2xl border-2 transition-all cursor-pointer flex items-start gap-4 select-none bg-slate-50 dark:bg-white/[0.02]"
+                      style={isPriorityLane ? { borderColor: themeColor, backgroundColor: `${themeColor}0a` } : {}}
+                    >
+                      <div className={cn(
+                        "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all shrink-0 mt-0.5",
+                        isPriorityLane ? "bg-primary border-primary text-white" : "border-slate-300 dark:border-white/10"
+                      )} style={isPriorityLane ? { backgroundColor: themeColor, borderColor: themeColor } : {}}>
+                        {isPriorityLane && <Check className="w-3.5 h-3.5" />}
+                      </div>
+                      <div className="space-y-1 text-left">
+                        <p className="text-xs font-black italic uppercase tracking-tight text-slate-900 dark:text-white">♿ REQUEST PRIORITY LANE SERVICE</p>
+                        <p className="text-[8px] text-slate-400 font-bold uppercase tracking-widest">For Senior Citizens, PWDs, or Pregnant applicants.</p>
+                      </div>
+                    </div>
 
                   {/* Privacy Agreement */}
                   <div
@@ -1328,7 +1498,8 @@ export function BusinessPermitAppointmentClient({
                     </div>
                   </div>
                 </motion.div>
-              )}
+              );
+            })()}
 
               {currentStep === "SUCCESS" && (
                 <div className="space-y-8 text-center py-6">

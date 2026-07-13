@@ -66,7 +66,7 @@ function BusinessPermitAppointmentWrapper() {
           setThemeColor(themeRes.data);
         }
         if (settingsRes && settingsRes.success) {
-          setBploSettings(settingsRes.data);
+          setBploSettings(settingsRes.data || null);
         }
       } catch (err) {
         console.error("Initialization error:", err);
