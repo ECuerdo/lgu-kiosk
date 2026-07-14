@@ -225,7 +225,7 @@ export default function PrintQueueTicket({
             display: 'flex',
             flexDirection: 'column',
             fontFamily: 'monospace, Courier, sans-serif',
-            lineHeight: 1.15,
+            lineHeight: 1.18,
             fontWeight: 700,
             color: 'black',
             background: 'white',
@@ -340,16 +340,16 @@ export default function PrintQueueTicket({
           <div style={{ borderTop: '1px dotted black', margin: is58mm ? '3px 0' : '5px 0' }}></div>
 
           {/* Transaction Details */}
-          <div style={{ fontSize: is58mm ? '8px' : '9.5px', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: is58mm ? '2px' : '3px', margin: '1px 0 5px 0' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dotted #ccc', paddingBottom: '1.5px' }}>
+          <div style={{ fontSize: '9.5px', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '3px', margin: '1px 0 5px 0' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dotted #ccc', paddingBottom: '2px' }}>
               <span style={{ fontWeight: 'bold', color: '#333' }}>Service Type:</span>
-              <span style={{ fontWeight: 'bold', textAlign: 'right', maxWidth: is58mm ? '55%' : '60%' }}>{serviceName}</span>
+              <span style={{ fontWeight: 'bold', textAlign: 'right', maxWidth: '60%' }}>{serviceName}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dotted #ccc', paddingBottom: '1.5px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dotted #ccc', paddingBottom: '2px' }}>
               <span style={{ fontWeight: 'bold', color: '#333' }}>Date:</span>
               <span style={{ fontWeight: 'bold' }}>{formatDate(appointmentDate)}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dotted #ccc', paddingBottom: '1.5px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dotted #ccc', paddingBottom: '2px' }}>
               <span style={{ fontWeight: 'bold', color: '#333' }}>Schedule:</span>
               <span style={{ fontWeight: 'bold' }}>{appointmentSlot}</span>
             </div>
