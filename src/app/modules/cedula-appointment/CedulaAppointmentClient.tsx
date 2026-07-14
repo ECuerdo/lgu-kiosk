@@ -137,6 +137,17 @@ export function CedulaAppointmentClient({
     }
   }, [applicantType, formState.incomeSource]);
 
+  // Auto-select option if one pathway is blocked by an active request
+  useEffect(() => {
+    if (hasActiveIndividual && !hasActiveJuridical) {
+      setApplicantType("JURIDICAL");
+      setFormState(prev => ({ ...prev, incomeSource: "BUSINESS" }));
+    } else if (hasActiveJuridical && !hasActiveIndividual) {
+      setApplicantType("INDIVIDUAL");
+      setFormState(prev => ({ ...prev, incomeSource: "PROFESSION" }));
+    }
+  }, [hasActiveIndividual, hasActiveJuridical]);
+
   // Appointment Schedule State
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [selectedSlot, setSelectedSlot] = useState<string>("");
@@ -428,9 +439,9 @@ export function CedulaAppointmentClient({
     if (!isStepValid(currentStep)) {
       if (currentStep === "STATUS") {
         if (hasActiveIndividual && applicantType === "INDIVIDUAL") {
-          toast.error("You already have an active Individual Cedula request currently in progress.");
+          toast.error("You currently have an ongoing Individual Cedula request. Please wait for it to be completed or cancelled.");
         } else if (hasActiveJuridical && applicantType === "JURIDICAL") {
-          toast.error("You already have an active Juridical Cedula request currently in progress.");
+          toast.error("You currently have an ongoing Juridical Cedula request. Please wait for it to be completed or cancelled.");
         } else {
           toast.error("Please select your application status.");
         }
@@ -617,6 +628,18 @@ export function CedulaAppointmentClient({
                       </p>
                     </div>
 
+                    {((hasActiveIndividual && applicantType === "INDIVIDUAL") || (hasActiveJuridical && applicantType === "JURIDICAL")) && (
+                      <div className="p-6 rounded-[2rem] bg-amber-500/10 border border-amber-500/20 max-w-3xl mx-auto text-amber-600 dark:text-amber-400 flex items-start gap-4 text-left">
+                        <ShieldAlert className="w-6 h-6 shrink-0 mt-0.5" />
+                        <div>
+                          <h4 className="text-sm font-black uppercase tracking-wider italic">Ongoing Cedula Request Detected</h4>
+                          <p className="text-[10px] font-bold uppercase tracking-wide opacity-80 mt-1">
+                            You currently have an active {applicantType.toLowerCase()} community tax certificate transaction that is not yet completed. Please wait for your existing request to be Released, Rejected, or Cancelled.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
                       {[
                         {
@@ -634,10 +657,12 @@ export function CedulaAppointmentClient({
                       ].map(opt => {
                         const isSelected = applicantType === opt.id;
                         const Icon = opt.icon;
+                        const hasActive = opt.id === "INDIVIDUAL" ? hasActiveIndividual : hasActiveJuridical;
                         return (
                           <button
                             key={opt.id}
                             type="button"
+                            disabled={hasActive}
                             onClick={() => {
                               setApplicantType(opt.id as any);
                               if (opt.id === "JURIDICAL") {
@@ -648,7 +673,8 @@ export function CedulaAppointmentClient({
                             }}
                             className={cn(
                               "p-6 rounded-[2rem] border-2 text-left relative group select-none overflow-hidden transition-all duration-350 min-h-[180px] flex flex-col justify-between cursor-pointer",
-                              isSelected
+                              hasActive && "opacity-50 cursor-not-allowed",
+                              isSelected && !hasActive
                                 ? "border-theme-primary bg-theme-primary/[0.04] dark:bg-theme-primary/[0.08] shadow-lg scale-[1.01]"
                                 : "border-slate-200 dark:border-white/5 bg-white/40 dark:bg-white/5 backdrop-blur-sm hover:border-theme-primary/30"
                             )}
@@ -660,7 +686,12 @@ export function CedulaAppointmentClient({
                               )}>
                                 <Icon className="w-4 h-4 stroke-[2.5]" />
                               </div>
-                              {isSelected && (
+                              {hasActive && (
+                                <div className="px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-[8px] font-black uppercase tracking-wider animate-pulse">
+                                  Ongoing Request
+                                </div>
+                              )}
+                              {isSelected && !hasActive && (
                                 <div className="w-5 h-5 rounded-full bg-theme-primary flex items-center justify-center shadow-md animate-in zoom-in-50">
                                   <Check className="w-3 h-3 text-white stroke-[3]" />
                                 </div>
