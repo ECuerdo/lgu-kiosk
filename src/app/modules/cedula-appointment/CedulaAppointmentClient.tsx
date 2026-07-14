@@ -75,6 +75,7 @@ interface CedulaAppointmentClientProps {
   hasActiveIndividual: boolean;
   hasActiveJuridical: boolean;
   themeColor: string;
+  cedulaSettings?: Record<string, string>;
 }
 
 export function CedulaAppointmentClient({
@@ -84,7 +85,8 @@ export function CedulaAppointmentClient({
   bookedSlots,
   hasActiveIndividual,
   hasActiveJuridical,
-  themeColor
+  themeColor,
+  cedulaSettings = {}
 }: CedulaAppointmentClientProps) {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState<Step>("STATUS");
@@ -379,7 +381,8 @@ export function CedulaAppointmentClient({
       propertyValue: parseFloat(formState.propertyValue.replace(/,/g, "")) || 0,
       baseFee,
       fulfillmentType: "PICK_UP",
-      deliveryFee: 0
+      deliveryFee: 0,
+      settings: cedulaSettings
     });
     setCalcResult(result);
   }, [formState.income, formState.propertyValue, applicantType, activeType]);
@@ -834,7 +837,7 @@ export function CedulaAppointmentClient({
                           </div>
                           <div className="flex justify-between items-center text-[10px] uppercase tracking-widest italic text-amber-500">
                             <span>
-                              Penalty ({Math.round(getCedulaPenaltyRate() * 100)}%)
+                              Penalty ({Math.round(getCedulaPenaltyRate(cedulaSettings) * 100)}%)
                             </span>
                             <span>₱{(calcResult?.penalty ?? 0).toFixed(2)}</span>
                           </div>

@@ -138,7 +138,8 @@ interface BusinessPermitAppointmentClientProps {
     activeDays: number[];
   };
   bookedSlots: { appointmentDate: Date; appointmentSlot: string }[];
-  hasActivePermit: boolean;
+  hasActiveNew: boolean;
+  hasActiveRenew: boolean;
   previousPermits: any[];
   themeColor: string;
   bploSettings?: Record<string, string> | null;
@@ -149,7 +150,8 @@ export function BusinessPermitAppointmentClient({
   permitTypes,
   config,
   bookedSlots,
-  hasActivePermit,
+  hasActiveNew,
+  hasActiveRenew,
   previousPermits,
   themeColor,
   bploSettings
@@ -164,6 +166,8 @@ export function BusinessPermitAppointmentClient({
   const [showRenewalModal, setShowRenewalModal] = useState(false);
   const [selectedPermitIndex, setSelectedPermitIndex] = useState(0);
   const [isOtherLine, setIsOtherLine] = useState(false);
+
+  const hasActiveTransaction = businessType === "NEW" ? hasActiveNew : hasActiveRenew;
 
   const [newTransactionId, setNewTransactionId] = useState<string | null>(null);
   const [queueNumber, setQueueNumber] = useState<string | null>(null);
@@ -495,7 +499,7 @@ export function BusinessPermitAppointmentClient({
 
   const isStepValid = (step: Step): boolean => {
     if (step === "PATHWAY") {
-      return !hasActivePermit;
+      return !hasActiveTransaction;
     }
     if (step === "PROFILE") {
       const hasCapital = businessType === "NEW" ? !!formState.capitalInvestment : !!formState.grossSales;
@@ -781,6 +785,15 @@ export function BusinessPermitAppointmentClient({
                       );
                     })}
                   </div>
+
+                  {hasActiveTransaction && (
+                    <div className="p-5 rounded-2xl bg-red-500/10 border border-red-500/10 text-red-500 flex items-start gap-3 text-left">
+                      <ShieldAlert className="w-5 h-5 shrink-0 mt-0.5 animate-pulse" />
+                      <p className="text-[10px] font-bold italic leading-relaxed">
+                        You already have an active/pending BPLO transaction for {businessType === "NEW" ? "New Business" : "Renewal"}. Please complete or cancel it first.
+                      </p>
+                    </div>
+                  )}
                 </motion.div>
               )}
 
@@ -1230,8 +1243,10 @@ export function BusinessPermitAppointmentClient({
                       ]
                       : [
                         { label: "1. Owner's Valid ID", field: "idFile", file: idFile, setter: setIdFile, existingUrl: existingIdUrl, fileName: idFileName, optional: true },
-                        { label: "2. CTC (Cedula)", field: "ctcFile", file: ctcFile, setter: setCtcFile, existingUrl: existingCtcUrl, fileName: ctcFileName, optional: true },
-                        { label: "3. Previous Business Permit License", field: "previousPermitFile", file: previousPermitFile, setter: setPreviousPermitFile, existingUrl: existingPreviousPermitUrl, fileName: previousPermitFileName, optional: true }
+                        { label: "2. Community Tax Certificate (CTC/Cedula)", field: "ctcFile", file: ctcFile, setter: setCtcFile, existingUrl: existingCtcUrl, fileName: ctcFileName, optional: true },
+                        { label: "3. DTI / SEC / CDA Registration", field: "dtiSecFile", file: dtiSecFile, setter: setDtiSecFile, existingUrl: existingDtiSecUrl, fileName: dtiSecFileName, optional: true },
+                        { label: "4. BIR Certificate of Registration (COR)", field: "birCorFile", file: birCorFile, setter: setBirCorFile, existingUrl: existingBirCorUrl, fileName: birCorFileName, optional: true },
+                        { label: "5. Previous Business Permit License", field: "previousPermitFile", file: previousPermitFile, setter: setPreviousPermitFile, existingUrl: existingPreviousPermitUrl, fileName: previousPermitFileName, optional: true }
                       ]
                     ) as any[]).map(item => {
                       const hasFile = !!item.file || !!item.existingUrl;
@@ -1626,7 +1641,7 @@ export function BusinessPermitAppointmentClient({
 
                 <Button
                   onClick={currentStep === "SUBMIT" ? handleSubmit : handleNext}
-                  disabled={submitting || (currentStep === "SUBMIT" && !privacyAccepted)}
+                  disabled={submitting || (currentStep === "SUBMIT" && !privacyAccepted) || (currentStep === "PATHWAY" && hasActiveTransaction)}
                   className="text-white text-[10px] md:text-xs rounded-xl md:rounded-2xl px-8 md:px-12 h-10 md:h-14 font-black uppercase tracking-widest italic"
                   style={{ backgroundColor: themeColor }}
                 >
@@ -1651,12 +1666,16 @@ export function BusinessPermitAppointmentClient({
       {/* Renewal Quick modal */}
       <AnimatePresence>
         {showRenewalModal && previousPermits.length > 0 && (
-          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div 
+            onClick={() => setShowRenewalModal(false)}
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 cursor-pointer"
+          >
             <motion.div
+              onClick={(e) => e.stopPropagation()}
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white dark:bg-[#11131a] rounded-[2rem] border border-slate-200 dark:border-white/10 shadow-2xl p-6 md:p-8 max-w-lg w-full space-y-6"
+              className="bg-white dark:bg-[#11131a] rounded-[2rem] border border-slate-200 dark:border-white/10 shadow-2xl p-6 md:p-8 max-w-lg w-full space-y-6 cursor-default"
             >
               <div className="flex items-start gap-4">
                 <div className="p-3 bg-primary/10 rounded-2xl text-primary shrink-0" style={{ color: themeColor, backgroundColor: `${themeColor}1a` }}>
