@@ -176,16 +176,16 @@ export default function PrintQueueTicket({
                 LGU
               </div>
             )}
-            <span style={{ fontSize: '7px', fontWeight: 'bold', letterSpacing: '0.45px', textTransform: 'uppercase', color: '#333' }}>
+            <span style={{ fontSize: '8.5px', fontWeight: 'bold', letterSpacing: '0.45px', textTransform: 'uppercase', color: '#333' }}>
               Republic of the Philippines
             </span>
-            <span style={{ fontSize: '8.5px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.45px', marginTop: '1px' }}>
+            <span style={{ fontSize: '10.5px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.45px', marginTop: '1px' }}>
               Municipality of Mapandan
             </span>
-            <span style={{ fontSize: '6.5px', fontWeight: 'bold', letterSpacing: '0.4px', color: '#555' }}>
+            <span style={{ fontSize: '7.5px', fontWeight: 'bold', letterSpacing: '0.4px', color: '#555' }}>
               Province of Pangasinan
             </span>
-            <span style={{ fontSize: '7px', fontWeight: 'black', textTransform: 'uppercase', letterSpacing: '0.4px', marginTop: '2px', border: '1px solid black', padding: '1px 4px', borderRadius: '3px' }}>
+            <span style={{ fontSize: '8.5px', fontWeight: 'black', textTransform: 'uppercase', letterSpacing: '0.4px', marginTop: '2px', border: '1px solid black', padding: '1px 4px', borderRadius: '3px' }}>
               EMapandan Queue Portal
             </span>
           </div>
@@ -195,7 +195,7 @@ export default function PrintQueueTicket({
 
           {/* Ticket Number Section */}
           <div style={{ padding: '2px 0' }}>
-            <span style={{ fontSize: '7px', fontWeight: 'bold', letterSpacing: '0.8px', textTransform: 'uppercase', display: 'block', marginBottom: '3px' }}>
+            <span style={{ fontSize: '8.5px', fontWeight: 'bold', letterSpacing: '0.8px', textTransform: 'uppercase', display: 'block', marginBottom: '3px' }}>
               Queue Ticket Number
             </span>
             <div style={{ 
@@ -208,7 +208,7 @@ export default function PrintQueueTicket({
               background: '#fcfcfc'
             }}>
               <span style={{ 
-                fontSize: '17px', 
+                fontSize: '21px', 
                 fontWeight: '900', 
                 letterSpacing: '0.35px',
                 fontFamily: 'monospace',
@@ -223,7 +223,7 @@ export default function PrintQueueTicket({
           <div style={{ borderTop: '1px dotted black', margin: '5px 0' }}></div>
 
           {/* Transaction Details */}
-          <div style={{ fontSize: '8px', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '3px', margin: '1px 0 5px 0' }}>
+          <div style={{ fontSize: '9.5px', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '3px', margin: '1px 0 5px 0' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dotted #ccc', paddingBottom: '2px' }}>
               <span style={{ fontWeight: 'normal', color: '#333' }}>Service Type:</span>
               <span style={{ fontWeight: 'bold', textAlign: 'right', maxWidth: '60%' }}>{serviceName}</span>
@@ -246,9 +246,9 @@ export default function PrintQueueTicket({
           <div style={{ borderTop: '1px dotted black', margin: '4px 0 5px 0' }}></div>
 
           {/* Waiting Instructions */}
-          <div style={{ fontSize: '7px', lineHeight: 1.22, marginBottom: '6px', background: '#fafafa', padding: '5px', border: '1px solid #eee', borderRadius: '5px' }}>
+          <div style={{ fontSize: '8.5px', lineHeight: 1.22, marginBottom: '6px', background: '#fafafa', padding: '5px', border: '1px solid #eee', borderRadius: '5px' }}>
             <p style={{ margin: '0', fontWeight: 'bold' }}>Please wait for your number to be called.</p>
-            <p style={{ margin: '0 0 3px 0', fontStyle: 'italic', color: '#555', fontSize: '6.5px' }}>
+            <p style={{ margin: '0 0 3px 0', fontStyle: 'italic', color: '#555', fontSize: '7.5px' }}>
               (Mangyaring hintayin na tawagin ang inyong numero.)
             </p>
             <p style={{ margin: '0', fontWeight: 'bold' }}>Please have your physical documents ready.</p>
@@ -266,7 +266,7 @@ export default function PrintQueueTicket({
               style={{ width: '80px', height: '80px', border: '1px solid black', padding: '2px', borderRadius: '3px' }}
               onLoad={() => setQrLoaded(true)}
             />
-            <span style={{ fontSize: '6.5px', fontWeight: 'bold', color: '#777', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+            <span style={{ fontSize: '7.5px', fontWeight: 'bold', color: '#777', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
               Scan QR Code at Counter
             </span>
           </div>
@@ -275,10 +275,10 @@ export default function PrintQueueTicket({
           <div style={{ borderTop: '1px dotted black', margin: '5px 0 4px 0' }}></div>
 
           {/* Footer Slogan */}
-          <div style={{ fontSize: '6.5px', fontWeight: 'bold', color: '#333', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+          <div style={{ fontSize: '7.5px', fontWeight: 'bold', color: '#333', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
             Serbisyong Tapat at Totoo
           </div>
-          <div style={{ fontSize: '5.5px', color: '#666', marginTop: '1px' }}>
+          <div style={{ fontSize: '6.5px', color: '#666', marginTop: '1px' }}>
             Mapandan, Pangasinan
           </div>
         </div>
