@@ -252,7 +252,7 @@ export default function PrintQueueTicket({
               (Mangyaring hintayin na tawagin ang inyong numero.)
             </p>
             <p style={{ margin: '0', fontWeight: 'bold' }}>Please have your physical documents ready.</p>
-            <p style={{ margin: '0', fontStyle: 'italic', color: '#555', fontSize: '7.5px' }}>
+            <p style={{ margin: '0', fontStyle: 'italic', color: '#555', fontSize: '6.5px' }}>
               (Ihanda ang inyong mga kinakailangang dokumento.)
             </p>
           </div>
