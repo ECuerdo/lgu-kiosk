@@ -15,6 +15,7 @@ interface PrintQueueTicketProps {
   branding?: any;
   themeColor?: string;
   triggerPrint?: boolean;
+  kioskMode?: boolean;
   onPrintCompleted?: () => void;
 }
 
@@ -55,6 +56,7 @@ export default function PrintQueueTicket({
   dateGenerated = new Date(),
   branding,
   triggerPrint = false,
+  kioskMode = false,
   onPrintCompleted
 }: PrintQueueTicketProps) {
   const [mounted, setMounted] = useState(false);
@@ -70,22 +72,27 @@ export default function PrintQueueTicket({
 
   useEffect(() => {
     if (mounted && triggerPrint) {
-      if (qrLoaded) {
-        const timer = setTimeout(() => {
-          window.print();
-          if (onPrintCompleted) onPrintCompleted();
-        }, 150);
+      const printNow = () => {
+        window.focus();
+        window.print();
+        if (onPrintCompleted) onPrintCompleted();
+      };
+
+      if (kioskMode) {
+        const timer = setTimeout(printNow, qrLoaded ? 150 : 400);
         return () => clearTimeout(timer);
-      } else {
-        // Fallback timeout in case image loading fails or takes too long
-        const fallback = setTimeout(() => {
-          window.print();
-          if (onPrintCompleted) onPrintCompleted();
-        }, 1500);
-        return () => clearTimeout(fallback);
       }
+
+      if (qrLoaded) {
+        const timer = setTimeout(printNow, 150);
+        return () => clearTimeout(timer);
+      }
+
+      // Fallback timeout in case image loading fails or takes too long
+      const fallback = setTimeout(printNow, 1500);
+      return () => clearTimeout(fallback);
     }
-  }, [mounted, triggerPrint, qrLoaded, queueNumber, onPrintCompleted]);
+  }, [mounted, triggerPrint, qrLoaded, queueNumber, kioskMode, onPrintCompleted]);
 
   if (!mounted) return null;
 
