@@ -364,11 +364,11 @@ function DashboardContent() {
     if (service.id === "p3") {
       router.push("/modules/building-permit");
     } else if (service.id === "p1") {
-      router.push("/modules/business-permit");
+      router.push("/modules/business-permit-appointment");
     } else if (service.id === "c1") {
       router.push("/modules/civil-registry");
     } else if (service.id === "t2") {
-      router.push("/modules/cedula");
+      router.push("/modules/cedula-appointment");
     }
   };
 
@@ -563,6 +563,23 @@ function DashboardContent() {
               </div>
             </Button>
 
+            {resident && (
+              <Button
+                onClick={() => router.push("/dashboard/appointment")}
+                className="bg-theme-primary hover:bg-theme-primary/95 text-white font-bold rounded-2xl flex items-center gap-2.5 px-4 py-5 shadow-lg active:scale-95 transition-all shrink-0"
+              >
+                <Clock className="w-5 h-5 text-emerald-100" />
+                <div className="text-left select-none">
+                  <span className="block text-[8px] font-black uppercase tracking-widest leading-none opacity-85">
+                    Transactions
+                  </span>
+                  <span className="block text-[11px] font-black uppercase">
+                    My Tickets
+                  </span>
+                </div>
+              </Button>
+            )}
+
             {resident ? (
               <button
                 type="button"
@@ -746,6 +763,20 @@ function DashboardContent() {
                 <ProfileRow label="Contact Number" value={resident.contactNumber} />
                 <ProfileRow label="Barangay" value={resident.barangay} />
                 <ProfileRow label="Municipality" value={resident.municipality || "Mapandan"} />
+              </div>
+
+              <div className="mt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setProfileOpen(false);
+                    router.push("/dashboard/appointment");
+                  }}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-theme-primary/10 border border-theme-primary/20 text-theme-primary px-4 py-3.5 text-xs font-black uppercase tracking-wider transition hover:bg-theme-primary/20"
+                >
+                  <Clock className="h-4 w-4" />
+                  My Appointments & Tickets
+                </button>
               </div>
 
               {/* Font Size Selector */}
