@@ -504,7 +504,7 @@ export function BusinessPermitAppointmentClient({
     if (step === "PROFILE") {
       const hasCapital = businessType === "NEW" ? !!formState.capitalInvestment : !!formState.grossSales;
       const hasRegistration = businessType === "NEW" ? (!!formState.registrationType && !!formState.dtiSecNumber && !!formState.dtiSecDate) : !!formState.permitNumber;
-      return !!formState.businessName && !!formState.lineOfBusiness && !!formState.barangay && hasCapital && !!formState.businessBranch && !!formState.tinNumber && hasRegistration && !!formState.assets;
+      return !!formState.businessName && !!formState.lineOfBusiness && !!formState.barangay && hasCapital && !!formState.businessBranch && !!formState.tinNumber && hasRegistration && !!formState.assets && !!formState.businessArea;
     }
     if (step === "CHECKLIST") {
       return true;
@@ -976,13 +976,16 @@ export function BusinessPermitAppointmentClient({
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">Store Area (in Sqm)</Label>
+                      <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 italic">Store Area (in Sqm) <span className="text-rose-500 ml-0.5">*</span></Label>
                       <Input
                         type="number"
                         value={formState.businessArea}
                         onChange={e => handleInputChange("businessArea", e.target.value)}
                         placeholder="e.g. 120"
-                        className="rounded-xl h-12 border-slate-200"
+                        className={cn(
+                          "rounded-xl h-12 border-slate-200",
+                          showValidationErrors && !formState.businessArea && "border-red-500 focus-visible:ring-red-500/20 dark:border-red-500/50"
+                        )}
                       />
                     </div>
 
@@ -1458,7 +1461,11 @@ export function BusinessPermitAppointmentClient({
                             <span className="text-slate-400 font-bold uppercase tracking-wider text-[8.5px]">Health Certificate Fee</span>
                             <span className="font-mono font-bold">₱{assessment.healthCertificateFee.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                           </div>
-                          <div className="border-t border-white/10 pt-2.5 mt-1.5 flex justify-between items-center">
+                          <div className="flex justify-between items-center">
+                             <span className="text-slate-400 font-bold uppercase tracking-wider text-[8.5px]">Mayor&apos;s / Tax Clearance Fee</span>
+                             <span className="font-mono font-bold">₱{assessment.regulatoryFee.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                           </div>
+                           <div className="border-t border-white/10 pt-2.5 mt-1.5 flex justify-between items-center">
                             <span className="font-black uppercase tracking-widest text-[9px]" style={{ color: themeColor }}>Total Assessed Amount</span>
                             <span className="font-mono font-black text-sm" style={{ color: themeColor }}>
                               ₱{assessment.totalAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}

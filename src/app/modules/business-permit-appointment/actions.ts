@@ -388,7 +388,8 @@ export async function getBploSettings() {
             "bplo_wholesaler_tax_rate",
             "bplo_mayors_permit_matrix",
             "bplo_sanitary_fee_matrix",
-            "bplo_garbage_fee_matrix"
+            "bplo_garbage_fee_matrix",
+            "bplo_mayors_tax_clearance_fee"
           ]
         }
       }
@@ -397,6 +398,7 @@ export async function getBploSettings() {
     const settingsMap: Record<string, string> = {
       bplo_tax_rate_new: "0.0005",
       bplo_health_card_fee: "100.00",
+      bplo_mayors_tax_clearance_fee: "85.00",
       bplo_retail_tax_rate_low: "0.022",
       bplo_retail_tax_rate_high: "0.011",
       bplo_manufacturer_tax_rate: "0.004125",
