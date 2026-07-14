@@ -154,6 +154,7 @@ export default function PrintQueueTicket({
             flexDirection: 'column',
             fontFamily: 'monospace, Courier, sans-serif',
             lineHeight: 1.18,
+            fontWeight: 700,
             color: 'black',
             background: 'white',
             padding: '9px 7px 7px',
@@ -225,19 +226,19 @@ export default function PrintQueueTicket({
           {/* Transaction Details */}
           <div style={{ fontSize: '9.5px', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '3px', margin: '1px 0 5px 0' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dotted #ccc', paddingBottom: '2px' }}>
-              <span style={{ fontWeight: 'normal', color: '#333' }}>Service Type:</span>
+              <span style={{ fontWeight: 'bold', color: '#333' }}>Service Type:</span>
               <span style={{ fontWeight: 'bold', textAlign: 'right', maxWidth: '60%' }}>{serviceName}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dotted #ccc', paddingBottom: '2px' }}>
-              <span style={{ fontWeight: 'normal', color: '#333' }}>Date:</span>
+              <span style={{ fontWeight: 'bold', color: '#333' }}>Date:</span>
               <span style={{ fontWeight: 'bold' }}>{formatDate(appointmentDate)}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dotted #ccc', paddingBottom: '2px' }}>
-              <span style={{ fontWeight: 'normal', color: '#333' }}>Schedule:</span>
+              <span style={{ fontWeight: 'bold', color: '#333' }}>Schedule:</span>
               <span style={{ fontWeight: 'bold' }}>{appointmentSlot}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '1px' }}>
-              <span style={{ fontWeight: 'normal', color: '#555' }}>Created On:</span>
+              <span style={{ fontWeight: 'bold', color: '#555' }}>Created On:</span>
               <span style={{ fontWeight: 'bold', color: '#333' }}>{formatDateTime(dateGenerated)}</span>
             </div>
           </div>

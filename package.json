@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "kiosk:bridge": "node scripts/kiosk-print-bridge/server.mjs",
     "postinstall": "prisma generate",
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc --noEmit",
