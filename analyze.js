@@ -1,4 +1,4 @@
-const fs = require('fs');
+import fs from 'node:fs';
 const kioskCode = fs.readFileSync('c:/Users/Eulysis/Documents/lgu-kiosk/src/app/modules/building-permit/page.tsx', 'utf8');
 
 const lines = kioskCode.split('\n');
