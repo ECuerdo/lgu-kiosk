@@ -9,7 +9,8 @@ import {
   getBookedSlots,
   getPreviousPermits,
   getSystemThemeColor,
-  getBploSettings
+  getBploSettings,
+  checkActivePermits
 } from "./actions";
 import { BusinessPermitAppointmentClient } from "./BusinessPermitAppointmentClient";
 
@@ -20,7 +21,8 @@ function BusinessPermitAppointmentWrapper() {
   const [permitTypes, setPermitTypes] = useState<any[]>([]);
   const [appointmentConfig, setAppointmentConfig] = useState<any>(null);
   const [bookedSlots, setBookedSlots] = useState<any[]>([]);
-  const [hasActivePermit, setHasActivePermit] = useState(false);
+  const [hasActiveNew, setHasActiveNew] = useState(false);
+  const [hasActiveRenew, setHasActiveRenew] = useState(false);
   const [previousPermits, setPreviousPermits] = useState<any[]>([]);
   const [themeColor, setThemeColor] = useState<string>("#059669");
   const [bploSettings, setBploSettings] = useState<Record<string, string> | null>(null);
@@ -37,14 +39,15 @@ function BusinessPermitAppointmentWrapper() {
         const resident = JSON.parse(savedResident);
         const userId = resident.userId || resident.id;
 
-        const [typesRes, configRes, bookedRes, residentRes, permitsRes, themeRes, settingsRes] = await Promise.all([
+        const [typesRes, configRes, bookedRes, residentRes, permitsRes, themeRes, settingsRes, activeRes] = await Promise.all([
           getTransactionTypes(),
           getAppointmentConfig(),
           getBookedSlots(),
           getCurrentUserResident(userId),
           getPreviousPermits(userId),
           getSystemThemeColor(),
-          getBploSettings()
+          getBploSettings(),
+          checkActivePermits(userId)
         ]);
 
         if (typesRes.success) {
@@ -67,6 +70,10 @@ function BusinessPermitAppointmentWrapper() {
         }
         if (settingsRes && settingsRes.success) {
           setBploSettings(settingsRes.data || null);
+        }
+        if (activeRes && activeRes.success && activeRes.data) {
+          setHasActiveNew(activeRes.data.hasActiveNew);
+          setHasActiveRenew(activeRes.data.hasActiveRenew);
         }
       } catch (err) {
         console.error("Initialization error:", err);
@@ -96,7 +103,8 @@ function BusinessPermitAppointmentWrapper() {
       permitTypes={permitTypes}
       config={appointmentConfig}
       bookedSlots={bookedSlots}
-      hasActivePermit={hasActivePermit}
+      hasActiveNew={hasActiveNew}
+      hasActiveRenew={hasActiveRenew}
       previousPermits={previousPermits}
       themeColor={themeColor}
       bploSettings={bploSettings}

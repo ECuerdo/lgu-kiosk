@@ -223,6 +223,7 @@ export async function submitCedulaAppointment(formData: FormData, userId: string
       isPriority,
       appointmentDate: startOfDay,
       appointmentSlot,
+      category: "CEDULA"
     });
 
     // Create transaction and update resident details in database
