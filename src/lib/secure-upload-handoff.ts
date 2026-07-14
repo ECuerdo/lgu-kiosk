@@ -10,6 +10,10 @@ export type HandoffPayload = {
   slot: string;
   nonce: string;
   exp: number;
+  context?: {
+    isLotOwner?: boolean;
+    totalFloors?: number;
+  };
 };
 
 function getSecret() {
@@ -28,12 +32,13 @@ function sign(encodedPayload: string) {
   return createHmac("sha256", getSecret()).update(encodedPayload).digest("base64url");
 }
 
-export function createHandoffToken(userId: string, slot: string) {
+export function createHandoffToken(userId: string, slot: string, context?: HandoffPayload["context"]) {
   const payload: HandoffPayload = {
     userId,
     slot,
     nonce: randomBytes(18).toString("hex"),
     exp: Date.now() + HANDOFF_SESSION_DURATION_MS,
+    context,
   };
   const encodedPayload = encode(JSON.stringify(payload));
   return {
@@ -72,7 +77,7 @@ export function getHandoffStoragePrefix(payload: HandoffPayload) {
 
 export function isAllowedHandoffSlot(sessionSlot: string, uploadSlot: string) {
   if (sessionSlot === "documents") {
-    return (/^req_[0-9]$/.test(uploadSlot) && uploadSlot !== "req_5") || /^permit_[0-6]$/.test(uploadSlot);
+    return /^req_(?:[0-9]|1[0-9]|2[0-4])$/.test(uploadSlot) || /^permit_(?:[0-9]|1[0-1])$/.test(uploadSlot);
   }
   if (sessionSlot === "birth_id") {
     return uploadSlot === "idFront" || uploadSlot === "idBack";
