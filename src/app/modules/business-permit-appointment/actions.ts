@@ -79,7 +79,7 @@ export async function getBookedSlots() {
 
 export async function getPreviousPermits(userId: string) {
   try {
-    const permits = await prisma.transaction.findMany({
+    const permitsRaw = await prisma.transaction.findMany({
       where: {
         userId,
         status: "RELEASED",
@@ -94,6 +94,17 @@ export async function getPreviousPermits(userId: string) {
         createdAt: "desc"
       }
     });
+
+    const uniqueBusinessesMap: Record<string, any> = {};
+    permitsRaw.forEach((tx: any) => {
+      // Access businessName directly or from additionalData
+      const bizName = (tx.businessName || tx.additionalData?.businessName)?.trim().toUpperCase();
+      if (bizName && !uniqueBusinessesMap[bizName]) {
+        uniqueBusinessesMap[bizName] = tx;
+      }
+    });
+    const permits = Object.values(uniqueBusinessesMap);
+
     return { success: true, data: permits };
   } catch (error) {
     console.error("Get previous permits error:", error);
@@ -309,6 +320,7 @@ export async function submitBusinessAppointment(formData: FormData, userId: stri
       isPriority,
       appointmentDate: startOfDay,
       appointmentSlot,
+      category: "BUSINESS_PERMIT"
     });
 
     const transaction = await prisma.$transaction(async (tx) => {
@@ -376,7 +388,8 @@ export async function getBploSettings() {
             "bplo_wholesaler_tax_rate",
             "bplo_mayors_permit_matrix",
             "bplo_sanitary_fee_matrix",
-            "bplo_garbage_fee_matrix"
+            "bplo_garbage_fee_matrix",
+            "bplo_mayors_tax_clearance_fee"
           ]
         }
       }
@@ -385,6 +398,7 @@ export async function getBploSettings() {
     const settingsMap: Record<string, string> = {
       bplo_tax_rate_new: "0.0005",
       bplo_health_card_fee: "100.00",
+      bplo_mayors_tax_clearance_fee: "85.00",
       bplo_retail_tax_rate_low: "0.022",
       bplo_retail_tax_rate_high: "0.011",
       bplo_manufacturer_tax_rate: "0.004125",
@@ -404,3 +418,39 @@ export async function getBploSettings() {
     return { success: false, error: "Failed to fetch BPLO settings" };
   }
 }
+
+export async function checkActivePermits(userId: string) {
+  try {
+    if (!userId) return { success: false, error: "Unauthorized" };
+
+    const activeNew = await prisma.transaction.findFirst({
+      where: {
+        userId: userId,
+        type: { code: "BUSINESS_PERMIT_NEW" },
+        status: { notIn: ["RELEASED", "DELIVERED", "REJECTED"] },
+        isCancelled: false
+      }
+    });
+
+    const activeRenew = await prisma.transaction.findFirst({
+      where: {
+        userId: userId,
+        type: { code: "BUSINESS_PERMIT_RENEW" },
+        status: { notIn: ["RELEASED", "DELIVERED", "REJECTED"] },
+        isCancelled: false
+      }
+    });
+
+    return {
+      success: true,
+      data: {
+        hasActiveNew: !!activeNew,
+        hasActiveRenew: !!activeRenew
+      }
+    };
+  } catch (error) {
+    console.error("Check active permits error:", error);
+    return { success: false, error: "Failed to check active permit transactions" };
+  }
+}
+
