@@ -385,7 +385,7 @@ export function CedulaAppointmentClient({
       settings: cedulaSettings
     });
     setCalcResult(result);
-  }, [formState.income, formState.propertyValue, applicantType, activeType]);
+  }, [formState.income, formState.propertyValue, applicantType, activeType, cedulaSettings]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -929,25 +929,47 @@ export function CedulaAppointmentClient({
                         )}>
                           {existingIdUrl ? (
                             <div className="flex flex-col items-center justify-between h-full w-full space-y-2">
-                              <div className="w-10 h-10 bg-emerald-500/10 text-theme-primary rounded-xl flex items-center justify-center" style={{ color: themeColor }}>
-                                <ShieldCheck size={20} className="stroke-[2.5]" />
-                              </div>
                               <div className="space-y-0.5">
                                 <span className="block text-[9px] font-black text-emerald-600 uppercase tracking-widest">Valid ID Attached</span>
                                 <p className="text-slate-500 text-[8px] font-bold truncate max-w-[150px]">{idFileName || "Government-issued ID"}</p>
                               </div>
-                              <div className="flex items-center gap-2 pt-1">
+
+                              <div
+                                onClick={() => handleViewFile(null, existingIdUrl, "Valid ID Card")}
+                                className="relative rounded-2xl overflow-hidden border border-slate-100 dark:border-white/5 bg-slate-100 dark:bg-black/30 h-24 w-full flex items-center justify-center group/preview cursor-pointer"
+                              >
+                                {existingIdUrl.toLowerCase().endsWith(".pdf") ? (
+                                  <div className="flex flex-col items-center justify-center gap-1 text-slate-500">
+                                    <FileText className="w-8 h-8 text-rose-500" />
+                                    <span className="text-[8px] font-black uppercase tracking-wider">{idFileName || "PDF Document"}</span>
+                                  </div>
+                                ) : (
+                                  <>
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img
+                                      src={existingIdUrl}
+                                      alt="Valid ID Preview"
+                                      className="object-cover w-full h-full group-hover/preview:scale-105 transition-all"
+                                    />
+                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/preview:opacity-100 transition-opacity flex items-center justify-center">
+                                      <span className="text-[9px] text-white font-black uppercase tracking-widest">🔍 VIEW FULL SIZE</span>
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+
+                              <div className="flex items-center gap-2 pt-1 w-full">
                                 <button
                                   type="button"
                                   onClick={() => handleViewFile(null, existingIdUrl, "Valid ID Card")}
-                                  className="px-3 py-1.5 rounded-full bg-slate-200 dark:bg-white/10 hover:bg-slate-300 text-slate-800 dark:text-white font-black text-[8px] uppercase tracking-wider transition-all"
+                                  className="px-3 py-1.5 rounded-full bg-slate-200 dark:bg-white/10 hover:bg-slate-300 text-slate-800 dark:text-white font-black text-[8px] uppercase tracking-wider transition-all flex-1"
                                 >
-                                  Preview
+                                  View Document
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => startHandoff("idFile")}
-                                  className="px-3 py-1.5 rounded-full bg-theme-primary text-white font-black text-[8px] uppercase tracking-wider transition-all"
+                                  className="px-3 py-1.5 rounded-full bg-theme-primary text-white font-black text-[8px] uppercase tracking-wider transition-all flex-1"
                                   style={{ backgroundColor: themeColor }}
                                 >
                                   Change
@@ -981,25 +1003,47 @@ export function CedulaAppointmentClient({
                         )}>
                           {existingProofUrl ? (
                             <div className="flex flex-col items-center justify-between h-full w-full space-y-2">
-                              <div className="w-10 h-10 bg-emerald-500/10 text-theme-primary rounded-xl flex items-center justify-center" style={{ color: themeColor }}>
-                                <ShieldCheck size={20} className="stroke-[2.5]" />
-                              </div>
                               <div className="space-y-0.5">
                                 <span className="block text-[9px] font-black text-emerald-600 uppercase tracking-widest">Proof Attached</span>
                                 <p className="text-slate-500 text-[8px] font-bold truncate max-w-[150px]">{proofFileName || "Income Statement"}</p>
                               </div>
-                              <div className="flex items-center gap-2 pt-1">
+
+                              <div
+                                onClick={() => handleViewFile(null, existingProofUrl, "Proof of Income")}
+                                className="relative rounded-2xl overflow-hidden border border-slate-100 dark:border-white/5 bg-slate-100 dark:bg-black/30 h-24 w-full flex items-center justify-center group/preview cursor-pointer"
+                              >
+                                {existingProofUrl.toLowerCase().endsWith(".pdf") ? (
+                                  <div className="flex flex-col items-center justify-center gap-1 text-slate-500">
+                                    <FileText className="w-8 h-8 text-rose-500" />
+                                    <span className="text-[8px] font-black uppercase tracking-wider">{proofFileName || "PDF Document"}</span>
+                                  </div>
+                                ) : (
+                                  <>
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img
+                                      src={existingProofUrl}
+                                      alt="Proof Preview"
+                                      className="object-cover w-full h-full group-hover/preview:scale-105 transition-all"
+                                    />
+                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/preview:opacity-100 transition-opacity flex items-center justify-center">
+                                      <span className="text-[9px] text-white font-black uppercase tracking-widest">🔍 VIEW FULL SIZE</span>
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+
+                              <div className="flex items-center gap-2 pt-1 w-full">
                                 <button
                                   type="button"
                                   onClick={() => handleViewFile(null, existingProofUrl, "Proof of Income")}
-                                  className="px-3 py-1.5 rounded-full bg-slate-200 dark:bg-white/10 hover:bg-slate-300 text-slate-800 dark:text-white font-black text-[8px] uppercase tracking-wider transition-all"
+                                  className="px-3 py-1.5 rounded-full bg-slate-200 dark:bg-white/10 hover:bg-slate-300 text-slate-800 dark:text-white font-black text-[8px] uppercase tracking-wider transition-all flex-1"
                                 >
-                                  Preview
+                                  View Document
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => startHandoff("proofFile")}
-                                  className="px-3 py-1.5 rounded-full bg-theme-primary text-white font-black text-[8px] uppercase tracking-wider transition-all"
+                                  className="px-3 py-1.5 rounded-full bg-theme-primary text-white font-black text-[8px] uppercase tracking-wider transition-all flex-1"
                                   style={{ backgroundColor: themeColor }}
                                 >
                                   Change
