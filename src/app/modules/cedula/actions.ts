@@ -416,3 +416,33 @@ export async function getCedulaTransactionById(id: string, userId: string) {
   }
 }
 
+export async function getCedulaSettings() {
+  try {
+    const settingsList = await prisma.systemSetting.findMany({
+      where: {
+        key: {
+          in: [
+            "cedula_basic_tax_individual",
+            "cedula_basic_tax_juridical",
+            "cedula_additional_tax_rate_individual",
+            "cedula_additional_tax_rate_juridical",
+            "cedula_cap_individual",
+            "cedula_cap_juridical",
+            "cedula_penalty_rate_monthly"
+          ]
+        }
+      }
+    });
+
+    const settingsMap: Record<string, string> = {};
+    settingsList.forEach(s => {
+      settingsMap[s.key] = s.value;
+    });
+
+    return { success: true, data: settingsMap };
+  } catch (err: any) {
+    console.error("Error loading Cedula settings:", err);
+    return { success: false, error: err.message || "Failed to load settings" };
+  }
+}
+

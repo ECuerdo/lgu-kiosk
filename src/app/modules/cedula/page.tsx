@@ -30,7 +30,8 @@ import {
   submitCedulaTransaction,
   submitStudentCedulaTransaction,
   getTransactionTypes,
-  cancelTransaction
+  cancelTransaction,
+  getCedulaSettings
 } from "./actions";
 import { calculateCedula, CedulaResult, getCedulaPenaltyRate } from "@/lib/cedula";
 import { useRouter } from "next/navigation";
@@ -88,6 +89,7 @@ export default function CedulaPage() {
   const [purpose, setPurpose] = useState("");
 
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
+  const [cedulaSettings, setCedulaSettings] = useState<Record<string, string>>({});
   const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
   const [showValidationErrors, setShowValidationErrors] = useState(false);
 
@@ -122,12 +124,17 @@ export default function CedulaPage() {
         const resident = JSON.parse(savedResident);
         const userId = resident.userId || resident.id;
 
-        // Fetch types and existing applications
-        const [typesRes, existingRes, residentRes] = await Promise.all([
+        // Fetch types, existing applications, and settings
+        const [typesRes, existingRes, residentRes, settingsRes] = await Promise.all([
           getTransactionTypes(),
           getExistingCedulaTransactions(userId),
-          getCurrentUserResident(userId)
+          getCurrentUserResident(userId),
+          getCedulaSettings()
         ]);
+
+        if (settingsRes && settingsRes.success && settingsRes.data) {
+          setCedulaSettings(settingsRes.data);
+        }
 
         if (residentRes.success && residentRes.data) {
           setResidentData(residentRes.data);
@@ -285,7 +292,8 @@ export default function CedulaPage() {
     type: applicantType,
     income: parseFloat(income.replace(/,/g, "")) || 0,
     propertyValue: parseFloat(propertyValue.replace(/,/g, "")) || 0,
-    baseFee: getActiveTypeObj()?.baseFee
+    baseFee: getActiveTypeObj()?.baseFee,
+    settings: cedulaSettings
   };
 
   const result: CedulaResult = isStudent 
@@ -1165,7 +1173,7 @@ export default function CedulaPage() {
                           <span>₱{result.additionalTax.toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between items-center text-[10px] uppercase tracking-widest italic text-amber-500">
-                          <span>Penalty ({Math.round(getCedulaPenaltyRate() * 100)}%)</span>
+                          <span>Penalty ({Math.round(getCedulaPenaltyRate(cedulaSettings) * 100)}%)</span>
                           <span>₱{result.penalty.toFixed(2)}</span>
                         </div>
                       </div>

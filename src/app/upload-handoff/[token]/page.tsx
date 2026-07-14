@@ -5,15 +5,45 @@ import { CheckCircle2, FileUp, ShieldCheck } from "lucide-react";
 import { useParams } from "next/navigation";
 
 const REQUIREMENTS = [
-  "Barangay Clearance/Certification", "Tax Declaration", "Land Title",
-  "Community Tax Certificate", "Latest Tax Receipts", "Adjoining Owners Confirmation",
-  "Locational Clearance", "Affidavit of Consent", "Affidavit of Adjoining Owners",
+  "Barangay Clearance/Certification",
+  "Tax Declaration",
+  "Land Title",
+  "Community Tax Certificate",
+  "Latest Tax Receipts",
+  "Adjoining Owners Confirmation",
+  "Locational Clearance",
+  "Affidavit of Consent",
+  "Affidavit of Adjoining Owners",
   "Signed & Sealed Plans",
+  "Notarized Deed of Sale/Lot Locational Plan/ Contract of Lease",
+  "Cedula of Lot Owner",
+  "ID of Lot Owner",
+  "Death Certificate of Lot Owner (Optional)",
+  "Birth Certificate of Heirs of Deceased Owner (Optional)",
+  "Valid Licenses (PRC I.D.) of Involved Professionals",
+  "Duly Notarized Estimated Value of Building/Structure",
+  "Duly Notarized Technical Specification",
+  "Construction Safety and Health Program From DOLE",
+  "Construction Logbook duly signed by Civil Engineer/Architect in-charge of Construction",
+  "Affidavit of Undertaking",
+  "Cedula of Applicant",
+  "ID of applicant with 3 signatures",
+  "Structural Analysis and Design",
+  "Soil Boring Test",
 ];
 const PERMITS = [
-  "Electrical Permit", "Plumbing Permit", "Sanitary Permit",
-  "Excavation & Ground Preparation Permit", "Fencing Permit",
-  "Scaffolding Permit", "Mechanical Permit",
+  "Electrical Documents",
+  "Plumbing Documents",
+  "Sanitary Documents",
+  "Excavation & Ground Preparation Documents",
+  "Fencing Documents",
+  "Scaffolding Documents",
+  "Mechanical Documents",
+  "Architectural Documents",
+  "Civil/Structural Documents",
+  "Electronics Documents",
+  "Geodetic Documents",
+  "Fire Protection Plan",
 ];
 
 const BUSINESS_PERMIT_LABELS: Record<string, string> = {
@@ -33,6 +63,15 @@ const CEDULA_LABELS: Record<string, string> = {
   proofFile: "Proof of Income (e.g., Payslip, ITR, Barangay Certificate)",
 };
 
+const REQUIRED_REQUIREMENT_INDICES = new Set([
+  0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24
+]);
+
+type HandoffContext = {
+  isLotOwner?: boolean;
+  totalFloors?: number;
+};
+
 type UploadedFile = { slot: string; fileName: string; url: string };
 
 export default function UploadHandoffPage() {
@@ -42,6 +81,7 @@ export default function UploadHandoffPage() {
   const [uploadingSlot, setUploadingSlot] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
+  const [context, setContext] = useState<HandoffContext>({});
 
   const endpoint = `/api/upload-handoff/${encodeURIComponent(params.token)}`;
 
@@ -54,6 +94,7 @@ export default function UploadHandoffPage() {
         return;
       }
       setSessionSlot(result.sessionSlot);
+      setContext(result.context || {});
       setUploaded(Object.fromEntries((result.files || []).map((file: UploadedFile) => [file.slot, file])));
     } catch (err) {
       console.error(err);
@@ -83,29 +124,41 @@ export default function UploadHandoffPage() {
   const slots = sessionSlot === "documents"
     ? [
         ...REQUIREMENTS
-          .map((label, index) => ({ slot: `req_${index}`, label, group: "Requirements" }))
-          .filter((_, index) => index !== 5),
-        ...PERMITS.map((label, index) => ({ slot: `permit_${index}`, label, group: "Permits" })),
+          .map((label, index) => {
+            const isLotOwner = context.isLotOwner ?? true;
+            const hasMultipleFloors = (context.totalFloors || 0) > 1;
+            const isRequired =
+              REQUIRED_REQUIREMENT_INDICES.has(index) &&
+              (isLotOwner ? ![7, 10, 11, 12, 13, 14].includes(index) : ![21, 22].includes(index)) &&
+              (hasMultipleFloors || ![23, 24].includes(index));
+            return { slot: `req_${index}`, label, group: "Requirements", isRequired };
+          }),
+        ...PERMITS.map((label, index) => ({
+          slot: `permit_${index}`,
+          label,
+          group: "Permits",
+          isRequired: false,
+        })),
       ]
     : sessionSlot.startsWith("bp_")
-      ? [{ slot: sessionSlot, label: BUSINESS_PERMIT_LABELS[sessionSlot.replace("bp_", "")] || sessionSlot.replace("bp_", "").replace(/([A-Z])/g, " $1").trim(), group: "Business Permit Document" }]
+      ? [{ slot: sessionSlot, label: BUSINESS_PERMIT_LABELS[sessionSlot.replace("bp_", "")] || sessionSlot.replace("bp_", "").replace(/([A-Z])/g, " $1").trim(), group: "Business Permit Document", isRequired: false }]
       : sessionSlot === "birth_id"
         ? [
-            { slot: "idFront", label: "Valid ID Front Photo", group: "Valid ID Copy (Front & Back)" },
-            { slot: "idBack", label: "Valid ID Back Photo", group: "Valid ID Copy (Front & Back)" }
+            { slot: "idFront", label: "Valid ID Front Photo", group: "Valid ID Copy (Front & Back)", isRequired: false },
+            { slot: "idBack", label: "Valid ID Back Photo", group: "Valid ID Copy (Front & Back)", isRequired: false }
           ]
       : sessionSlot === "lcr_birth_psa"
         ? [
-            { slot: "psaNegativeCert", label: "PSA Negative Certification", group: "Required Documents" },
-            { slot: "form1a", label: "Form 1A (Local Registry Copy)", group: "Required Documents" }
+            { slot: "psaNegativeCert", label: "PSA Negative Certification", group: "Required Documents", isRequired: false },
+            { slot: "form1a", label: "Form 1A (Local Registry Copy)", group: "Required Documents", isRequired: false }
           ]
         : sessionSlot === "idFile" || sessionSlot === "proofFile"
-        ? [{ slot: sessionSlot, label: CEDULA_LABELS[sessionSlot] || "Secure Document Upload", group: "Cedula Application Document" }]
+        ? [{ slot: sessionSlot, label: CEDULA_LABELS[sessionSlot] || "Secure Document Upload", group: "Cedula Application Document", isRequired: false }]
         : sessionSlot === "bfp"
-          ? [{ slot: "bfp", label: "Fire Safety / BFP Clearance", group: "Clearance Document" }]
+          ? [{ slot: "bfp", label: "Fire Safety / BFP Clearance", group: "Clearance Document", isRequired: false }]
           : sessionSlot === "zoning"
-            ? [{ slot: "zoning", label: "Zoning / Locational Clearance", group: "Clearance Document" }]
-            : [{ slot: sessionSlot || "unknown", label: "Secure Document Upload", group: "Document" }];
+            ? [{ slot: "zoning", label: "Zoning / Locational Clearance", group: "Clearance Document", isRequired: false }]
+            : [{ slot: sessionSlot || "unknown", label: "Secure Document Upload", group: "Document", isRequired: false }];
 
   return (
     <main className="h-dvh overflow-y-auto bg-[#071c12] px-4 py-8 text-slate-900">
@@ -138,7 +191,12 @@ export default function UploadHandoffPage() {
                       {file ? <CheckCircle2 className="h-6 w-6" /> : <FileUp className="h-6 w-6" />}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-bold">{item.label}</p>
+                      <p className="text-sm font-bold">
+                        {item.label}
+                        {item.group === "Requirements" && !item.isRequired && (
+                          <span className="ml-2 text-[9px] font-black uppercase tracking-widest text-slate-400">Optional</span>
+                        )}
+                      </p>
                       <p className="truncate text-xs text-slate-400">
                         {uploadingSlot === item.slot ? "Scanning..." : file?.fileName || "Tap to choose file"}
                       </p>

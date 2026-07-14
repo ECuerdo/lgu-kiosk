@@ -201,38 +201,15 @@ export default function PaymentModal({
           <section className="space-y-8 rounded-[2rem] border border-white/10 bg-[#0d1015] p-6 sm:p-8">
             <div className="space-y-5">
               <SectionTitle icon={Truck} title="Deployment Strategy" />
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 <ChoiceCard active={fulfillment === "PICK_UP"} onClick={() => setFulfillment("PICK_UP")} icon={Building2} label="Office Pickup" />
-                <ChoiceCard active={fulfillment === "DELIVERY"} onClick={() => setFulfillment("DELIVERY")} icon={Truck} label="Home Delivery" />
               </div>
             </div>
 
-            {fulfillment === "DELIVERY" && (
-              <div className="grid grid-cols-2 gap-4 border-t border-white/10 pt-6 sm:grid-cols-3">
-                <SelectField
-                  label="Barangay"
-                  value={address.barangay}
-                  onChange={value => updateAddress("barangay", value)}
-                  options={MAPANDAN_BARANGAYS}
-                />
-                <AddressField label="House No. / Lot No. (Optional)" value={address.houseNumber} onChange={value => updateAddress("houseNumber", value)} />
-                <AddressField label="Street (Optional)" value={address.street} onChange={value => updateAddress("street", value)} />
-                <AddressField label="Sitio" value={address.sitio} onChange={value => updateAddress("sitio", value)} />
-                <AddressField label="Purok" value={address.purok} onChange={value => updateAddress("purok", value)} />
-                <AddressField label="Municipality" value={address.municipality} onChange={value => updateAddress("municipality", value)} />
-                <AddressField label="Province" value={address.province} onChange={value => updateAddress("province", value)} />
-                <div className="col-span-2">
-                  <AddressField label="Landmark / Instructions" value={address.landmark} onChange={value => updateAddress("landmark", value)} />
-                </div>
-              </div>
-            )}
-
             <div className="space-y-5 border-t border-white/10 pt-6">
               <SectionTitle icon={CreditCard} title="Payment" />
-              <div className="grid grid-cols-3 gap-3">
-                <ChoiceCard active={paymentMethod === "gcash"} onClick={() => setPaymentMethod("gcash")} icon={Wallet} label="GCash Wallet" description="GCash E-Wallet" light />
+              <div className="grid grid-cols-1 gap-3">
                 <ChoiceCard active={paymentMethod === "qrph"} onClick={() => setPaymentMethod("qrph")} icon={QrCode} label="QRPH Scan" description="Maya, BPI, GCash" light />
-                <ChoiceCard active={paymentMethod === "dob"} onClick={() => setPaymentMethod("dob")} icon={Building2} label="Direct Banking" description="UnionBank / BPI" light />
               </div>
 
               {error && <p className="rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-xs font-semibold text-red-300">{error}</p>}
