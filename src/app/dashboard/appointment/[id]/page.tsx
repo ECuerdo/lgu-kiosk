@@ -357,7 +357,6 @@ export default function KioskAppointmentDetailsPage() {
           appointmentDate={appointmentDate}
           appointmentSlot={appointmentSlot}
           triggerPrint={printTriggered}
-          kioskMode
           branding={branding}
           themeColor={themeColor}
           onPrintCompleted={() => setPrintTriggered(false)}

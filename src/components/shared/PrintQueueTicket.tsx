@@ -15,7 +15,6 @@ interface PrintQueueTicketProps {
   branding?: any;
   themeColor?: string;
   triggerPrint?: boolean;
-  kioskMode?: boolean;
   onPrintCompleted?: () => void;
 }
 
@@ -56,7 +55,6 @@ export default function PrintQueueTicket({
   dateGenerated = new Date(),
   branding,
   triggerPrint = false,
-  kioskMode = false,
   onPrintCompleted
 }: PrintQueueTicketProps) {
   const [mounted, setMounted] = useState(false);
@@ -72,27 +70,22 @@ export default function PrintQueueTicket({
 
   useEffect(() => {
     if (mounted && triggerPrint) {
-      const printNow = () => {
-        window.focus();
-        window.print();
-        if (onPrintCompleted) onPrintCompleted();
-      };
-
-      if (kioskMode) {
-        const timer = setTimeout(printNow, qrLoaded ? 150 : 400);
-        return () => clearTimeout(timer);
-      }
-
       if (qrLoaded) {
-        const timer = setTimeout(printNow, 150);
+        const timer = setTimeout(() => {
+          window.print();
+          if (onPrintCompleted) onPrintCompleted();
+        }, 150);
         return () => clearTimeout(timer);
+      } else {
+        // Fallback timeout in case image loading fails or takes too long
+        const fallback = setTimeout(() => {
+          window.print();
+          if (onPrintCompleted) onPrintCompleted();
+        }, 1500);
+        return () => clearTimeout(fallback);
       }
-
-      // Fallback timeout in case image loading fails or takes too long
-      const fallback = setTimeout(printNow, 1500);
-      return () => clearTimeout(fallback);
     }
-  }, [mounted, triggerPrint, qrLoaded, queueNumber, kioskMode, onPrintCompleted]);
+  }, [mounted, triggerPrint, qrLoaded, queueNumber, onPrintCompleted]);
 
   if (!mounted) return null;
 
@@ -101,7 +94,7 @@ export default function PrintQueueTicket({
       <style dangerouslySetInnerHTML={{ __html: `
         @media print {
           @page { 
-            size: 80mm 125mm; 
+            size: 80mm 150mm; 
             margin: 0; 
           }
           body { 
@@ -121,7 +114,7 @@ export default function PrintQueueTicket({
             height: 100% !important;
             visibility: visible !important;
             overflow: visible !important;
-            padding: 2mm !important;
+            padding: 6mm !important;
             background: white !important;
             z-index: 99999 !important;
             color: black !important;
@@ -131,6 +124,8 @@ export default function PrintQueueTicket({
             color-adjust: exact !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
+            font-weight: 900 !important;
+            color: black !important;
           }
         }
       `}} />
@@ -153,55 +148,55 @@ export default function PrintQueueTicket({
             display: 'flex',
             flexDirection: 'column',
             fontFamily: 'monospace, Courier, sans-serif',
-            lineHeight: 1.18,
-            fontWeight: 700,
+            lineHeight: 1.25,
             color: 'black',
             background: 'white',
-            padding: '9px 7px 7px',
-            border: '1.5px solid black',
-            borderRadius: '10px',
-            textAlign: 'center'
+            padding: '12px 8px',
+            border: '2px solid black',
+            borderRadius: '12px',
+            textAlign: 'center',
+            fontWeight: '900'
           }}
         >
           {/* Official LGU Logo & Header */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '5px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '4px' }}>
             {branding?.logo ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={branding.logo}
                 alt="LGU Seal"
-                style={{ width: '34px', height: '34px', filter: 'grayscale(1) contrast(1.2)', marginBottom: '4px' }}
+                style={{ width: '36px', height: '36px', filter: 'grayscale(1) contrast(1.2)', marginBottom: '4px' }}
               />
             ) : (
-              <div style={{ width: '30px', height: '30px', border: '1.5px solid black', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '11px', marginBottom: '4px' }}>
+              <div style={{ width: '30px', height: '30px', border: '1.5px solid black', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '12px', marginBottom: '4px' }}>
                 LGU
               </div>
             )}
-            <span style={{ fontSize: '8.5px', fontWeight: 'bold', letterSpacing: '0.45px', textTransform: 'uppercase', color: '#333' }}>
+            <span style={{ fontSize: '7px', fontWeight: '900', letterSpacing: '0.5px', textTransform: 'uppercase', color: 'black' }}>
               Republic of the Philippines
             </span>
-            <span style={{ fontSize: '10.5px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.45px', marginTop: '1px' }}>
+            <span style={{ fontSize: '9px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: '1px' }}>
               Municipality of Mapandan
             </span>
-            <span style={{ fontSize: '7.5px', fontWeight: 'bold', letterSpacing: '0.4px', color: '#555' }}>
+            <span style={{ fontSize: '6.5px', fontWeight: '900', letterSpacing: '0.5px', color: 'black' }}>
               Province of Pangasinan
             </span>
-            <span style={{ fontSize: '8.5px', fontWeight: 'black', textTransform: 'uppercase', letterSpacing: '0.4px', marginTop: '2px', border: '1px solid black', padding: '1px 4px', borderRadius: '3px' }}>
+            <span style={{ fontSize: '7.5px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: '3px', border: '1px solid black', padding: '1px 4px', borderRadius: '3px' }}>
               EMapandan Queue Portal
             </span>
           </div>
 
           {/* Dotted Divider */}
-          <div style={{ borderTop: '1px dotted black', margin: '5px 0' }}></div>
+          <div style={{ borderTop: '1.5px dotted black', margin: '6px 0' }}></div>
 
           {/* Ticket Number Section */}
           <div style={{ padding: '2px 0' }}>
-            <span style={{ fontSize: '8.5px', fontWeight: 'bold', letterSpacing: '0.8px', textTransform: 'uppercase', display: 'block', marginBottom: '3px' }}>
+            <span style={{ fontSize: '8px', fontWeight: 'bold', letterSpacing: '1px', textTransform: 'uppercase', display: 'block', marginBottom: '2px' }}>
               Queue Ticket Number
             </span>
             <div style={{ 
-              border: '1px dashed black', 
-              padding: '6px 3px', 
+              border: '1.5px dashed black', 
+              padding: '8px 4px', 
               borderRadius: '6px',
               display: 'inline-block',
               width: '100%',
@@ -209,9 +204,9 @@ export default function PrintQueueTicket({
               background: '#fcfcfc'
             }}>
               <span style={{ 
-                fontSize: '21px', 
+                fontSize: '20px', 
                 fontWeight: '900', 
-                letterSpacing: '0.35px',
+                letterSpacing: '0.5px',
                 fontFamily: 'monospace',
                 display: 'block'
               }}>
@@ -221,39 +216,39 @@ export default function PrintQueueTicket({
           </div>
 
           {/* Dotted Divider */}
-          <div style={{ borderTop: '1px dotted black', margin: '5px 0' }}></div>
+          <div style={{ borderTop: '1.5px dotted black', margin: '6px 0' }}></div>
 
           {/* Transaction Details */}
-          <div style={{ fontSize: '9.5px', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '3px', margin: '1px 0 5px 0' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dotted #ccc', paddingBottom: '2px' }}>
-              <span style={{ fontWeight: 'bold', color: '#333' }}>Service Type:</span>
-              <span style={{ fontWeight: 'bold', textAlign: 'right', maxWidth: '60%' }}>{serviceName}</span>
+          <div style={{ fontSize: '9px', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '4px', margin: '2px 0 6px 0', fontWeight: '900' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dotted black', paddingBottom: '2px' }}>
+              <span style={{ fontWeight: '900', color: 'black' }}>Service Type:</span>
+              <span style={{ fontWeight: '900', textAlign: 'right', maxWidth: '60%', color: 'black' }}>{serviceName}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dotted #ccc', paddingBottom: '2px' }}>
-              <span style={{ fontWeight: 'bold', color: '#333' }}>Date:</span>
-              <span style={{ fontWeight: 'bold' }}>{formatDate(appointmentDate)}</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dotted black', paddingBottom: '2px' }}>
+              <span style={{ fontWeight: '900', color: 'black' }}>Date:</span>
+              <span style={{ fontWeight: '900', color: 'black' }}>{formatDate(appointmentDate)}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dotted #ccc', paddingBottom: '2px' }}>
-              <span style={{ fontWeight: 'bold', color: '#333' }}>Schedule:</span>
-              <span style={{ fontWeight: 'bold' }}>{appointmentSlot}</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dotted black', paddingBottom: '2px' }}>
+              <span style={{ fontWeight: '900', color: 'black' }}>Schedule:</span>
+              <span style={{ fontWeight: '900', color: 'black' }}>{appointmentSlot}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '1px' }}>
-              <span style={{ fontWeight: 'bold', color: '#555' }}>Created On:</span>
-              <span style={{ fontWeight: 'bold', color: '#333' }}>{formatDateTime(dateGenerated)}</span>
+              <span style={{ fontWeight: '900', color: 'black' }}>Created On:</span>
+              <span style={{ fontWeight: '900', color: 'black' }}>{formatDateTime(dateGenerated)}</span>
             </div>
           </div>
 
           {/* Dotted Divider */}
-          <div style={{ borderTop: '1px dotted black', margin: '4px 0 5px 0' }}></div>
+          <div style={{ borderTop: '1.5px dotted black', margin: '4px 0 6px 0' }}></div>
 
           {/* Waiting Instructions */}
-          <div style={{ fontSize: '8.5px', lineHeight: 1.22, marginBottom: '6px', background: '#fafafa', padding: '5px', border: '1px solid #eee', borderRadius: '5px' }}>
-            <p style={{ margin: '0', fontWeight: 'bold' }}>Please wait for your number to be called.</p>
-            <p style={{ margin: '0 0 3px 0', fontStyle: 'italic', color: '#555', fontSize: '7.5px' }}>
+          <div style={{ fontSize: '8px', lineHeight: 1.3, marginBottom: '10px', background: '#fafafa', padding: '6px', border: '1px solid black', borderRadius: '6px', fontWeight: '900' }}>
+            <p style={{ margin: '0', fontWeight: '900', color: 'black' }}>Please wait for your number to be called.</p>
+            <p style={{ margin: '0 0 4px 0', fontStyle: 'italic', color: 'black', fontSize: '7.5px', fontWeight: '900' }}>
               (Mangyaring hintayin na tawagin ang inyong numero.)
             </p>
-            <p style={{ margin: '0', fontWeight: 'bold' }}>Please have your physical documents ready.</p>
-            <p style={{ margin: '0', fontStyle: 'italic', color: '#555', fontSize: '6.5px' }}>
+            <p style={{ margin: '0', fontWeight: '900', color: 'black' }}>Please have your physical documents ready.</p>
+            <p style={{ margin: '0', fontStyle: 'italic', color: 'black', fontSize: '7.5px', fontWeight: '900' }}>
               (Ihanda ang inyong mga kinakailangang dokumento.)
             </p>
           </div>
@@ -264,22 +259,22 @@ export default function PrintQueueTicket({
             <img
               src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${queueNumber}`}
               alt="QR Code"
-              style={{ width: '80px', height: '80px', border: '1px solid black', padding: '2px', borderRadius: '3px' }}
+              style={{ width: '85px', height: '85px', border: '1px solid black', padding: '3px', borderRadius: '3px' }}
               onLoad={() => setQrLoaded(true)}
             />
-            <span style={{ fontSize: '7.5px', fontWeight: 'bold', color: '#777', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+            <span style={{ fontSize: '6.5px', fontWeight: '900', color: 'black', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
               Scan QR Code at Counter
             </span>
           </div>
 
           {/* Dotted Divider */}
-          <div style={{ borderTop: '1px dotted black', margin: '5px 0 4px 0' }}></div>
+          <div style={{ borderTop: '1.5px dotted black', margin: '8px 0 4px 0' }}></div>
 
           {/* Footer Slogan */}
-          <div style={{ fontSize: '7.5px', fontWeight: 'bold', color: '#333', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+          <div style={{ fontSize: '7px', fontWeight: '900', color: 'black', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
             Serbisyong Tapat at Totoo
           </div>
-          <div style={{ fontSize: '6.5px', color: '#666', marginTop: '1px' }}>
+          <div style={{ fontSize: '6px', color: 'black', marginTop: '1px', fontWeight: '900' }}>
             Mapandan, Pangasinan
           </div>
         </div>

@@ -129,6 +129,40 @@ export async function cleanupPastDueCedulaAppointments(userId?: string) {
   }
 }
 
+export async function checkActiveCedulaRequests(userId: string) {
+  try {
+    if (!userId) return { success: false, error: "Unauthorized" };
+
+    const activeTransactions = await prisma.transaction.findMany({
+      where: {
+        userId: userId,
+        type: {
+          code: { in: ["CEDULA_IND", "CEDULA_JUR"] }
+        },
+        status: {
+          notIn: ["RELEASED", "DELIVERED", "REJECTED"]
+        },
+        isCancelled: false
+      },
+      include: {
+        type: true
+      }
+    });
+
+    const hasActiveIndividual = activeTransactions.some(tx => tx.type.code === "CEDULA_IND");
+    const hasActiveJuridical = activeTransactions.some(tx => tx.type.code === "CEDULA_JUR");
+
+    return {
+      success: true,
+      hasActiveIndividual,
+      hasActiveJuridical
+    };
+  } catch (error) {
+    console.error("Check active cedula requests error:", error);
+    return { success: false, error: "Failed to check active requests" };
+  }
+}
+
 export async function submitCedulaAppointment(formData: FormData, userId: string) {
   try {
     if (!userId) {
