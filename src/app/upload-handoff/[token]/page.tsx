@@ -141,24 +141,24 @@ export default function UploadHandoffPage() {
         })),
       ]
     : sessionSlot.startsWith("bp_")
-      ? [{ slot: sessionSlot, label: BUSINESS_PERMIT_LABELS[sessionSlot.replace("bp_", "")] || sessionSlot.replace("bp_", "").replace(/([A-Z])/g, " $1").trim(), group: "Business Permit Document" }]
+      ? [{ slot: sessionSlot, label: BUSINESS_PERMIT_LABELS[sessionSlot.replace("bp_", "")] || sessionSlot.replace("bp_", "").replace(/([A-Z])/g, " $1").trim(), group: "Business Permit Document", isRequired: false }]
       : sessionSlot === "birth_id"
         ? [
-            { slot: "idFront", label: "Valid ID Front Photo", group: "Valid ID Copy (Front & Back)" },
-            { slot: "idBack", label: "Valid ID Back Photo", group: "Valid ID Copy (Front & Back)" }
+            { slot: "idFront", label: "Valid ID Front Photo", group: "Valid ID Copy (Front & Back)", isRequired: false },
+            { slot: "idBack", label: "Valid ID Back Photo", group: "Valid ID Copy (Front & Back)", isRequired: false }
           ]
       : sessionSlot === "lcr_birth_psa"
         ? [
-            { slot: "psaNegativeCert", label: "PSA Negative Certification", group: "Required Documents" },
-            { slot: "form1a", label: "Form 1A (Local Registry Copy)", group: "Required Documents" }
+            { slot: "psaNegativeCert", label: "PSA Negative Certification", group: "Required Documents", isRequired: false },
+            { slot: "form1a", label: "Form 1A (Local Registry Copy)", group: "Required Documents", isRequired: false }
           ]
         : sessionSlot === "idFile" || sessionSlot === "proofFile"
-        ? [{ slot: sessionSlot, label: CEDULA_LABELS[sessionSlot] || "Secure Document Upload", group: "Cedula Application Document" }]
+        ? [{ slot: sessionSlot, label: CEDULA_LABELS[sessionSlot] || "Secure Document Upload", group: "Cedula Application Document", isRequired: false }]
         : sessionSlot === "bfp"
-          ? [{ slot: "bfp", label: "Fire Safety / BFP Clearance", group: "Clearance Document" }]
+          ? [{ slot: "bfp", label: "Fire Safety / BFP Clearance", group: "Clearance Document", isRequired: false }]
           : sessionSlot === "zoning"
-            ? [{ slot: "zoning", label: "Zoning / Locational Clearance", group: "Clearance Document" }]
-            : [{ slot: sessionSlot || "unknown", label: "Secure Document Upload", group: "Document" }];
+            ? [{ slot: "zoning", label: "Zoning / Locational Clearance", group: "Clearance Document", isRequired: false }]
+            : [{ slot: sessionSlot || "unknown", label: "Secure Document Upload", group: "Document", isRequired: false }];
 
   return (
     <main className="h-dvh overflow-y-auto bg-[#071c12] px-4 py-8 text-slate-900">
