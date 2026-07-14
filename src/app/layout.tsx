@@ -32,18 +32,26 @@ export default function RootLayout({
             __html: `
               (function() {
                 try {
-                  const saved = localStorage.getItem('kiosk_font_size');
+                  var root = document.documentElement;
+
+                  // ── Apply font size ────────────────────────────────────────
+                  var saved = localStorage.getItem('kiosk_font_size');
                   if (saved) {
-                    const sizeMap = { sm: '14px', md: '16px', lg: '18px', xl: '20px' };
-                    document.documentElement.style.fontSize = sizeMap[saved] || '16px';
+                    var sizeMap = { sm: '14px', md: '16px', lg: '18px', xl: '20px' };
+                    root.style.fontSize = sizeMap[saved] || '16px';
                   }
-                  const cachedTheme = localStorage.getItem('kiosk_theme_cache');
-                  if (cachedTheme) {
-                    const vars = JSON.parse(cachedTheme);
-                    const root = document.documentElement;
-                    for (const key in vars) {
-                      if (Object.prototype.hasOwnProperty.call(vars, key)) {
-                        root.style.setProperty(key, vars[key]);
+
+                  // ── Apply cached theme vars instantly (before first paint) ─
+                  var raw = localStorage.getItem('kiosk_theme_cache');
+                  if (raw) {
+                    var parsed = JSON.parse(raw);
+                    // New format: { vars: { '--primary-theme': '#...' }, ts: 123 }
+                    var vars = parsed.vars || parsed;
+                    if (vars && typeof vars === 'object') {
+                      for (var key in vars) {
+                        if (Object.prototype.hasOwnProperty.call(vars, key)) {
+                          root.style.setProperty(key, vars[key]);
+                        }
                       }
                     }
                   }
