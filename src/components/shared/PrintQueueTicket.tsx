@@ -15,7 +15,6 @@ interface PrintQueueTicketProps {
   branding?: any;
   themeColor?: string;
   triggerPrint?: boolean;
-  kioskMode?: boolean;
   onPrintCompleted?: () => void;
   paperWidth?: "58mm" | "80mm";
 }
@@ -145,13 +144,19 @@ export default function PrintQueueTicket({
       }
 
       if (qrLoaded) {
-        const timer = setTimeout(printNow, 150);
+        const timer = setTimeout(() => {
+          window.print();
+          if (onPrintCompleted) onPrintCompleted();
+        }, 150);
         return () => clearTimeout(timer);
+      } else {
+        // Fallback timeout in case image loading fails or takes too long
+        const fallback = setTimeout(() => {
+          window.print();
+          if (onPrintCompleted) onPrintCompleted();
+        }, 1500);
+        return () => clearTimeout(fallback);
       }
-
-      // Fallback timeout in case image loading fails or takes too long
-      const fallback = setTimeout(printNow, 1500);
-      return () => clearTimeout(fallback);
     }
   }, [mounted, triggerPrint, qrLoaded, queueNumber, kioskMode, onPrintCompleted, paperWidth, serviceName, appointmentDate, appointmentSlot, dateGenerated]);
 
@@ -195,6 +200,8 @@ export default function PrintQueueTicket({
             color-adjust: exact !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
+            font-weight: 900 !important;
+            color: black !important;
           }
         }
       `}} />
