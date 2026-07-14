@@ -38,6 +38,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       files,
       expiresAt: payload.exp,
       sessionSlot: payload.slot,
+      context: payload.context || {},
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Invalid handoff.";

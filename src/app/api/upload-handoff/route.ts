@@ -12,13 +12,13 @@ function normalizePublicOrigin(value: string | undefined, fallback: string) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId, slot } = await request.json();
+    const { userId, slot, context } = await request.json();
     const allowed = ["tct", "documents", "bfp", "zoning", "idFile", "proofFile", "birth_id"];
     if (!userId || !(allowed.includes(slot) || String(slot).startsWith("bp_") || String(slot).startsWith("lcr_"))) {
       return NextResponse.json({ error: "Invalid upload request." }, { status: 400 });
     }
 
-    const { token, expiresAt } = createHandoffToken(String(userId), slot);
+    const { token, expiresAt } = createHandoffToken(String(userId), slot, context);
     const publicOrigin = normalizePublicOrigin(process.env.NEXT_PUBLIC_APP_URL, request.nextUrl.origin);
     const uploadUrl = new URL(`/upload-handoff/${encodeURIComponent(token)}`, publicOrigin);
     return NextResponse.json({ token, uploadUrl: uploadUrl.toString(), expiresAt });

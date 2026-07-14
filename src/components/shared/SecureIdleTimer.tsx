@@ -7,8 +7,8 @@ import { AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 
 interface SecureIdleTimerProps {
-    timeoutSeconds?: number; // Default: 120s (2 minutes)
-    warningSeconds?: number; // Default: 90s (1.5 minutes)
+    timeoutSeconds?: number; // Default: 300s (5 minutes)
+    warningSeconds?: number; // Default: 240s (4 minutes)
     themeColor?: string;     // Default: "var(--primary-theme)"
 }
 
@@ -16,8 +16,8 @@ const AUTO_LOGOUT_ENABLED =
     process.env.NEXT_PUBLIC_ENABLE_SERVICE_AUTO_LOGOUT?.toLowerCase() === "true";
 
 export default function SecureIdleTimer({
-    timeoutSeconds = 120,
-    warningSeconds = 90,
+    timeoutSeconds = 300,
+    warningSeconds = 240,
     themeColor = "var(--primary-theme)"
 }: SecureIdleTimerProps) {
     const [idleTime, setIdleTime] = useState(0);

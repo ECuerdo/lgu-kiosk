@@ -6,6 +6,43 @@ import { uploadFile } from "@/lib/storage";
 import { revalidatePath } from "next/cache";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 
+function sanitizeString(value: unknown) {
+  if (typeof value !== "string") return value;
+  return value
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function sanitizeObject<T>(input: T): T {
+  if (Array.isArray(input)) {
+    return input.map((item) => sanitizeObject(item)) as T;
+  }
+  if (input && typeof input === "object") {
+    const output: Record<string, any> = {};
+    for (const [key, value] of Object.entries(input as Record<string, any>)) {
+      output[key] = sanitizeObject(value);
+    }
+    return output as T;
+  }
+  return sanitizeString(input) as T;
+}
+
+async function validatePayloadFiles(payload: Record<string, any>) {
+  const suspicious = Object.entries(payload).some(([, value]) => {
+    if (typeof value !== "string") return false;
+    if (!value.startsWith("http")) return false;
+    return !/^https?:\/\/.+/i.test(value);
+  });
+
+  if (suspicious) {
+    return { success: false, error: "Invalid file payload detected." };
+  }
+
+  return { success: true };
+}
+
 export async function getCurrentUserResident(userId: string) {
   try {
     if (!userId) return { success: false, error: "Unauthorized" };
@@ -105,6 +142,20 @@ export async function submitBuildingPermit(formData: FormData, userId: string) {
     const totalFloors = totalFloorsValue ? parseInt(totalFloorsValue, 10) : null;
     const privacyConsentAccepted = formData.get("privacyConsentAccepted") === "true";
 
+    const customLabelsStr = formData.get("customLabels") as string;
+    let customLabels = {};
+    if (customLabelsStr) {
+      try {
+        customLabels = JSON.parse(customLabelsStr);
+      } catch (e) {
+        console.error("Error parsing customLabels", e);
+      }
+    }
+
+    if (!privacyConsentAccepted) {
+      return { success: false, error: "Privacy consent is required." };
+    }
+
     // Prepare JSON for additional Data
     const additionalData: any = {
       descriptionOfWork,
@@ -118,7 +169,8 @@ export async function submitBuildingPermit(formData: FormData, userId: string) {
       totalFloors,
       privacyConsentAccepted,
       privacyConsentAcceptedAt: privacyConsentAccepted ? new Date().toISOString() : null,
-      documents: {}
+      documents: {},
+      customLabels
     };
 
     // Helper to upload and store URL
@@ -153,14 +205,26 @@ export async function submitBuildingPermit(formData: FormData, userId: string) {
       where: { userId: targetUserId }
     });
 
+    const fileCheck = await validatePayloadFiles(additionalData);
+    if (!fileCheck.success) {
+      return { success: false, error: fileCheck.error || "File validation failed." };
+    }
+
+    const sanitizedAdditionalData = sanitizeObject(additionalData);
+    if (additionalData.signature) {
+      sanitizedAdditionalData.signature = additionalData.signature;
+    }
+
+    const sanitizedResidentSnapshot = resident ? sanitizeObject(resident) : {};
+
     // Create the transaction (FOR_REQUESTING)
     const transaction = await prisma.transaction.create({
       data: {
         userId: targetUserId,
         typeId: type.id,
         status: "FOR_REQUESTING",
-        residentSnapshot: resident ? (resident as any) : {},
-        additionalData: additionalData,
+        residentSnapshot: sanitizedResidentSnapshot as any,
+        additionalData: sanitizedAdditionalData as any,
         totalAmount: 0,
       }
     });
@@ -260,6 +324,18 @@ export async function resubmitBuildingPermit(transactionId: string, formData: Fo
       additionalData.documents = {};
     }
 
+    const customLabelsStr = formData.get("customLabels") as string;
+    if (customLabelsStr) {
+      try {
+        additionalData.customLabels = {
+          ...(additionalData.customLabels || {}),
+          ...JSON.parse(customLabelsStr)
+        };
+      } catch (e) {
+        console.error("Error parsing customLabels in resubmit", e);
+      }
+    }
+
     // Extract basic form data
     const descriptionOfWork = formData.get("descriptionOfWork") as string;
     const occupancyUse = formData.get("occupancyUse") as string;
@@ -319,13 +395,25 @@ export async function resubmitBuildingPermit(transactionId: string, formData: Fo
       where: { userId: userId }
     });
 
+    const fileCheck = await validatePayloadFiles(additionalData);
+    if (!fileCheck.success) {
+      return { success: false, error: fileCheck.error || "File validation failed." };
+    }
+
+    const sanitizedAdditionalData = sanitizeObject(additionalData);
+    if (additionalData.signature) {
+      sanitizedAdditionalData.signature = additionalData.signature;
+    }
+
+    const sanitizedResidentSnapshot = resident ? sanitizeObject(resident) : {};
+
     const updatedTransaction = await prisma.transaction.update({
       where: { id: transactionId },
       data: {
         status: "FOR_REQUESTING",
         rejectionRemarks: null,
-        residentSnapshot: resident ? (resident as any) : {},
-        additionalData: additionalData,
+        residentSnapshot: sanitizedResidentSnapshot as any,
+        additionalData: sanitizedAdditionalData as any,
       }
     });
 
