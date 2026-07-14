@@ -34,7 +34,6 @@ import {
   Upload,
   Hourglass,
   Receipt,
-  Printer,
   Check,
   UserCheck,
   Handshake,
@@ -325,6 +324,9 @@ const EVALUATION_PHASE_STATUSES = [
 ];
 const TREASURY_PHASE_STATUSES = ["UNPAID", "PAID", "TREASURY_REVISION", "FOR_PROCESSING"];
 const RELEASE_PHASE_STATUSES = ["FOR_CLAIM", "FOR_PICKING", "RELEASED", "DELIVERED"];
+const hasTreasuryClearances = (app: any) =>
+  Boolean(app?.additionalData?.bfpClearanceUrl) &&
+  Boolean(app?.additionalData?.zoningClearanceUrl);
 
 function getApplicationPhase(status?: string) {
   if (status && RELEASE_PHASE_STATUSES.includes(status)) return { step: "SUBMIT", maxStep: 5 };
@@ -336,6 +338,7 @@ function getApplicationPhase(status?: string) {
 export default function BuildingPermitPage() {
   const router = useRouter();
   const pageScrollRef = React.useRef<HTMLDivElement>(null);
+  const handoffStorageKey = (slot: string) => `lgu_kiosk_building_permit_handoff_${slot}`;
   const [currentStep, setCurrentStep] = useState("GUIDE");
   const [hasReadGuide, setHasReadGuide] = useState(true);
   const [existingApplications, setExistingApplications] = useState<any[]>([]);
@@ -394,6 +397,25 @@ export default function BuildingPermitPage() {
   };
 
   const isEditable = !selectedApplication || isRevision;
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const stored = window.sessionStorage.getItem(handoffStorageKey("documents"));
+    if (!stored) return;
+    try {
+      const parsed = JSON.parse(stored) as { token: string; qrCode: string; expiresAt: number; slot: string };
+      if (!parsed.token || !parsed.expiresAt || parsed.expiresAt <= Date.now() || parsed.slot !== "documents") {
+        window.sessionStorage.removeItem(handoffStorageKey("documents"));
+        return;
+      }
+      setHandoffToken(parsed.token);
+      setHandoffQrCode(parsed.qrCode || "");
+      setHandoffExpiresAt(parsed.expiresAt);
+      setHandoffSessionSlot("documents");
+    } catch {
+      window.sessionStorage.removeItem(handoffStorageKey("documents"));
+    }
+  }, []);
 
   const [signatureData, setSignatureData] = useState<string | null>(null);
   const [idChoice, setIdChoice] = useState<"PROFILE" | "UPLOAD">("PROFILE");
@@ -493,14 +515,18 @@ export default function BuildingPermitPage() {
               )
             }));
 
-            const requiredRequirementSlots = Array.from({ length: 10 }, (_, index) => index)
-              .filter(index =>
-                ![2, 5, 8].includes(index)
-                && (formData.isLotOwner === "No" || index !== 7)
-              )
+            const isAffidavitOfConsentRequired = formData.isLotOwner === "No";
+            const hasMultipleFloors = parseInt(formData.totalFloors || "0", 10) > 1;
+            const requiredRequirementSlots = Array.from({ length: 25 }, (_, index) => index)
+              .filter(index => {
+                if ([2, 5, 8, 13, 14].includes(index)) return false;
+                if (!isAffidavitOfConsentRequired && [7, 10, 11, 12, 13, 14].includes(index)) return false;
+                if (isAffidavitOfConsentRequired && [21, 22].includes(index)) return false;
+                if (!hasMultipleFloors && [23, 24].includes(index)) return false;
+                return true;
+              })
               .map(index => `req_${index}`);
-            const requiredPermitSlots = Array.from({ length: 7 }, (_, index) => index)
-              .filter(index => index !== 4)
+            const requiredPermitSlots = Array.from({ length: 12 }, (_, index) => index)
               .map(index => `permit_${index}`);
             const uploadedSlots = new Set([
               ...Object.keys(selectedApplication?.additionalData?.documents || {}),
@@ -555,6 +581,25 @@ export default function BuildingPermitPage() {
 
   const startHandoff = async (slot: "tct" | "documents" | "bfp" | "zoning") => {
     if (isCreatingHandoff) return;
+    if (typeof window !== "undefined") {
+      const stored = window.sessionStorage.getItem(handoffStorageKey(slot));
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored) as { token: string; qrCode: string; expiresAt: number; slot: string };
+          if (parsed.token && parsed.expiresAt > Date.now() && parsed.slot === slot) {
+            setHandoffToken(parsed.token);
+            setHandoffSessionSlot(slot);
+            setHandoffQrCode(parsed.qrCode || "");
+            setHandoffExpiresAt(parsed.expiresAt);
+            setIsHandoffOpen(true);
+            return;
+          }
+          window.sessionStorage.removeItem(handoffStorageKey(slot));
+        } catch {
+          window.sessionStorage.removeItem(handoffStorageKey(slot));
+        }
+      }
+    }
     setIsCreatingHandoff(true);
     try {
       const savedResident = typeof window !== "undefined" ? sessionStorage.getItem("active_resident") : null;
@@ -564,7 +609,14 @@ export default function BuildingPermitPage() {
       const response = await fetch("/api/upload-handoff", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, slot }),
+        body: JSON.stringify({
+          userId,
+          slot,
+          context: slot === "documents" ? {
+            isLotOwner: formData.isLotOwner === "Yes",
+            totalFloors: Number(formData.totalFloors || 0),
+          } : undefined,
+        }),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Unable to create QR upload.");
@@ -578,6 +630,12 @@ export default function BuildingPermitPage() {
       setHandoffQrCode(qrDataUrl);
       setHandoffExpiresAt(result.expiresAt);
       setIsHandoffOpen(true);
+      if (typeof window !== "undefined") {
+        window.sessionStorage.setItem(
+          handoffStorageKey(slot),
+          JSON.stringify({ token: result.token, qrCode: qrDataUrl, expiresAt: result.expiresAt, slot })
+        );
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Unable to create QR upload.");
     } finally {
@@ -591,6 +649,7 @@ export default function BuildingPermitPage() {
   const startZoningHandoff = () => startHandoff("zoning");
 
   const isAffidavitOfConsentRequired = formData.isLotOwner === "No";
+  const hasMultipleFloors = parseInt(formData.totalFloors || "0", 10) > 1;
   const missingBuildingPermitFields = showValidationErrors ? [
     ...((!formData.scopeNewConstruction &&
       !formData.scopeAddition &&
@@ -612,8 +671,14 @@ export default function BuildingPermitPage() {
     ...((idChoice === "UPLOAD" && !formData.newIdFile && !selectedApplication?.additionalData?.documents?.newIdFile) ? ["Valid ID upload"] : []),
     ...((!hasTctFile) ? ["Certified true copy of the TCT"] : []),
   ] : [];
-  const requiredRequirementIndexes = Array.from({ length: 10 }, (_, index) => index)
-    .filter(index => ![2, 5, 8].includes(index) && (isAffidavitOfConsentRequired || index !== 7));
+  const requiredRequirementIndexes = Array.from({ length: 25 }, (_, index) => index)
+    .filter(index => {
+      if ([2, 5, 8, 13, 14].includes(index)) return false;
+      if (!isAffidavitOfConsentRequired && [7, 10, 11, 12, 13, 14].includes(index)) return false;
+      if (isAffidavitOfConsentRequired && [21, 22].includes(index)) return false;
+      if (!hasMultipleFloors && [23, 24].includes(index)) return false;
+      return true;
+    });
   const requiredRequirementsCount = requiredRequirementIndexes.length;
   const uploadedRequirementKeys = new Set([
     ...Object.keys(selectedApplication?.additionalData?.documents || {}).filter(k => k.startsWith("req_")),
@@ -623,16 +688,14 @@ export default function BuildingPermitPage() {
   const requirementsProgress = requiredRequirementIndexes
     .filter(index => uploadedRequirementKeys.has(`req_${index}`)).length;
 
-  const requiredPermitIndexes = Array.from({ length: 7 }, (_, index) => index)
-    .filter(index => index !== 4);
-  const requiredPermitsCount = requiredPermitIndexes.length;
+  const requiredPermitIndexes: number[] = [];
+  const requiredPermitsCount = 4;
   const uploadedPermitKeys = new Set([
     ...Object.keys(selectedApplication?.additionalData?.documents || {}).filter(k => k.startsWith("permit_")),
     ...Object.keys(uploadedPermits).map(k => `permit_${k}`),
     ...Object.keys(handoffDocuments).filter(k => k.startsWith("permit_"))
   ]);
-  const permitsProgress = requiredPermitIndexes
-    .filter(index => uploadedPermitKeys.has(`permit_${index}`)).length;
+  const permitsProgress = uploadedPermitKeys.size;
 
 
 
@@ -646,17 +709,37 @@ export default function BuildingPermitPage() {
     "Locational Clearance",
     "Affidavit of Consent",
     "Affidavit of Adjoining Owners",
-    "Signed & Sealed Plans"
+    "Signed & Sealed Plans",
+    "Notarized Deed of Sale/Lot Locational Plan/ Contract of Lease",
+    "Cedula of Lot Owner",
+    "ID of Lot Owner",
+    "Death Certificate of Lot Owner (Optional)",
+    "Birth Certificate of Heirs of Deceased Owner (Optional)",
+    "Valid Licenses (PRC I.D.) of Involved Professionals",
+    "Duly Notarized Estimated Value of Building/Structure",
+    "Duly Notarized Technical Specification",
+    "Construction Safety and Health Program From DOLE",
+    "Construction Logbook duly signed by Civil Engineer/Architect in-charge of Construction",
+    "Affidavit of Undertaking",
+    "Cedula of Applicant",
+    "ID of applicant with 3 signatures",
+    "Structural Analysis and Design",
+    "Soil Boring Test"
   ];
 
   const permitTypesList = [
-    "1. Electrical Permit",
-    "2. Plumbing Permit",
-    "3. Sanitary Permit",
-    "4. Excavation & Ground Preparation Permit",
-    "5. Fencing Permit",
-    "6. Scaffolding Permit",
-    "7. Mechanical Permit"
+    "Electrical Documents",
+    "Plumbing Documents",
+    "Sanitary Documents",
+    "Excavation & Ground Preparation Documents",
+    "Fencing Documents",
+    "Scaffolding Documents",
+    "Mechanical Documents",
+    "Architectural Documents",
+    "Civil/Structural Documents",
+    "Electronics Documents",
+    "Geodetic Documents",
+    "Fire Protection Plan"
   ];
 
   useEffect(() => {
@@ -942,9 +1025,6 @@ export default function BuildingPermitPage() {
         "Have them sign the document in the presence of a notary public or barangay official.",
         "If any owner is unavailable or refuses, you may need to secure a barangay certification of posting instead."
       ],
-      infoType: "tip",
-      infoLabel: "Tip",
-      infoText: "Bring a small token or be courteous when requesting signatures. This avoids future boundary disputes."
     },
     {
       id: 8,
@@ -1140,13 +1220,13 @@ export default function BuildingPermitPage() {
     if (!residentData) return;
     const userId = residentData.userId || residentData.id;
 
-    if (requirementsProgress < requiredRequirementsCount || permitsProgress < requiredPermitsCount || !signatureData || !privacyAccepted) {
+    if (requirementsProgress < requiredRequirementsCount || permitsProgress < 4 || !signatureData || !privacyAccepted) {
       setShowValidationErrors(true);
       if (requirementsProgress < requiredRequirementsCount) {
         toast.warning(`Please ensure ALL ${requiredRequirementsCount} required documents are provided.`);
         setActiveDocTab("REQUIREMENTS");
-      } else if (permitsProgress < requiredPermitsCount) {
-        toast.warning(`Please ensure ALL ${requiredPermitsCount} required permits are provided.`);
+      } else if (permitsProgress < 4) {
+        toast.warning("Please upload 4 or more permits to proceed.");
         setActiveDocTab("PERMITS");
       } else if (!signatureData) {
         toast.warning("Please provide your digital signature before submitting.");
@@ -1189,8 +1269,11 @@ export default function BuildingPermitPage() {
       }
 
       const finalReqUrls: Record<string, string> = {};
-      for (let i = 0; i < 10; i++) {
-        if (i === 5 || (i === 7 && !isAffidavitOfConsentRequired)) continue;
+      for (let i = 0; i < 25; i++) {
+        if ([2, 5, 8, 13, 14].includes(i)) continue;
+        if (!isAffidavitOfConsentRequired && [7, 10, 11, 12, 13, 14].includes(i)) continue;
+        if (isAffidavitOfConsentRequired && [21, 22].includes(i)) continue;
+        if (!hasMultipleFloors && [23, 24].includes(i)) continue;
         const file = uploadedRequirements[i];
         if (file) {
           const url = await uploadFileClientSide(file, "requirements", `req_${i}`);
@@ -1204,7 +1287,7 @@ export default function BuildingPermitPage() {
       }
 
       const finalPermitUrls: Record<string, string> = {};
-      for (let i = 0; i < 7; i++) {
+      for (let i = 0; i < 12; i++) {
         const file = uploadedPermits[i];
         if (file) {
           const url = await uploadFileClientSide(file, "permits", `permit_${i}`);
@@ -1331,7 +1414,7 @@ export default function BuildingPermitPage() {
       />
       <SecureQrUploadModal
         isOpen={isHandoffOpen}
-        onClose={() => { setIsHandoffOpen(false); setHandoffToken(""); }}
+        onClose={() => { setIsHandoffOpen(false); }}
         qrCode={handoffQrCode}
         expiresAt={handoffExpiresAt}
         slotLabel={
@@ -2465,7 +2548,7 @@ export default function BuildingPermitPage() {
                     : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-white/50 dark:hover:bg-white/5"
                 )}
               >
-                Permits ({permitsProgress}/{requiredPermitsCount} required)
+                Permits ({permitsProgress}/4)
               </button>
             </div>
 
@@ -2485,27 +2568,27 @@ export default function BuildingPermitPage() {
               {activeDocTab === "REQUIREMENTS" ? (
                 documentRequirementsList
                   .map((reqName, idx) => ({ reqName, idx }))
-                  .filter(({ idx }) => idx !== 5 && (isAffidavitOfConsentRequired || idx !== 7))
                   .map(({ reqName, idx }) => {
                   const file = uploadedRequirements[idx];
                   const existingUrl = selectedApplication?.additionalData?.documents?.[`req_${idx}`];
                   const handoffFile = handoffDocuments[`req_${idx}`];
                   const hasFile = !!file || !!existingUrl || !!handoffFile;
+                  const isRequired = ![2, 5, 8, 13, 14].includes(idx)
+                    && (isAffidavitOfConsentRequired || ![7, 10, 11, 12, 13, 14].includes(idx))
+                    && (!isAffidavitOfConsentRequired || ![21, 22].includes(idx))
+                    && (hasMultipleFloors || ![23, 24].includes(idx));
 
                   return (
                     <div key={idx} className={cn("bg-white/40 dark:bg-white/5 border rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-4 shadow-sm", (showValidationErrors && requiredRequirementIndexes.includes(idx) && !hasFile) ? "border-red-500" : "border-slate-200 dark:border-white/10")}>
                       <div className="flex items-center gap-4 flex-1">
-                        <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center font-black", hasFile ? "bg-emerald-500/10 text-emerald-500" : "bg-slate-100 dark:bg-white/5 text-slate-400")}>
-                          {idx + 1}
-                        </div>
                         <div>
                           <p className="font-bold text-slate-800 dark:text-white text-sm">
                             {reqName}
-                            {!requiredRequirementIndexes.includes(idx) && (
+                            {!isRequired && (
                               <span className="ml-2 text-[9px] font-black uppercase tracking-widest text-slate-400">Optional</span>
                             )}
                           </p>
-                          <p className="text-xs text-slate-400">{file?.name || handoffFile?.fileName || (existingUrl ? "Existing Document" : requiredRequirementIndexes.includes(idx) ? "Required File" : "Optional File")}</p>
+                          <p className="text-xs text-slate-400">{file?.name || handoffFile?.fileName || (existingUrl ? "Existing Document" : isRequired ? "Required File" : "Optional File")}</p>
                         </div>
                       </div>
 
@@ -2557,17 +2640,11 @@ export default function BuildingPermitPage() {
                   return (
                     <div key={idx} className={cn("bg-white/40 dark:bg-white/5 border rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-4 shadow-sm", (showValidationErrors && requiredPermitIndexes.includes(idx) && !hasFile) ? "border-red-500" : "border-slate-200 dark:border-white/10")}>
                       <div className="flex items-center gap-4 flex-1">
-                        <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center font-black", hasFile ? "bg-emerald-500/10 text-emerald-500" : "bg-slate-100 dark:bg-white/5 text-slate-400")}>
-                          {idx + 1}
-                        </div>
                         <div>
                           <p className="font-bold text-slate-800 dark:text-white text-sm">
                             {permitName}
-                            {!requiredPermitIndexes.includes(idx) && (
-                              <span className="ml-2 text-[9px] font-black uppercase tracking-widest text-slate-400">Optional</span>
-                            )}
                           </p>
-                          <p className="text-xs text-slate-400">{file?.name || handoffFile?.fileName || (existingUrl ? "Existing Document" : requiredPermitIndexes.includes(idx) ? "Required File" : "Optional File")}</p>
+                          <p className="text-xs text-slate-400">{file?.name || handoffFile?.fileName || (existingUrl ? "Existing Document" : "Upload at least 4 permits to proceed")}</p>
                         </div>
                       </div>
 
@@ -2674,12 +2751,18 @@ export default function BuildingPermitPage() {
                     return;
                   }
 
-                  const missingReqs = activeDocTab === "REQUIREMENTS" && requirementsProgress < requiredRequirementsCount;
-                  const missingPermits = activeDocTab === "PERMITS" && permitsProgress < requiredPermitsCount;
+                  const missingReqs = requirementsProgress < requiredRequirementsCount;
+                  const missingPermits = permitsProgress < requiredPermitsCount;
 
                   if (missingReqs || missingPermits) {
                     setShowValidationErrors(true);
-                    toast.error("Please upload all files in the active tab before continuing.");
+                    if (missingReqs) {
+                      setActiveDocTab("REQUIREMENTS");
+                      toast.error(`Please upload all required documents before continuing.`);
+                    } else {
+                      setActiveDocTab("PERMITS");
+                      toast.error(`Please upload at least ${requiredPermitsCount} permits before continuing.`);
+                    }
                     return;
                   }
 
@@ -2706,12 +2789,12 @@ export default function BuildingPermitPage() {
               </p>
             </div>
 
-            <div className="mx-auto max-w-4xl space-y-6 rounded-[2.5rem] border border-slate-200 bg-white p-6 shadow-xl md:p-10">
+            <div className="mx-auto max-w-4xl space-y-6 rounded-[2.5rem] border border-slate-200 bg-white/40 p-6 shadow-xl backdrop-blur-md dark:border-white/10 dark:bg-white/5 md:p-10">
               <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-theme-primary">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-theme-primary dark:bg-emerald-500/10">
                   <Landmark className="h-5 w-5" />
                 </span>
-                <h3 className="text-xl font-black tracking-tight text-slate-900">Treasury & Zoning/BFP Status</h3>
+                <h3 className="text-xl font-black tracking-tight text-slate-900 dark:text-white">Treasury & Zoning/BFP Status</h3>
               </div>
 
               <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pb-6 border-b border-slate-200 dark:border-white/10">
@@ -2726,14 +2809,14 @@ export default function BuildingPermitPage() {
                 </div>
 
                 <div className="text-right">
-                  <span className="bg-theme-primary/10 text-theme-primary text-xs font-bold uppercase tracking-widest px-4 py-2 rounded-full border border-theme-primary/20 shadow-inner">
+                  <span className="bg-theme-primary/10 text-theme-primary text-xs font-bold uppercase tracking-widest px-4 py-2 rounded-full border border-theme-primary/20 shadow-inner dark:bg-theme-primary/15">
                     {selectedApplication.status.replace(/_/g, ' ')}
                   </span>
                 </div>
               </div>
 
               {selectedApplication.status === "FOR_REVISION" && selectedApplication.rejectionRemarks && (
-                <div className="bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 p-6 rounded-2xl space-y-2">
+                <div className="bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-300 p-6 rounded-2xl space-y-2">
                   <h4 className="font-bold uppercase tracking-widest text-xs flex items-center gap-2">
                     <FileWarning className="w-4 h-4" /> Revision Required by Engineer
                   </h4>
@@ -2799,6 +2882,171 @@ export default function BuildingPermitPage() {
                 </div>
               )}
 
+              <div className="space-y-4">
+                <h3 className="font-bold text-slate-700 dark:text-slate-300">MPDC Zoning Review</h3>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-white/5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full">
+                    <div className="flex items-start gap-4">
+                      <div className={cn(
+                        "w-10 h-10 rounded-full flex items-center justify-center shrink-0 mt-0.5",
+                        !["EVALUATED", "UNPAID", "PAID", "FOR_PROCESSING", "FOR_CLAIM", "FOR_PICKING", "RELEASED", "DELIVERED"].includes(selectedApplication.status)
+                          ? "bg-amber-100 dark:bg-amber-500/20 text-amber-500"
+                          : selectedApplication.additionalData?.feeAssessment?.zoningEndorsed
+                            ? "bg-emerald-100 text-emerald-500 dark:bg-emerald-500/20"
+                            : "bg-blue-100 text-blue-500 dark:bg-blue-500/20"
+                      )}>
+                        {!["EVALUATED", "UNPAID", "PAID", "FOR_PROCESSING", "FOR_CLAIM", "FOR_PICKING", "RELEASED", "DELIVERED"].includes(selectedApplication.status) ? (
+                          <Clock className="w-5 h-5" />
+                        ) : selectedApplication.additionalData?.feeAssessment?.zoningEndorsed ? (
+                          <Check className="w-5 h-5" />
+                        ) : (
+                          <MapPin className="w-5 h-5" />
+                        )}
+                      </div>
+                      <div className="space-y-1">
+                        <p className="font-bold text-slate-800 dark:text-white text-sm leading-snug">
+                          {!["EVALUATED", "UNPAID", "PAID", "FOR_PROCESSING", "FOR_CLAIM", "FOR_PICKING", "RELEASED", "DELIVERED"].includes(selectedApplication.status)
+                            ? "Awaiting Engineering Approval"
+                            : selectedApplication.additionalData?.zoningStatus === "FOR_INSPECTION"
+                              ? "Scheduled for Zoning Site Inspection"
+                              : selectedApplication.additionalData?.zoningStatus === "FOR_REINSPECTION"
+                                ? "Scheduled for Zoning Site Re-inspection"
+                                : selectedApplication.additionalData?.feeAssessment?.zoningEndorsed
+                                  ? "Zoning Assessment Endorsed"
+                                  : "Zoning Clearance Under Review"}
+                        </p>
+                        <p className="text-xs text-slate-500 leading-normal">
+                          {!["EVALUATED", "UNPAID", "PAID", "FOR_PROCESSING", "FOR_CLAIM", "FOR_PICKING", "RELEASED", "DELIVERED"].includes(selectedApplication.status)
+                            ? "Zoning review will commence once the Engineering Department approves your documents."
+                            : selectedApplication.additionalData?.zoningStatus === "FOR_INSPECTION"
+                              ? "Your application is scheduled for an upcoming zoning site inspection."
+                              : selectedApplication.additionalData?.zoningStatus === "FOR_REINSPECTION"
+                                ? "Your application requires a zoning site re-inspection. Please check for updates."
+                                : selectedApplication.additionalData?.feeAssessment?.zoningEndorsed
+                                  ? "Your zoning requirements have been evaluated and endorsed by MPDC."
+                                  : "Your documents are currently being reviewed by the MPDC Zoning Office."}
+                        </p>
+                      </div>
+                    </div>
+                    <span className={cn(
+                      "text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full shrink-0 w-fit sm:self-center self-start sm:ml-0 ml-14",
+                      selectedApplication.isCancelled
+                        ? "bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-500"
+                        : !["EVALUATED", "UNPAID", "PAID", "FOR_PROCESSING", "FOR_CLAIM", "FOR_PICKING", "RELEASED", "DELIVERED"].includes(selectedApplication.status)
+                          ? "bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-500"
+                          : selectedApplication.additionalData?.zoningStatus === "REJECTED"
+                            ? "bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-500"
+                            : selectedApplication.additionalData?.zoningStatus === "FOR_REVISION"
+                              ? "bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-500"
+                              : selectedApplication.additionalData?.feeAssessment?.zoningEndorsed
+                                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-500"
+                                : "bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-500"
+                    )}>
+                      {selectedApplication.isCancelled
+                        ? "Cancelled"
+                        : !["EVALUATED", "UNPAID", "PAID", "FOR_PROCESSING", "FOR_CLAIM", "FOR_PICKING", "RELEASED", "DELIVERED"].includes(selectedApplication.status)
+                          ? "Pending"
+                          : selectedApplication.additionalData?.feeAssessment?.zoningEndorsed
+                            ? "Approved"
+                            : selectedApplication.additionalData?.zoningStatus === "FOR_INSPECTION" || selectedApplication.additionalData?.zoningStatus === "FOR_REINSPECTION"
+                              ? "For Inspection"
+                              : selectedApplication.additionalData?.zoningStatus === "FOR_REVISION"
+                                ? "For Revision"
+                                : selectedApplication.additionalData?.zoningStatus === "REJECTED"
+                                  ? "Rejected"
+                                  : "Under Review"}
+                    </span>
+                  </div>
+
+                  {selectedApplication.additionalData?.zoningStatus && (selectedApplication.additionalData.zoningStatus === "REJECTED" || selectedApplication.additionalData.zoningStatus === "FOR_REVISION") && selectedApplication.additionalData.zoningRejectionRemarks && (
+                    <div className="mt-4 p-4 bg-red-50 dark:bg-red-500/5 border border-red-200 dark:border-red-500/20 rounded-xl text-red-800 dark:text-red-400 text-sm">
+                      <p className="font-bold uppercase tracking-widest text-[10px] mb-1">
+                        {selectedApplication.additionalData.zoningStatus === "REJECTED" ? "Zoning Rejection Reason" : "Zoning Revision Remarks"}
+                      </p>
+                      <p className="whitespace-pre-wrap font-medium">{selectedApplication.additionalData.zoningRejectionRemarks}</p>
+                    </div>
+                  )}
+
+                  {(selectedApplication.additionalData?.zoningStatus === "FOR_INSPECTION" || selectedApplication.additionalData?.zoningStatus === "FOR_REINSPECTION") && (selectedApplication.additionalData?.zoningInspectionSchedule || selectedApplication.additionalData?.inspectionSchedule) && (
+                    <div className="mt-4 p-5 bg-purple-50 dark:bg-purple-500/5 border border-purple-200 dark:border-purple-500/20 rounded-2xl space-y-4">
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-purple-600 dark:text-purple-400">
+                        {selectedApplication.additionalData.zoningStatus === "FOR_REINSPECTION" ? "Zoning Re-Inspection Details" : "Zoning Inspection Details"}
+                      </h4>
+                      <div className="grid grid-cols-2 gap-4 text-xs text-purple-800 dark:text-purple-300 font-bold">
+                        <div>
+                          <span className="text-purple-400 dark:text-purple-500 block text-[9px] uppercase tracking-wider mb-0.5">Date & Time</span>
+                          {(selectedApplication.additionalData.zoningInspectionSchedule || selectedApplication.additionalData.inspectionSchedule).date} at {(selectedApplication.additionalData.zoningInspectionSchedule || selectedApplication.additionalData.inspectionSchedule).time}
+                        </div>
+                        <div>
+                          <span className="text-purple-400 dark:text-purple-500 block text-[9px] uppercase tracking-wider mb-0.5">Inspector</span>
+                          {(selectedApplication.additionalData.zoningInspectionSchedule || selectedApplication.additionalData.inspectionSchedule).inspectorName}
+                        </div>
+                        <div className="col-span-2">
+                          <span className="text-purple-400 dark:text-purple-500 block text-[9px] uppercase tracking-wider mb-0.5">Type</span>
+                          {(selectedApplication.additionalData.zoningInspectionSchedule || selectedApplication.additionalData.inspectionSchedule).type}
+                        </div>
+                        {(selectedApplication.additionalData.zoningInspectionSchedule || selectedApplication.additionalData.inspectionSchedule).notes && (
+                          <div className="col-span-2 mt-2 pt-3 border-t border-purple-200 dark:border-purple-500/20">
+                            <span className="text-purple-400 dark:text-purple-500 block text-[9px] uppercase tracking-wider mb-1">Notes / Instructions</span>
+                            <p className="italic text-purple-700 dark:text-purple-300 font-medium">"{(selectedApplication.additionalData.zoningInspectionSchedule || selectedApplication.additionalData.inspectionSchedule).notes}"</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="font-bold text-slate-700 dark:text-slate-300">Endorsement Status</h3>
+                <div className="bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-start gap-4">
+                    <div className={cn(
+                      "w-10 h-10 rounded-full flex items-center justify-center shrink-0 mt-0.5",
+                      ["UNPAID", "PAID", "FOR_PROCESSING", "FOR_CLAIM", "FOR_PICKING", "RELEASED", "DELIVERED"].includes(selectedApplication.status || "") || (selectedApplication.status === "EVALUATED" && selectedApplication.additionalData?.zoningStatus === "EVALUATED")
+                        ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-500"
+                        : "bg-amber-100 dark:bg-amber-500/20 text-amber-500"
+                    )}>
+                      {["UNPAID", "PAID", "FOR_PROCESSING", "FOR_CLAIM", "FOR_PICKING", "RELEASED", "DELIVERED"].includes(selectedApplication.status || "") || (selectedApplication.status === "EVALUATED" && selectedApplication.additionalData?.zoningStatus === "EVALUATED") ? (
+                        <Check className="w-5 h-5 text-emerald-500" />
+                      ) : (
+                        <Clock className="w-5 h-5 text-amber-500" />
+                      )}
+                    </div>
+                    <div className="space-y-1">
+                      <p className="font-bold text-slate-800 dark:text-white text-sm leading-snug">Endorsement to Treasury</p>
+                      <p className="text-xs text-slate-500 leading-normal">
+                        {["UNPAID", "PAID", "FOR_PROCESSING", "FOR_CLAIM", "FOR_PICKING", "RELEASED", "DELIVERED"].includes(selectedApplication.status || "") || (selectedApplication.status === "EVALUATED" && selectedApplication.additionalData?.zoningStatus === "EVALUATED")
+                          ? "Endorsed successfully to Treasury"
+                          : !["EVALUATED", "UNPAID", "PAID", "FOR_PROCESSING", "FOR_CLAIM", "FOR_PICKING", "RELEASED", "DELIVERED"].includes(selectedApplication.status || "")
+                            ? "Awaiting Engineering and Zoning approval"
+                            : "Awaiting Zoning approval"}
+                      </p>
+                    </div>
+                  </div>
+                  <span className={cn(
+                    "text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full shrink-0 w-fit sm:self-center self-start sm:ml-0 ml-14",
+                    selectedApplication.isCancelled || selectedApplication.status === "REJECTED"
+                      ? "bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-500"
+                      : selectedApplication.status === "UNPAID"
+                        ? "bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-500"
+                        : ["PAID", "FOR_PROCESSING", "FOR_CLAIM", "FOR_PICKING", "RELEASED", "DELIVERED"].includes(selectedApplication.status || "") || (selectedApplication.status === "EVALUATED" && selectedApplication.additionalData?.zoningStatus === "EVALUATED")
+                          ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-500"
+                          : "bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-500"
+                  )}>
+                    {selectedApplication.isCancelled
+                      ? "Cancelled"
+                      : selectedApplication.status === "REJECTED"
+                        ? "Rejected"
+                        : selectedApplication.status === "UNPAID"
+                          ? "Unpaid"
+                          : ["PAID", "FOR_PROCESSING", "FOR_CLAIM", "FOR_PICKING", "RELEASED", "DELIVERED"].includes(selectedApplication.status || "") || (selectedApplication.status === "EVALUATED" && selectedApplication.additionalData?.zoningStatus === "EVALUATED")
+                            ? "Endorsed"
+                            : "Awaiting"}
+                  </span>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4 text-sm font-medium text-slate-700 dark:text-slate-300">
                 <div>
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Description of Work</p>
@@ -2840,12 +3088,17 @@ export default function BuildingPermitPage() {
                 )}
                 {!selectedApplication.isCancelled && !["REJECTED", "CANCELLED"].includes(selectedApplication.status) && (
                   <button
-                    disabled={["FOR_REQUESTING", "FOR_INSPECTION", "FOR_REINSPECTION", "EVALUATED"].includes(selectedApplication.status)}
-                    onClick={() => setCurrentStep("TREASURY")}
+                    disabled={["FOR_REQUESTING", "FOR_INSPECTION", "FOR_REINSPECTION", "EVALUATED", "FOR_REVISION"].includes(selectedApplication.status)}
+                    onClick={() => {
+                      if (["FOR_REQUESTING", "FOR_INSPECTION", "FOR_REINSPECTION", "EVALUATED", "FOR_REVISION"].includes(selectedApplication.status)) {
+                        return;
+                      }
+                      setCurrentStep("TREASURY");
+                    }}
                     className="px-6 py-3 bg-theme-primary text-white rounded-full font-black uppercase tracking-widest text-xs disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500"
                   >
-                    {["FOR_REQUESTING", "FOR_INSPECTION", "FOR_REINSPECTION", "EVALUATED"].includes(selectedApplication.status)
-                      ? "Awaiting Treasury Billing"
+                    {["FOR_REQUESTING", "FOR_INSPECTION", "FOR_REINSPECTION", "EVALUATED", "FOR_REVISION"].includes(selectedApplication.status)
+                      ? (selectedApplication.status === "FOR_REVISION" ? "Awaiting Resubmission" : "Awaiting Treasury Billing")
                       : "Next: Treasury & Zoning"}
                   </button>
                 )}
@@ -2896,14 +3149,14 @@ export default function BuildingPermitPage() {
                 </div>
               </div>
 
-              <section className="space-y-5 rounded-2xl border border-slate-200 bg-slate-50/70 p-5 md:p-6">
+              <section className="space-y-5 rounded-2xl border border-slate-200 bg-slate-50/70 p-5 md:p-6 dark:border-white/10 dark:bg-white/5">
                 <div className="flex items-center gap-3">
-                  <Receipt className="h-5 w-5 text-slate-600" />
-                  <h4 className="text-lg font-black text-slate-900">Payment Processing</h4>
+                  <Receipt className="h-5 w-5 text-slate-600 dark:text-slate-300" />
+                  <h4 className="text-lg font-black text-slate-900 dark:text-white">Payment Processing</h4>
                 </div>
-                <div className="rounded-2xl border border-slate-200 bg-white p-5">
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-black/30">
                   <p className="text-[9px] font-black italic uppercase tracking-widest text-theme-primary">Endorsed Fees Summary</p>
-                  <div className="mt-3 space-y-3 text-xs font-bold text-slate-500">
+                  <div className="mt-3 space-y-3 text-xs font-bold text-slate-500 dark:text-slate-300">
                     {(() => {
                       const rawFiscal = selectedApplication.fiscalSnapshot;
                       const snap = (typeof rawFiscal === "string" ? JSON.parse(rawFiscal) : rawFiscal) as any || {};
@@ -2934,7 +3187,7 @@ export default function BuildingPermitPage() {
                     )}
                   </div>
                   <div className="mt-5 flex items-center justify-between border-t border-dashed border-slate-300 pt-5">
-                    <span className="text-xs font-black uppercase text-slate-900">Total Amount</span>
+                    <span className="text-xs font-black uppercase text-slate-900 dark:text-white">Total Amount</span>
                     <span className="text-xl font-black text-theme-primary">₱{Number(selectedApplication.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                   </div>
                 </div>
@@ -2951,41 +3204,32 @@ export default function BuildingPermitPage() {
                   <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-5 text-left dark:border-white/10 dark:bg-black/30">
                     <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
                       <div className="flex items-center gap-3">
-                        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+                        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
                           <Receipt className="h-5 w-5" />
                         </span>
                         <div>
-                          <p className="text-[10px] font-black uppercase tracking-widest text-emerald-700">Treasury Record</p>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-emerald-700 dark:text-emerald-300">Treasury Record</p>
                           <p className="text-sm font-black uppercase text-slate-800 dark:text-white">Official Receipt (OR)</p>
                         </div>
                       </div>
                       {officialReceiptUrl && (
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setViewerFile(null);
-                              setViewerUrl(officialReceiptUrl);
-                              setViewerTitle("Official Treasury Receipt");
-                              setViewerOpen(true);
-                            }}
-                            className="rounded-full border border-slate-200 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-100"
-                          >
-                            View OR
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => void handlePrintDocument(officialReceiptUrl, "Official Receipt")}
-                            className="flex items-center gap-2 rounded-full bg-theme-primary px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white hover:bg-[#155b31]"
-                          >
-                            <Printer className="h-3.5 w-3.5" /> Print OR
-                          </button>
-                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setViewerFile(null);
+                            setViewerUrl(officialReceiptUrl);
+                            setViewerTitle("Official Treasury Receipt");
+                            setViewerOpen(true);
+                          }}
+                          className="rounded-full border border-slate-200 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-100 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/10"
+                        >
+                          View OR
+                        </button>
                       )}
                     </div>
 
                     {selectedApplication.additionalData?.orSeriesNumber && (
-                      <p className="text-xs font-bold text-slate-500">
+                      <p className="text-xs font-bold text-slate-500 dark:text-slate-400">
                         OR Number: <span className="text-slate-800 dark:text-white">{selectedApplication.additionalData.orSeriesNumber}</span>
                       </p>
                     )}
@@ -3030,7 +3274,7 @@ export default function BuildingPermitPage() {
 
                       <button
                         onClick={() => setIsPaymentModalOpen(true)}
-                        className="px-6 py-3 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-full font-black uppercase tracking-widest text-xs flex items-center gap-2 shadow-sm"
+                        className="px-6 py-3 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-full font-black uppercase tracking-widest text-xs flex items-center gap-2 shadow-sm dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
                       >
                         <Receipt className="w-4 h-4" /> View Payment Details
                       </button>
@@ -3067,197 +3311,13 @@ export default function BuildingPermitPage() {
                   <h4 className="font-black uppercase tracking-widest text-xs flex items-center gap-2 text-emerald-800 dark:text-emerald-300">
                     <Check className="w-4 h-4 text-emerald-500" /> Payment Verified
                   </h4>
-                  <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Your payment has been officially verified! Please ensure BFP and Zoning clearances are uploaded for final review.</p>
+                  <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Your payment has been officially verified! The permit will continue to the next phase once processing is complete.</p>
 
                   {selectedApplication.additionalData?.clearanceRevisionReason && !selectedApplication.additionalData?.clearancesSubmitted && (
                     <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-left">
                       <p className="text-[10px] font-black uppercase tracking-widest text-amber-700">Revision Required</p>
                       <p className="mt-1 text-xs font-medium text-amber-800">{selectedApplication.additionalData.clearanceRevisionReason}</p>
                     </div>
-                  )}
-
-                  <section className="space-y-4 rounded-2xl border border-sky-200 bg-sky-50 p-5 md:p-6">
-                    <div className="flex items-center gap-2 text-sky-700">
-                      <AlertCircle className="h-4 w-4" />
-                      <h4 className="text-xs font-black italic uppercase tracking-widest">Where to Obtain Your Clearances</h4>
-                    </div>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div className="flex items-start gap-3 rounded-xl border border-purple-100 bg-white p-4">
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-purple-100 text-purple-600">
-                          <FileWarning className="h-4 w-4" />
-                        </span>
-                        <div>
-                          <p className="text-[10px] font-black italic uppercase tracking-wider text-purple-700">BFP Fire Safety Clearance</p>
-                          <p className="mt-1 text-[11px] font-medium leading-relaxed text-slate-600">
-                            Go to the <strong>Bureau of Fire Protection (BFP) - Mapandan Fire Station</strong> and apply for a Fire Safety Inspection Certificate.
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-3 rounded-xl border border-blue-100 bg-white p-4">
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
-                          <MapPin className="h-4 w-4" />
-                        </span>
-                        <div>
-                          <p className="text-[10px] font-black italic uppercase tracking-wider text-blue-700">Zoning / Locational Clearance</p>
-                          <p className="mt-1 text-[11px] font-medium leading-relaxed text-slate-600">
-                            Go to the <strong>Office of the Zoning Officer / MPDC</strong> at the Municipal Hall and apply for a Locational/Zoning Clearance.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                    <p className="text-[10px] font-medium italic text-sky-700/70">
-                      Once you have secured both clearances, upload them below to proceed with your Building Permit application.
-                    </p>
-                  </section>
-
-                  <div className="space-y-5">
-                    {/* BFP Clearance */}
-                    <div className="space-y-4 rounded-2xl border border-purple-200 bg-purple-50/60 p-5 md:p-6">
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="text-sm font-black italic uppercase tracking-wider text-purple-700">BFP Fire Safety Clearance</p>
-                        <span className={`rounded-full border px-3 py-1 text-[9px] font-black uppercase tracking-widest ${selectedApplication.additionalData?.bfpClearanceUrl ? "border-emerald-200 bg-emerald-50 text-emerald-600" : "border-amber-200 bg-amber-50 text-amber-600"}`}>
-                          {selectedApplication.additionalData?.bfpClearanceUrl ? "Uploaded" : "Required"}
-                        </span>
-                      </div>
-                      <p className="text-xs font-medium leading-relaxed text-slate-600">
-                        Upload the official Fire Safety Clearance certificate issued by the Bureau of Fire Protection. Engineering will review this document before approving your permit.
-                      </p>
-                      {selectedApplication.additionalData?.bfpClearanceUrl ? (
-                        <div className="flex flex-wrap items-center gap-3">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setViewerFile(null);
-                              setViewerUrl(selectedApplication.additionalData.bfpClearanceUrl);
-                              setViewerTitle("Fire Safety / BFP Clearance");
-                              setViewerOpen(true);
-                            }}
-                            className="rounded-full border border-purple-200 bg-white px-5 py-2.5 text-[10px] font-black uppercase tracking-widest text-purple-700 hover:bg-purple-100"
-                          >
-                            View Uploaded Clearance
-                          </button>
-                          {!selectedApplication.additionalData?.clearancesSubmitted && (
-                            <button
-                              type="button"
-                              onClick={startBfpHandoff}
-                              disabled={isCreatingHandoff}
-                              className="rounded-full bg-theme-primary px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white pointer-events-auto disabled:opacity-50"
-                              style={{ touchAction: "manipulation" }}
-                            >
-                              Re-upload QR
-                            </button>
-                          )}
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={startBfpHandoff}
-                          disabled={isCreatingHandoff}
-                          className="inline-flex items-center gap-1.5 px-4 py-2 bg-theme-primary text-white text-xs font-bold uppercase rounded-full hover:bg-theme-primary/95 pointer-events-auto disabled:opacity-50"
-                          style={{ touchAction: "manipulation" }}
-                        >
-                          <QrCode className="w-3.5 h-3.5" /> {isCreatingHandoff ? "Creating QR..." : "Upload BFP via QR"}
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Zoning Clearance */}
-                    <div className="space-y-4 rounded-2xl border border-blue-200 bg-blue-50/60 p-5 md:p-6">
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="text-sm font-black italic uppercase tracking-wider text-blue-700">Zoning Clearance</p>
-                        <span className={`rounded-full border px-3 py-1 text-[9px] font-black uppercase tracking-widest ${selectedApplication.additionalData?.zoningClearanceUrl ? "border-emerald-200 bg-emerald-50 text-emerald-600" : "border-amber-200 bg-amber-50 text-amber-600"}`}>
-                          {selectedApplication.additionalData?.zoningClearanceUrl ? "Uploaded" : "Required"}
-                        </span>
-                      </div>
-                      <p className="text-xs font-medium leading-relaxed text-slate-600">
-                        Upload the official Locational/Zoning Clearance certificate issued by the Zoning Office / MPDC.
-                      </p>
-                      {selectedApplication.additionalData?.zoningClearanceUrl ? (
-                        <div className="flex flex-wrap items-center gap-3">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setViewerFile(null);
-                              setViewerUrl(selectedApplication.additionalData.zoningClearanceUrl);
-                              setViewerTitle("Zoning / Locational Clearance");
-                              setViewerOpen(true);
-                            }}
-                            className="rounded-full border border-blue-200 bg-white px-5 py-2.5 text-[10px] font-black uppercase tracking-widest text-blue-700 hover:bg-blue-100"
-                          >
-                            View Uploaded Clearance
-                          </button>
-                          {!selectedApplication.additionalData?.clearancesSubmitted && (
-                            <button
-                              type="button"
-                              onClick={startZoningHandoff}
-                              disabled={isCreatingHandoff}
-                              className="rounded-full bg-theme-primary px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white pointer-events-auto disabled:opacity-50"
-                              style={{ touchAction: "manipulation" }}
-                            >
-                              Re-upload QR
-                            </button>
-                          )}
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={startZoningHandoff}
-                          disabled={isCreatingHandoff}
-                          className="inline-flex items-center gap-1.5 px-4 py-2 bg-theme-primary text-white text-xs font-bold uppercase rounded-full hover:bg-theme-primary/95 pointer-events-auto disabled:opacity-50"
-                          style={{ touchAction: "manipulation" }}
-                        >
-                          <QrCode className="w-3.5 h-3.5" /> {isCreatingHandoff ? "Creating QR..." : "Upload Zoning via QR"}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {selectedApplication.additionalData?.bfpClearanceUrl && selectedApplication.additionalData?.zoningClearanceUrl && (
-                    selectedApplication.additionalData?.clearancesSubmitted || selectedApplication.status !== "PAID" ? (
-                      <div className="flex w-full items-center justify-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-100/70 px-6 py-4 text-emerald-700">
-                        <CheckCircle2 className="h-5 w-5" />
-                        <div className="text-left">
-                          <p className="text-xs font-black uppercase tracking-widest">Clearances Submitted</p>
-                          <p className="mt-1 text-[10px] font-medium">
-                            {selectedApplication.status === "PAID"
-                              ? "Wait for the Engineer to verify your documents."
-                              : "Your clearance documents remain attached to this application record."}
-                          </p>
-                        </div>
-                      </div>
-                    ) : (
-                      <button
-                        disabled={isSubmitting}
-                        onClick={async () => {
-                          if (!residentData || isSubmitting) return;
-                          const userId = residentData.userId || residentData.id;
-                          setIsSubmitting(true);
-                          toast.loading("Submitting clearances...");
-                          try {
-                            const res = await submitClearancesForReviewAction(selectedApplication.id, userId);
-                            if (res.success) {
-                              toast.success("Clearances submitted to Engineering!");
-                              const appsRes = await getExistingBuildingPermits(userId);
-                              if (appsRes.success && appsRes.data) {
-                                setExistingApplications(appsRes.data);
-                                const updated = appsRes.data.find((application: any) => application.id === selectedApplication.id);
-                                if (updated) setSelectedApplication(updated);
-                              }
-                            } else {
-                              toast.error(res.error || "Submission failed.");
-                            }
-                          } catch {
-                            toast.error("An error occurred while submitting clearances.");
-                          } finally {
-                            setIsSubmitting(false);
-                          }
-                        }}
-                        className="mt-4 flex items-center gap-2 rounded-2xl bg-emerald-600 px-8 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        <Upload className="h-4 w-4" />
-                        {isSubmitting ? "Submitting..." : "Submit Clearances for Review"}
-                      </button>
-                    )
                   )}
                 </div>
               )}
@@ -3273,18 +3333,14 @@ export default function BuildingPermitPage() {
                 Back to Evaluation
               </button>
               <button
-                disabled={!RELEASE_PHASE_STATUSES.includes(selectedApplication.status)}
+                disabled={selectedApplication.status !== "PAID"}
                 onClick={() => {
-                  if (!RELEASE_PHASE_STATUSES.includes(selectedApplication.status)) return;
+                  if (selectedApplication.status !== "PAID") return;
                   setCurrentStep("SUBMIT");
                 }}
                 className="px-8 py-3 bg-theme-primary text-white rounded-full text-xs font-black uppercase tracking-widest disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500"
               >
-                {RELEASE_PHASE_STATUSES.includes(selectedApplication.status)
-                  ? "Next: Submission"
-                  : selectedApplication.status === "FOR_PROCESSING"
-                    ? "Permit Processing"
-                    : "Complete Treasury Requirements"}
+                {selectedApplication.status === "PAID" ? "Next: Submission" : "Awaiting Payment"}
               </button>
             </div>
           </div>
@@ -3412,74 +3468,144 @@ export default function BuildingPermitPage() {
           </div>
         )}
 
-        {currentStep === "SUBMIT" && selectedApplication && !isRevision && RELEASE_PHASE_STATUSES.includes(selectedApplication.status) && (
+        {currentStep === "SUBMIT" && selectedApplication && !isRevision && (RELEASE_PHASE_STATUSES.includes(selectedApplication.status) || hasTreasuryClearances(selectedApplication) || selectedApplication.status === "PAID") && (
           <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
-            <div className="rounded-[2.5rem] border border-slate-200 bg-white p-6 text-slate-900 shadow-xl md:p-10">
-              <div className="rounded-3xl border border-slate-200 bg-slate-50/70 px-6 py-10 text-center md:px-12">
-                <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-white text-theme-primary shadow-md ring-1 ring-slate-200">
+            <div className="rounded-[2.5rem] border border-slate-200 bg-white p-6 text-slate-900 shadow-xl dark:border-white/10 dark:bg-[#11131a] dark:text-white md:p-10">
+              <div className="rounded-3xl border border-slate-200 bg-slate-50/70 px-6 py-10 text-center md:px-12 dark:border-white/10 dark:bg-white/5">
+                <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-white text-theme-primary shadow-md ring-1 ring-slate-200 dark:bg-white/10 dark:ring-white/10">
                   <CheckCircle2 className="h-10 w-10" />
                 </div>
-                <h2 className="mt-7 text-2xl font-black tracking-tight">Application Status</h2>
-                <p className="mt-3 text-xl font-black uppercase tracking-widest text-emerald-400">
+                <h2 className="mt-7 text-2xl font-black tracking-tight text-slate-900 dark:text-white">Application Status</h2>
+                <p className="mt-3 text-xl font-black uppercase tracking-widest text-emerald-400 dark:text-emerald-300">
                   {selectedApplication.status === "FOR_CLAIM"
                     ? "Ready to Claim!"
                     : selectedApplication.status === "FOR_PICKING"
                       ? "Ready for Delivery!"
                       : selectedApplication.status === "DELIVERED"
                         ? "Permit Delivered!"
-                        : "Permit Released!"}
+                        : "Application Processing"}
                 </p>
-                <p className="mx-auto mt-3 max-w-2xl text-sm font-medium text-slate-500">
+                <p className="mx-auto mt-3 max-w-2xl text-sm font-medium text-slate-500 dark:text-slate-400">
                   {selectedApplication.status === "FOR_CLAIM"
                     ? "Your building permit has been approved and the digital copy is now available below."
                     : selectedApplication.status === "FOR_PICKING"
                       ? "Your approved building permit is being prepared for home delivery."
-                      : "Your building permit release process has been completed."}
+                      : selectedApplication.status === "DELIVERED"
+                        ? "Your building permit release process has been completed."
+                        : "Your application is being processed. You will be notified once your permit is ready for release."}
                 </p>
 
                 {selectedApplication.eCopyUrl ? (
-                  <div className="mx-auto mt-8 flex max-w-3xl flex-col items-center justify-between gap-5 rounded-2xl border-2 border-emerald-500/60 bg-emerald-50 p-6 text-left sm:flex-row">
-                    <div className="flex items-center gap-4">
-                      <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-emerald-500 text-white shadow-lg shadow-theme-primary/20">
-                        <FileText className="h-7 w-7" />
-                      </span>
-                      <div>
-                        <p className="font-black uppercase tracking-widest text-emerald-400">Official Permit E-Copy</p>
-                        <p className="mt-1 text-xs font-medium text-slate-500">Your approved building permit is ready for download.</p>
-                        <p className="mt-2 text-[9px] font-black uppercase tracking-wider text-emerald-400">
-                          Released on {new Date(selectedApplication.deliveredAt || selectedApplication.updatedAt || Date.now()).toLocaleString("en-PH", {
-                            month: "numeric",
-                            day: "numeric",
-                            year: "numeric",
-                            hour: "numeric",
-                            minute: "2-digit",
-                          })}
+                  <div className="mx-auto mt-8 max-w-3xl space-y-4">
+                    <div className="flex flex-col items-stretch gap-5 rounded-2xl border-2 border-emerald-500/50 bg-emerald-500/5 p-6 text-left md:flex-row md:items-center md:justify-between dark:bg-emerald-500/10">
+                      <div className="flex items-start gap-4 md:items-center">
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/20">
+                          <FileText className="h-6 w-6" />
+                        </div>
+                        <div className="text-center md:text-left">
+                          <p className="text-sm font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-300">Official Permit E-Copy</p>
+                          <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">Your approved building permit is ready for preview.</p>
+                          {selectedApplication.status === "RELEASED" && (
+                            <p className="mt-1.5 text-[9px] font-bold uppercase tracking-widest text-emerald-600/80 dark:text-emerald-300/80">
+                              Released on: {new Date(selectedApplication.deliveredAt || selectedApplication.updatedAt || Date.now()).toLocaleDateString("en-PH")} {new Date(selectedApplication.deliveredAt || selectedApplication.updatedAt || Date.now()).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex shrink-0 justify-center md:justify-end">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setViewerFile(null);
+                            setViewerUrl(selectedApplication.eCopyUrl);
+                            setViewerTitle("Official Building Permit E-Copy");
+                            setViewerOpen(true);
+                          }}
+                          className="flex items-center gap-2 rounded-xl bg-emerald-500 px-6 py-4 text-[11px] font-black uppercase tracking-widest text-white shadow-lg hover:bg-emerald-600"
+                        >
+                          <FileText className="h-4 w-4" /> Preview
+                        </button>
+                      </div>
+                    </div>
+
+                    {selectedApplication.additionalData?.zoningClearanceUrl && (
+                      <div className="flex flex-col items-stretch gap-5 rounded-2xl border-2 border-emerald-500/50 bg-emerald-500/5 p-6 text-left md:flex-row md:items-center md:justify-between dark:bg-emerald-500/10">
+                        <div className="flex items-start gap-4 md:items-center">
+                          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/20">
+                            <FileText className="h-6 w-6" />
+                          </div>
+                          <div className="text-center md:text-left">
+                            <p className="text-sm font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-300">Zoning / Locational Clearance</p>
+                            <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">Your approved zoning clearance is ready for preview.</p>
+                          </div>
+                        </div>
+                        <div className="flex shrink-0 justify-center md:justify-end">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setViewerFile(null);
+                              setViewerUrl(selectedApplication.additionalData.zoningClearanceUrl);
+                              setViewerTitle("Zoning Clearance");
+                              setViewerOpen(true);
+                            }}
+                            className="flex items-center gap-2 rounded-xl bg-emerald-500 px-6 py-4 text-[11px] font-black uppercase tracking-widest text-white shadow-lg hover:bg-emerald-600"
+                          >
+                            <FileText className="h-4 w-4" /> Preview
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedApplication.additionalData?.bfpClearanceUrl && (
+                      <div className="flex flex-col items-stretch gap-5 rounded-2xl border-2 border-emerald-500/50 bg-emerald-500/5 p-6 text-left md:flex-row md:items-center md:justify-between dark:bg-emerald-500/10">
+                        <div className="flex items-start gap-4 md:items-center">
+                          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/20">
+                            <FileText className="h-6 w-6" />
+                          </div>
+                          <div className="text-center md:text-left">
+                            <p className="text-sm font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-300">BFP Fire Safety Clearance</p>
+                            <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">Your approved fire safety clearance is ready for preview.</p>
+                          </div>
+                        </div>
+                        <div className="flex shrink-0 justify-center md:justify-end">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setViewerFile(null);
+                              setViewerUrl(selectedApplication.additionalData.bfpClearanceUrl);
+                              setViewerTitle("BFP Clearance");
+                              setViewerOpen(true);
+                            }}
+                            className="flex items-center gap-2 rounded-xl bg-emerald-500 px-6 py-4 text-[11px] font-black uppercase tracking-widest text-white shadow-lg hover:bg-emerald-600"
+                          >
+                            <FileText className="h-4 w-4" /> Preview
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="mx-auto mt-8 max-w-2xl rounded-2xl border-2 border-dashed border-[#1e293b] bg-slate-50/50 p-6 text-center dark:border-white/50 dark:bg-white/5">
+                    <div className="flex items-center justify-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#1e293b] text-white dark:bg-white dark:text-slate-900">
+                        <FileText className="h-5 w-5" />
+                      </div>
+                      <div className="text-left">
+                        <p className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                          <span className="font-black">Digital Copy</span> of your documents will be available here upon release
+                        </p>
+                        <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">
+                          You can preview your approved permit directly from this page.
                         </p>
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setViewerFile(null);
-                        setViewerUrl(selectedApplication.eCopyUrl);
-                        setViewerTitle("Official Building Permit E-Copy");
-                        setViewerOpen(true);
-                      }}
-                      className="flex shrink-0 items-center gap-2 rounded-xl bg-emerald-500 px-6 py-4 text-[11px] font-black uppercase tracking-widest text-white shadow-lg hover:bg-emerald-600"
-                    >
-                      <FileText className="h-4 w-4" /> Preview & Download
-                    </button>
-                  </div>
-                ) : (
-                  <div className="mx-auto mt-8 max-w-3xl rounded-2xl border border-amber-500/30 bg-amber-500/10 p-5 text-sm font-semibold text-amber-300">
-                    The official permit e-copy is being prepared. Please check again shortly.
                   </div>
                 )}
 
-                <div className="mx-auto mt-6 flex max-w-3xl items-start gap-3 rounded-xl border border-slate-200 bg-white p-5 text-left">
-                  <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-slate-500" />
-                  <p className="text-xs font-medium leading-relaxed text-slate-500">
-                    <span className="font-black text-slate-800">RA 10173 (Data Privacy Act of 2012) Compliance:</span>{" "}
+                <div className="mx-auto mt-6 flex max-w-3xl items-start gap-3 rounded-xl border border-slate-200 bg-white p-5 text-left dark:border-white/10 dark:bg-black/30">
+                  <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-slate-500 dark:text-slate-400" />
+                  <p className="text-xs font-medium leading-relaxed text-slate-500 dark:text-slate-400">
+                    <span className="font-black text-slate-800 dark:text-white">RA 10173 (Data Privacy Act of 2012) Compliance:</span>{" "}
                     Your personal information is collected for building permit processing only and will not be shared with third parties without your consent.
                   </p>
                 </div>
@@ -3488,7 +3614,7 @@ export default function BuildingPermitPage() {
               <button
                 type="button"
                 onClick={() => setCurrentStep("TREASURY")}
-                className="mt-8 rounded-full border-2 border-slate-200 bg-white px-6 py-3 text-xs font-black uppercase tracking-widest text-slate-600 hover:bg-slate-100"
+                className="mt-8 rounded-full border-2 border-slate-200 bg-white px-6 py-3 text-xs font-black uppercase tracking-widest text-slate-600 hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
               >
                 ← Back to Treasury & Zoning
               </button>
@@ -3496,21 +3622,21 @@ export default function BuildingPermitPage() {
           </div>
         )}
 
-        {currentStep === "SUBMIT" && selectedApplication && !isRevision && !RELEASE_PHASE_STATUSES.includes(selectedApplication.status) && (
+        {currentStep === "SUBMIT" && selectedApplication && !isRevision && !(RELEASE_PHASE_STATUSES.includes(selectedApplication.status) || hasTreasuryClearances(selectedApplication) || selectedApplication.status === "PAID") && (
           <div className="space-y-6 animate-in fade-in duration-300">
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-10 text-center">
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-10 text-center dark:border-amber-500/20 dark:bg-amber-500/10">
               <Hourglass className="mx-auto mb-4 h-14 w-14 animate-pulse text-amber-500" />
               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-600">Application Status</p>
-              <h2 className="mt-2 text-3xl font-black uppercase text-slate-900">
+              <h2 className="mt-2 text-3xl font-black uppercase text-slate-900 dark:text-white">
                 {selectedApplication.status.replace(/_/g, " ")}
               </h2>
-              <p className="mx-auto mt-3 max-w-2xl text-sm font-medium text-slate-600">
+              <p className="mx-auto mt-3 max-w-2xl text-sm font-medium text-slate-600 dark:text-slate-300">
                 Your Building Permit is still being processed. The Submission phase will become available once it is ready for claiming or delivery.
               </p>
               <button
                 type="button"
                 onClick={() => setCurrentStep("TREASURY")}
-                className="mt-6 rounded-full border border-slate-300 bg-white px-6 py-3 text-xs font-black uppercase tracking-widest text-slate-600"
+                className="mt-6 rounded-full border border-slate-300 bg-white px-6 py-3 text-xs font-black uppercase tracking-widest text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300"
               >
                 Back to Treasury & Clearances
               </button>
