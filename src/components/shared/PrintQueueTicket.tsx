@@ -15,6 +15,7 @@ interface PrintQueueTicketProps {
   branding?: any;
   themeColor?: string;
   triggerPrint?: boolean;
+  kioskMode?: boolean;
   onPrintCompleted?: () => void;
   paperWidth?: "58mm" | "80mm";
 }
