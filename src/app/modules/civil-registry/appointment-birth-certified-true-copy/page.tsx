@@ -65,7 +65,7 @@ const STEPS: { id: Step; label: string; icon: any }[] = [
     { id: "REVIEW", label: "Review & Submit", icon: CheckCircle2 },
 ];
 
-export default function AppointmentBirthPsaEndorsementPage() {
+export default function AppointmentBirthCertifiedTrueCopyPage() {
     const router = useRouter();
     const [userId, setUserId] = useState<string>("");
     const [currentStep, setCurrentStep] = useState<Step>("INFORMANT");
@@ -140,8 +140,8 @@ export default function AppointmentBirthPsaEndorsementPage() {
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get("revisionId")) return;
 
-        const savedStep = sessionStorage.getItem("appointment-birth-psa-endorsement-step");
-        const savedForm = sessionStorage.getItem("appointment-birth-psa-endorsement-form");
+        const savedStep = sessionStorage.getItem("appointment-birth-certified-true-copy-step");
+        const savedForm = sessionStorage.getItem("appointment-birth-certified-true-copy-form");
 
         if (savedStep) setCurrentStep(savedStep as Step);
         if (savedForm) {
@@ -159,8 +159,8 @@ export default function AppointmentBirthPsaEndorsementPage() {
 
     useEffect(() => {
         if (!loading && !revisionId) {
-            sessionStorage.setItem("appointment-birth-psa-endorsement-step", currentStep);
-            sessionStorage.setItem("appointment-birth-psa-endorsement-form", JSON.stringify(formData));
+            sessionStorage.setItem("appointment-birth-certified-true-copy-step", currentStep);
+            sessionStorage.setItem("appointment-birth-certified-true-copy-form", JSON.stringify(formData));
         }
     }, [currentStep, formData, loading, revisionId]);
 
@@ -313,13 +313,13 @@ export default function AppointmentBirthPsaEndorsementPage() {
                 }
 
                 if (typesResult.success && typesResult.data) {
-                    const psaType = typesResult.data.find((t: any) => t.code === "LCR_PSA_APPOINTMENT_ENDORSEMENT");
+                    const psaType = typesResult.data.find((t: any) => t.code === "LCR_BIRTH_CERTIFIED_TRUE_COPY_APPOINTMENT");
                     if (psaType) {
                         setTypeId(psaType.id);
                         setDbType(psaType);
                         await logDebugMessage(`Client: Found dbType ID: ${psaType.id}`);
                     } else {
-                        await logDebugMessage("Client: LCR_PSA_APPOINTMENT_ENDORSEMENT type NOT found in dbTypes list");
+                        await logDebugMessage("Client: LCR_BIRTH_CERTIFIED_TRUE_COPY_APPOINTMENT type NOT found in dbTypes list");
                     }
                 } else {
                     await logDebugMessage(`Client: getTransactionTypes was unsuccessful: ${(typesResult as any).error || "Unknown error"}`);
@@ -421,7 +421,7 @@ export default function AppointmentBirthPsaEndorsementPage() {
         try {
             const data = new FormData();
             data.append("typeId", typeId);
-            data.append("registryType", "BIRTH_PSA_APPOINTMENT_ENDORSEMENT");
+            data.append("registryType", "BIRTH_CERTIFIED_TRUE_COPY_APPOINTMENT");
             if (revisionId) {
                 data.append("revisionId", revisionId);
             }
@@ -454,12 +454,12 @@ export default function AppointmentBirthPsaEndorsementPage() {
             const res = await submitCivilRegistryTransaction(data, userId);
 
             if (res.success && res.data) {
-                toast.success(revisionId ? "Revision resubmitted successfully!" : "Birth PSA Appointment Endorsement submitted successfully!");
-                sessionStorage.removeItem("appointment-birth-psa-endorsement-step");
-                sessionStorage.removeItem("appointment-birth-psa-endorsement-form");
+                toast.success(revisionId ? "Revision resubmitted successfully!" : "Birth Certified True Copy Appointment submitted successfully!");
+                sessionStorage.removeItem("appointment-birth-certified-true-copy-step");
+                sessionStorage.removeItem("appointment-birth-certified-true-copy-form");
                 router.push("/modules/civil-registry");
             } else {
-                toast.error(res.error || "Failed to submit endorsement request");
+                toast.error(res.error || "Failed to submit appointment request");
             }
         } catch (error) {
             console.error("Submission error:", error);
@@ -473,7 +473,7 @@ export default function AppointmentBirthPsaEndorsementPage() {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-950">
                 <Loader2 className="w-10 h-10 animate-spin mb-4" style={{ color: "var(--primary-theme)" }} />
-                <p className="font-black uppercase tracking-widest text-[10px] text-slate-400 italic">Initializing Endorsement Form...</p>
+                <p className="font-black uppercase tracking-widest text-[10px] text-slate-400 italic">Initializing Appointment Form...</p>
             </div>
         );
     }
@@ -575,7 +575,7 @@ export default function AppointmentBirthPsaEndorsementPage() {
                             </BreadcrumbItem>
                             <BreadcrumbSeparator className="text-slate-300 dark:text-white/10" />
                             <BreadcrumbItem>
-                                <BreadcrumbPage className="text-[10px] font-black uppercase tracking-widest italic" style={{ color: themeColor }}>Birth PSA Appointment Endorsement</BreadcrumbPage>
+                                <BreadcrumbPage className="text-[10px] font-black uppercase tracking-widest italic" style={{ color: themeColor }}>Birth Certified True Copy Appointment</BreadcrumbPage>
                             </BreadcrumbItem>
                         </BreadcrumbList>
                     </Breadcrumb>
@@ -598,11 +598,11 @@ export default function AppointmentBirthPsaEndorsementPage() {
                             </div>
 
                             <h1 className="text-2xl md:text-4xl font-black uppercase italic tracking-tighter leading-none">
-                                Birth PSA Appointment <span style={{ color: themeColor }}>Endorsement</span>
+                                Birth Certified True Copy <span style={{ color: themeColor }}>Appointment</span>
                             </h1>
 
                             <p className="text-slate-600 dark:text-slate-300 font-medium text-xs leading-relaxed max-w-xl italic">
-                                Request appointment and endorsement of a verified local birth certificate record to the Philippine Statistics Authority (PSA).
+                                Schedule an appointment and request a certified true copy of an existing birth certificate.
                             </p>
                         </div>
 
@@ -846,7 +846,7 @@ export default function AppointmentBirthPsaEndorsementPage() {
                                         <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase italic tracking-tight flex items-center gap-2">
                                             Subject Information & Documents
                                         </h2>
-                                        <p className="text-xs text-slate-500 font-medium italic">Provide the details of the person whose birth record needs PSA appointment endorsement</p>
+                                        <p className="text-xs text-slate-500 font-medium italic">Provide the details of the person whose birth certificate certified true copy is being requested</p>
                                     </div>
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -974,7 +974,7 @@ export default function AppointmentBirthPsaEndorsementPage() {
                                 >
                                     <div className="flex items-center gap-4 mb-4">
                                         <div>
-                                            <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase italic tracking-tight">Endorsement Review</h2>
+                                                <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase italic tracking-tight">Certified True Copy Review</h2>
                                             <p className="text-xs text-slate-500 font-medium italic">Verify information before submission</p>
                                         </div>
                                     </div>
@@ -994,7 +994,7 @@ export default function AppointmentBirthPsaEndorsementPage() {
                                                 <p className="font-black text-slate-900 dark:text-white italic uppercase">{formData.informantAddress}</p>
                                             </div>
                                             <div className="col-span-2 border-t border-slate-200 dark:border-white/5 pt-4 space-y-1">
-                                                <span className="text-[9px] font-black uppercase tracking-widest text-emerald-500 italic">Subject Name (To Endorse)</span>
+                                                <span className="text-[9px] font-black uppercase tracking-widest text-emerald-500 italic">Subject Name (Certified True Copy)</span>
                                                 <p className="font-black text-slate-900 dark:text-white italic uppercase text-lg">{formData.subjectFullName}</p>
                                             </div>
                                             <div className="space-y-1">
@@ -1033,7 +1033,7 @@ export default function AppointmentBirthPsaEndorsementPage() {
                                             </div>
                                             <div className="border-t border-emerald-200/40 dark:border-emerald-500/20 pt-2 flex items-center justify-between">
                                                 <div>
-                                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300">Total PSA Appointment Endorsement Fee</span>
+                                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300">Total Certified True Copy Appointment Fee</span>
                                                 </div>
                                                 <div className="text-right">
                                                     <span className="text-lg font-black text-emerald-600 tracking-tight">₱{apptTotalAmount.toFixed(2)}</span>

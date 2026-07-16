@@ -2,6 +2,9 @@
 
 import { useEffect } from "react";
 
+const CACHE_KEY = "kiosk_theme_cache";  // Must match the key in layout.tsx inline script
+const CACHE_TTL = 10 * 60 * 1000;       // 10 minutes
+
 function hexToHsl(hex: string) {
     hex = hex.replace(/^#/, "");
 
@@ -56,44 +59,84 @@ function hslToHex(h: number, s: number, l: number) {
     return `#${rHex}${gHex}${bHex}`;
 }
 
+function buildThemeVars(baseHex: string): Record<string, string> {
+    const { h, s, l } = hexToHsl(baseHex);
+    const hoverHex     = hslToHex(h, s, Math.max(0, l - 8));
+    const darkHex      = hslToHex(h, s, Math.max(0, l - 18));
+    const lightHex     = hslToHex(h, s, 95);
+    const secondaryHex = hslToHex(h, Math.min(100, s + 5), Math.min(100, l + 12));
+
+    return {
+        "--primary-theme":           baseHex,
+        "--primary-theme-hover":     hoverHex,
+        "--primary-theme-dark":      darkHex,
+        "--primary-theme-light":     lightHex,
+        "--primary-theme-secondary": secondaryHex,
+        "--color-primary":           baseHex,
+        "--color-secondary":         secondaryHex,
+        "--color-emerald-50":        lightHex,
+        "--color-emerald-100":       lightHex,
+        "--color-emerald-200":       lightHex,
+        "--color-emerald-300":       lightHex,
+        "--color-emerald-400":       baseHex,
+        "--color-emerald-500":       baseHex,
+        "--color-emerald-600":       hoverHex,
+        "--color-emerald-700":       darkHex,
+        "--color-emerald-800":       darkHex,
+        "--color-emerald-900":       darkHex,
+        "--color-emerald-950":       darkHex,
+    };
+}
+
+function applyThemeVars(vars: Record<string, string>) {
+    const root = document.documentElement;
+    for (const [key, value] of Object.entries(vars)) {
+        root.style.setProperty(key, value);
+    }
+}
+
 export default function DynamicTheme() {
     useEffect(() => {
+        // ── Step 1: Check if cache is still fresh (layout.tsx already applied it) ──
+        // The inline <script> in layout.tsx already applied vars from localStorage
+        // synchronously before first paint. We just need to decide if we re-fetch.
+        let needsFetch = true;
+        try {
+            const raw = localStorage.getItem(CACHE_KEY);
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                // New format: { vars: {...}, ts: number }
+                if (parsed.vars && parsed.ts && Date.now() - parsed.ts < CACHE_TTL) {
+                    needsFetch = false;
+                }
+                // Legacy format (just vars object, no ts) — always refetch to upgrade
+            }
+        } catch {
+            // continue to fetch
+        }
+
+        if (!needsFetch) return;
+
+        // ── Step 2: Fetch fresh color, apply & save full var map ──────────────────
         async function loadTheme() {
             try {
-                const response = await fetch(`/api/system-settings/theme_color?t=${Date.now()}`, {
+                const response = await fetch("/api/system-settings/theme_color", {
                     cache: "no-store",
                 });
                 const result = await response.json();
                 if (result.success && result.value) {
-                    const baseHex = result.value;
-                    const { h, s, l } = hexToHsl(baseHex);
+                    const baseHex: string = result.value;
+                    const vars = buildThemeVars(baseHex);
 
-                    const hoverHex = hslToHex(h, s, Math.max(0, l - 8));
-                    const darkHex = hslToHex(h, s, Math.max(0, l - 18));
-                    const lightHex = hslToHex(h, s, 95);
-                    const secondaryHex = hslToHex(h, Math.min(100, s + 5), Math.min(100, l + 12));
+                    // Apply immediately to DOM
+                    applyThemeVars(vars);
 
-                    const root = document.documentElement;
-                    root.style.setProperty("--primary-theme", baseHex);
-                    root.style.setProperty("--primary-theme-hover", hoverHex);
-                    root.style.setProperty("--primary-theme-dark", darkHex);
-                    root.style.setProperty("--primary-theme-light", lightHex);
-                    root.style.setProperty("--primary-theme-secondary", secondaryHex);
-
-                    // Overwrite Tailwind color primary, secondary & emerald palette
-                    root.style.setProperty("--color-primary", baseHex);
-                    root.style.setProperty("--color-secondary", secondaryHex);
-                    root.style.setProperty("--color-emerald-50", lightHex);
-                    root.style.setProperty("--color-emerald-100", lightHex);
-                    root.style.setProperty("--color-emerald-200", lightHex);
-                    root.style.setProperty("--color-emerald-300", lightHex);
-                    root.style.setProperty("--color-emerald-400", baseHex);
-                    root.style.setProperty("--color-emerald-500", baseHex);
-                    root.style.setProperty("--color-emerald-600", hoverHex);
-                    root.style.setProperty("--color-emerald-700", darkHex);
-                    root.style.setProperty("--color-emerald-800", darkHex);
-                    root.style.setProperty("--color-emerald-900", darkHex);
-                    root.style.setProperty("--color-emerald-950", darkHex);
+                    // Save full var map with timestamp — layout.tsx reads this on next load
+                    try {
+                        localStorage.setItem(CACHE_KEY, JSON.stringify({ vars, ts: Date.now() }));
+                    } catch {
+                        // ignore storage write errors
+                    }
                 }
             } catch (e) {
                 console.error("Failed to load dynamic theme setting:", e);
