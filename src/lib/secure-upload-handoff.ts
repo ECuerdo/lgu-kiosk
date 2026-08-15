@@ -13,6 +13,7 @@ export type HandoffPayload = {
   context?: {
     isLotOwner?: boolean;
     totalFloors?: number;
+    module?: string;
   };
 };
 
@@ -71,12 +72,14 @@ export function getHandoffStoragePrefix(payload: HandoffPayload) {
       ? "birth-certificates"
       : payload.slot.startsWith("lcr_")
         ? "civil-registry"
-        : "building-permits";
+        : payload.context?.module === "occupancy"
+          ? "occupancy-permits"
+          : "building-permits";
   return `${namespace}/${payload.userId}/handoff/${payload.nonce}`;
 }
 
 export function isAllowedHandoffSlot(sessionSlot: string, uploadSlot: string) {
-  if (sessionSlot === "documents") {
+  if (sessionSlot === "documents" || sessionSlot === "occupancy_documents") {
     return /^req_(?:[0-9]|1[0-9]|2[0-4])$/.test(uploadSlot) || /^permit_(?:[0-9]|1[0-1])$/.test(uploadSlot);
   }
   if (sessionSlot === "birth_id") {

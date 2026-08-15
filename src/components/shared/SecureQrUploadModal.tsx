@@ -7,22 +7,30 @@ import { QrCode, X } from "lucide-react";
 interface SecureQrUploadModalProps {
   isOpen: boolean;
   onClose: () => void;
-  qrCode: string;
+  qrCode?: string;
+  qrCodeUrl?: string;
   expiresAt: number;
-  slotLabel: string;
+  slotLabel?: string;
+  documentName?: string;
+  themeColor?: string;
 }
 
 export default function SecureQrUploadModal({
   isOpen,
   onClose,
   qrCode,
+  qrCodeUrl,
   expiresAt,
-  slotLabel
+  slotLabel,
+  documentName,
+  themeColor
 }: SecureQrUploadModalProps) {
+  const actualQrCode = qrCode || qrCodeUrl || "";
+  const actualSlotLabel = slotLabel || documentName || "Document";
   
   // Prevent background scrolling when modal is active
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && actualQrCode) {
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "";
@@ -30,7 +38,9 @@ export default function SecureQrUploadModal({
     return () => {
       document.body.style.overflow = "";
     };
-  }, [isOpen]);
+  }, [isOpen, actualQrCode]);
+
+  if (!isOpen || !actualQrCode) return null;
 
   const formattedTime = expiresAt 
     ? new Date(expiresAt).toLocaleTimeString("en-US", {
@@ -71,7 +81,7 @@ export default function SecureQrUploadModal({
             {/* Header Title with Badge */}
             <div className="flex items-center gap-3 self-start mb-6">
               <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-theme-primary">
-                <QrCode size={20} className="stroke-[2.5]" />
+                <QrCode className="w-5 h-5 text-indigo-600" style={{ color: themeColor || "currentColor" }} />
               </div>
               <h3 className="text-lg font-black tracking-tighter text-[#0F172A] uppercase italic leading-none">
                 Secure QR Upload

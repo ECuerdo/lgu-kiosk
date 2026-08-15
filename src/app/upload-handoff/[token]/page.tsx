@@ -63,6 +63,15 @@ const CEDULA_LABELS: Record<string, string> = {
   proofFile: "Proof of Income (e.g., Payslip, ITR, Barangay Certificate)",
 };
 
+const OCCUPANCY_REQUIREMENTS = [
+  "Duly Notarized Certificate of Completion",
+  "Construction Logbook, signed and sealed by Owner's Architect and Civil Engineer",
+  "As-Built Plans, signed and sealed by the Owner's Architect and Civil Engineer",
+  "Valid Licenses of All Involved Professionals",
+  "Captioned Photographs of Site and Completed Building/Structure (Front, Sides, and Rear Areas)",
+  "Duly Notarized Affidavit of Undertaking (Optional)"
+];
+
 const REQUIRED_REQUIREMENT_INDICES = new Set([
   0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24
 ]);
@@ -70,6 +79,7 @@ const REQUIRED_REQUIREMENT_INDICES = new Set([
 type HandoffContext = {
   isLotOwner?: boolean;
   totalFloors?: number;
+  module?: string;
 };
 
 type UploadedFile = { slot: string; fileName: string; url: string };
@@ -121,8 +131,15 @@ export default function UploadHandoffPage() {
     setUploadingSlot("");
   }
 
-  const slots = sessionSlot === "documents"
-    ? [
+  const slots = (sessionSlot === "documents" || sessionSlot === "occupancy_documents")
+    ? (context.module === "occupancy" || sessionSlot === "occupancy_documents")
+      ? OCCUPANCY_REQUIREMENTS.map((label, index) => ({
+          slot: `req_${index}`,
+          label,
+          group: "Occupancy Permit Requirements",
+          isRequired: index < 5,
+        }))
+      : [
         ...REQUIREMENTS
           .map((label, index) => {
             const isLotOwner = context.isLotOwner ?? true;
