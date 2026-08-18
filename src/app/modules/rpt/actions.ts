@@ -223,16 +223,30 @@ export async function submitRptAppointment(formData: FormData, userId: string) {
             return { success: false, error: "Please select a valid appointment date and time slot." };
         }
 
-        const validIdUrl = sanitizeString(formData.get("validIdUrl") as string);
+        const processFile = async (field: string): Promise<string> => {
+            const val = formData.get(field);
+            if (!val) return "";
+            if (typeof val === "object" && "size" in val && val.size > 0) {
+                const file = val as File;
+                const uniqueId = Math.random().toString(36).substring(2, 9);
+                const path = `rpt/${Date.now()}_${uniqueId}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+                return (await uploadFile(file, path)) || "";
+            } else if (typeof val === "string") {
+                return sanitizeString(val);
+            }
+            return "";
+        };
+
+        const validIdUrl = await processFile("validIdFile");
         if (!validIdUrl) {
             return { success: false, error: "Valid Government-Issued ID is required." };
         }
 
-        const previousOrUrl = sanitizeString(formData.get("previousOrUrl") as string);
-        const buildingPermitUrl = sanitizeString(formData.get("buildingPermitUrl") as string);
-        const deedOfSaleUrl = sanitizeString(formData.get("deedOfSaleUrl") as string);
-        const titleUrl = sanitizeString(formData.get("titleUrl") as string);
-        const birEcarUrl = sanitizeString(formData.get("birEcarUrl") as string);
+        const previousOrUrl = await processFile("previousOrFile");
+        const buildingPermitUrl = await processFile("buildingPermitFile");
+        const deedOfSaleUrl = await processFile("deedOfSaleFile");
+        const titleUrl = await processFile("titleFile");
+        const birEcarUrl = await processFile("birEcarFile");
 
         // Find or create TransactionType for RPT
         let txType = await prisma.transactionType.findUnique({
@@ -263,13 +277,31 @@ export async function submitRptAppointment(formData: FormData, userId: string) {
 
         const apptDate = new Date(appointmentDateStr);
 
-        let customQueueNum = "";
         const shiftPrefix = appointmentSlot === "MORNING" ? "AM" : "PM";
         const ticketPrefix = categoryCode === "RPT_CAT1" ? "T" : "A";
         const mm = String(apptDate.getMonth() + 1).padStart(2, '0');
         const dd = String(apptDate.getDate()).padStart(2, '0');
         const yyyy = apptDate.getFullYear();
-        customQueueNum = `${mm}${dd}${yyyy}-${shiftPrefix}-${ticketPrefix}001`;
+        const queuePrefix = `${mm}${dd}${yyyy}-${shiftPrefix}-${ticketPrefix}`;
+
+        const existingCount = await prisma.transaction.count({
+            where: {
+                queueNumber: {
+                    startsWith: queuePrefix
+                }
+            }
+        });
+
+        let customQueueNum = `${queuePrefix}${String(existingCount + 1).padStart(3, '0')}`;
+        let attempts = 0;
+        while (attempts < 10) {
+            const collision = await prisma.transaction.findUnique({
+                where: { queueNumber: customQueueNum }
+            });
+            if (!collision) break;
+            attempts++;
+            customQueueNum = `${queuePrefix}${String(existingCount + 1 + attempts).padStart(3, '0')}`;
+        }
 
         const initialStatus = categoryCode === "RPT_CAT1" ? "UNPAID" : "FOR_REQUESTING";
 

@@ -7,39 +7,37 @@ datasource db {
 }
 
 model User {
-
-  id                    String        @id @default(cuid())
+  id                    String            @id @default(cuid())
   name                  String?
-  email                 String?       @unique
+  email                 String?           @unique
   emailVerified         DateTime?
   password              String?
-  role                  UserRole      @default(USER)
-  createdAt             DateTime      @default(now())
-  updatedAt             DateTime      @updatedAt
-  isEmailVerified       Boolean       @default(false)
-  isPasswordChanged     Boolean       @default(false)
-  rejectionCount        Int           @default(0)
+  role                  UserRole          @default(USER)
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  isEmailVerified       Boolean           @default(false)
+  isPasswordChanged     Boolean           @default(false)
+  rejectionCount        Int               @default(0)
   rejectionResetAt      DateTime?
   managedBarangay       String?
   department            String?
-  accessiblePages       String[]      @default([])
-  accessibleCategories  String[]      @default([])
-  accessibleStatuses    String[]      @default([])
-  isSynced              Boolean       @default(false)
-  rfid                  String?       @unique
-  consecutiveRejections Json?         @default("{}")
+  accessiblePages       String[]          @default([])
+  accessibleCategories  String[]          @default([])
+  accessibleStatuses    String[]          @default([])
+  isSynced              Boolean           @default(false)
+  rfid                  String?           @unique
+  consecutiveRejections Json?             @default("{}")
   fcmToken              String?
   accounts              Account[]
   reports               Report[]
   residentProfile       Resident?
   reviews               Review[]
   sessions              Session[]
+  vendorStalls          Stall[]           @relation("VendorStalls")
+  collectorCollections  StallCollection[] @relation("CollectorCollections")
+  vendorCollections     StallCollection[] @relation("VendorCollections")
   driverTransactions    Transaction[]     @relation("DriverTransactions")
   transactions          Transaction[]     @relation("ResidentTransactions")
-  vendorStalls          Stall[]           @relation("VendorStalls")
-  vendorCollections     StallCollection[] @relation("VendorCollections")
-  collectorCollections  StallCollection[] @relation("CollectorCollections")
-
 }
 
 model Account {
@@ -1208,6 +1206,94 @@ model VehicleClassification {
   updatedAt   DateTime @updatedAt
 }
 
+model StallType {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  createdBy   String?
+  updatedAt   DateTime @updatedAt
+  updatedBy   String?
+  stalls      Stall[]
+}
+
+model StallOtherFee {
+  id        String            @id @default(cuid())
+  stallId   String
+  amount    Float             @default(0)
+  createdAt DateTime          @default(now())
+  createdBy String?
+  feeType   StallFeeFrequency @default(DAILY)
+  name      String
+  remarks   String?
+  updatedAt DateTime          @updatedAt
+  updatedBy String?
+  stall     Stall             @relation(fields: [stallId], references: [id], onDelete: Cascade)
+}
+
+model Stall {
+  id                    String            @id @default(cuid())
+  stallTypeId           String
+  stallNumber           String            @unique
+  vendorId              String?
+  status                StallStatus       @default(VACANT)
+  dailyRate             Float             @default(0)
+  monthlyRate           Float             @default(0)
+  dailyRateOverdueFee   Float             @default(0)
+  monthlyRateOverdueFee Float             @default(0)
+  createdAt             DateTime          @default(now())
+  createdBy             String?
+  updatedAt             DateTime          @updatedAt
+  updatedBy             String?
+  stallType             StallType         @relation(fields: [stallTypeId], references: [id])
+  vendor                User?             @relation("VendorStalls", fields: [vendorId], references: [id])
+  collections           StallCollection[]
+  otherFees             StallOtherFee[]
+}
+
+model StallCollection {
+  id              String             @id @default(cuid())
+  stallId         String
+  vendorId        String?
+  collectorId     String
+  collectedDate   DateTime           @default(now())
+  ticketNumber    String             @unique
+  baseAmount      Float              @default(0)
+  otherFeesPaid   Float              @default(0)
+  overdueFeePaid  Float              @default(0)
+  totalAmountPaid Float              @default(0)
+  paymentMethod   StallPaymentMethod @default(CASH)
+  status          CollectionStatus   @default(PAID)
+  remarks         String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  collector       User               @relation("CollectorCollections", fields: [collectorId], references: [id])
+  stall           Stall              @relation(fields: [stallId], references: [id])
+  vendor          User?              @relation("VendorCollections", fields: [vendorId], references: [id])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model RHUAmbulance {
+  id          String   @id
+  unit        String
+  plateNumber String
+  station     String
+  status      String   @default("STANDBY")
+  statusColor String   @default("text-emerald-500 bg-emerald-500/10 border-emerald-500/20")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model RHUAmbulanceHotline {
+  id        String   @id
+  name      String
+  number    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+}
+
 enum InventoryCategory {
   MEDICINE
   MEDICAL_SUPPLY
@@ -1326,81 +1412,6 @@ enum PaymentStatus {
   REFUNDED
 }
 
-
-// ==============================================
-// MARKET STALL COLLECTION MODULE MODELS
-// ==============================================
-
-model StallType {
-  id          String   @id @default(cuid())
-  code        String   @unique
-  name        String
-  description String?
-  createdAt   DateTime @default(now())
-  createdBy   String?
-  updatedAt   DateTime @updatedAt
-  updatedBy   String?
-  stalls      Stall[]
-}
-
-model StallOtherFee {
-  id        String            @id @default(cuid())
-  stallId   String
-  name      String            // e.g. "Garbage Collection Fee", "Electricity Fee"
-  amount    Float             @default(0)
-  feeType   StallFeeFrequency @default(DAILY)
-  remarks   String?
-  createdAt DateTime          @default(now())
-  createdBy String?
-  updatedAt DateTime          @updatedAt
-  updatedBy String?
-
-  stall Stall @relation(fields: [stallId], references: [id], onDelete: Cascade)
-}
-
-model Stall {
-  id                    String            @id @default(cuid())
-  stallTypeId           String
-  stallNumber           String            @unique
-  vendorId              String?
-  status                StallStatus       @default(VACANT)
-  dailyRate             Float             @default(0)
-  monthlyRate           Float             @default(0)
-  dailyRateOverdueFee   Float             @default(0)
-  monthlyRateOverdueFee Float             @default(0)
-  createdAt             DateTime          @default(now())
-  createdBy             String?
-  updatedAt             DateTime          @updatedAt
-  updatedBy             String?
-
-  stallType   StallType         @relation(fields: [stallTypeId], references: [id])
-  vendor      User?             @relation("VendorStalls", fields: [vendorId], references: [id])
-  otherFees   StallOtherFee[]
-  collections StallCollection[]
-}
-
-model StallCollection {
-  id              String             @id @default(cuid())
-  stallId         String
-  vendorId        String?
-  collectorId     String
-  collectedDate   DateTime           @default(now())
-  ticketNumber    String             @unique
-  baseAmount      Float              @default(0)
-  otherFeesPaid   Float              @default(0)
-  overdueFeePaid  Float              @default(0)
-  totalAmountPaid Float              @default(0)
-  paymentMethod   StallPaymentMethod @default(CASH)
-  status          CollectionStatus   @default(PAID)
-  remarks         String?
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
-
-  stall     Stall @relation(fields: [stallId], references: [id])
-  collector User  @relation("CollectorCollections", fields: [collectorId], references: [id])
-  vendor    User? @relation("VendorCollections", fields: [vendorId], references: [id])
-}
-
 enum StallStatus {
   VACANT
   OCCUPIED
@@ -1408,14 +1419,12 @@ enum StallStatus {
   RESERVED
 }
 
-
 enum CollectionStatus {
   PAID
   PARTIAL
   PENDING
   CANCELLED
 }
-
 
 enum StallPaymentMethod {
   CASH
@@ -1426,4 +1435,3 @@ enum StallFeeFrequency {
   DAILY
   MONTHLY
 }
-

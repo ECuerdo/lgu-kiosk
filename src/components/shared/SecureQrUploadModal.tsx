@@ -89,17 +89,17 @@ export default function SecureQrUploadModal({
             </div>
 
             {/* QR Card Container */}
-            {qrCode && (
+            {actualQrCode && (
               <div className="bg-white p-5 rounded-3xl w-full max-w-[280px] shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-slate-100 flex items-center justify-center mb-6">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={qrCode} alt="Upload Handoff QR Code" className="w-full h-auto object-contain" />
+                <img src={actualQrCode} alt="Upload Handoff QR Code" className="w-full h-auto object-contain" />
               </div>
             )}
 
             {/* Instruction Details */}
             <div className="text-center space-y-3 px-2 mb-8">
               <p className="text-sm font-black text-slate-800 leading-snug">
-                Scan using your phone, then choose the <span className="text-theme-primary underline decoration-2 underline-offset-4">{slotLabel}</span> document.
+                Scan using your phone, then choose the <span className="text-theme-primary underline decoration-2 underline-offset-4">{actualSlotLabel}</span> document.
               </p>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-relaxed">
                 The link expires in 30 minutes. You may close this QR window while uploading; the kiosk will continue receiving files in the background.

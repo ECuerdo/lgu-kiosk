@@ -58,6 +58,15 @@ const BUSINESS_PERMIT_LABELS: Record<string, string> = {
   fireSafetyFile: "Fire Safety Inspection Certificate",
 };
 
+const RPT_LABELS: Record<string, string> = {
+  rpt_validId: "Valid Government ID",
+  rpt_previousOr: "Previous O.R. / SOA",
+  rpt_buildingPermit: "Building / Occupancy Permit",
+  rpt_deedOfSale: "Deed of Absolute Sale",
+  rpt_title: "TCT / Land Title",
+  rpt_birEcar: "BIR eCAR Certificate",
+};
+
 const CEDULA_LABELS: Record<string, string> = {
   idFile: "Government-Issued Valid ID",
   proofFile: "Proof of Income (e.g., Payslip, ITR, Barangay Certificate)",
@@ -159,6 +168,8 @@ export default function UploadHandoffPage() {
       ]
     : sessionSlot.startsWith("bp_")
       ? [{ slot: sessionSlot, label: BUSINESS_PERMIT_LABELS[sessionSlot.replace("bp_", "")] || sessionSlot.replace("bp_", "").replace(/([A-Z])/g, " $1").trim(), group: "Business Permit Document", isRequired: false }]
+      : sessionSlot.startsWith("rpt_")
+        ? [{ slot: sessionSlot, label: RPT_LABELS[sessionSlot] || "Real Property Tax Document", group: "Real Property Tax Document", isRequired: false }]
       : sessionSlot === "birth_id"
         ? [
             { slot: "idFront", label: "Valid ID Front Photo", group: "Valid ID Copy (Front & Back)", isRequired: false },
