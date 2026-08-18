@@ -61,10 +61,6 @@ function toFloat32Array(values: number[]) {
   return new Float32Array(values);
 }
 
-async function loadImage(url: string) {
-  const img = await faceapi.fetchImage(url);
-  return img;
-}
 
 function preprocessImage(
   source: HTMLVideoElement | HTMLImageElement,
@@ -83,7 +79,7 @@ function preprocessImage(
   return canvas;
 }
 
-async function detectReferenceFace(img: HTMLImageElement | HTMLVideoElement | HTMLCanvasElement) {
+async function detectReferenceFace(img: HTMLImageElement | HTMLVideoElement | HTMLCanvasElement, attemptIndex: number = 0) {
   // Use a smaller 320 inputSize configuration to decrease CPU workload on low-end kiosk processors
   const option = new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.15 });
 
@@ -92,27 +88,30 @@ async function detectReferenceFace(img: HTMLImageElement | HTMLVideoElement | HT
     return await faceapi.detectSingleFace(img, option).withFaceLandmarks(true).withFaceDescriptor();
   }
 
-  // 1. Always prioritize the Kiosk camera optimization preset (anti-glare + anti-scanline)
-  // because the kiosk camera is consistently overexposed. This avoids the high cost of double scans per frame.
-  try {
-    const canvas = preprocessImage(img, "brightness(0.6) contrast(1.7) saturate(1.1) blur(0.6px)");
-    const processedDetection = await faceapi.detectSingleFace(canvas, option).withFaceLandmarks(true).withFaceDescriptor();
-    if (processedDetection) return processedDetection;
-  } catch (e) {
-    console.error("Kiosk camera preprocessing failed:", e);
-  }
+  const attempt = attemptIndex % 3;
 
-  // 2. Fallback to raw frame detection
-  const rawDetection = await faceapi.detectSingleFace(img, option).withFaceLandmarks(true).withFaceDescriptor();
-  if (rawDetection) return rawDetection;
-
-  // 3. Fallback to backlight preset (if backlit)
-  try {
-    const canvasBacklight = preprocessImage(img, "brightness(1.25) contrast(1.3)");
-    const backlightDetection = await faceapi.detectSingleFace(canvasBacklight, option).withFaceLandmarks(true).withFaceDescriptor();
-    if (backlightDetection) return backlightDetection;
-  } catch (e) {
-    console.error("Backlight preprocessing failed:", e);
+  if (attempt === 0) {
+    // 0. Always prioritize the Kiosk camera optimization preset (anti-glare + anti-scanline)
+    try {
+      const canvas = preprocessImage(img, "brightness(0.6) contrast(1.7) saturate(1.1) blur(0.6px)");
+      const processedDetection = await faceapi.detectSingleFace(canvas, option).withFaceLandmarks(true).withFaceDescriptor();
+      if (processedDetection) return processedDetection;
+    } catch (e) {
+      console.error("Kiosk camera preprocessing failed:", e);
+    }
+  } else if (attempt === 1) {
+    // 1. Fallback to raw frame detection
+    const rawDetection = await faceapi.detectSingleFace(img, option).withFaceLandmarks(true).withFaceDescriptor();
+    if (rawDetection) return rawDetection;
+  } else {
+    // 2. Fallback to backlight preset (if backlit)
+    try {
+      const canvasBacklight = preprocessImage(img, "brightness(1.25) contrast(1.3)");
+      const backlightDetection = await faceapi.detectSingleFace(canvasBacklight, option).withFaceLandmarks(true).withFaceDescriptor();
+      if (backlightDetection) return backlightDetection;
+    } catch (e) {
+      console.error("Backlight preprocessing failed:", e);
+    }
   }
 
   return null;
@@ -147,6 +146,9 @@ export default function FaceVerification({
 
     async function setupCamera() {
       try {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          throw new Error("Camera API is not supported. Please ensure you are using a secure connection (HTTPS or localhost).");
+        }
         const stream = await navigator.mediaDevices.getUserMedia({
           video: {
             facingMode: "user",
@@ -193,7 +195,6 @@ export default function FaceVerification({
         await Promise.all([
           faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
           faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL),
-          faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
           faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
         ]);
         if (!cancelled) setModelsReady(true);
@@ -226,24 +227,9 @@ export default function FaceVerification({
           return;
         }
 
-        const url = recognition?.referenceImageUrl || recognition?.selfieUrl || referenceImageUrl || null;
-        if (!url) {
-          setError("No facialRecognition descriptor or reference image is available for this resident.");
-          setReferenceReady(false);
-          return;
-        }
-
-        const img = await loadImage(url);
-        const detection = await detectReferenceFace(img);
-
-        if (!detection) {
-          throw new Error("No face found in the saved reference image.");
-        }
-
         if (!cancelled) {
-          setReferenceDescriptor(detection.descriptor);
-          setReferenceLabel(residentName || "Resident");
-          setReferenceReady(true);
+          setError("No facial embedding/descriptor is available for this resident in the database. Please re-enroll their face.");
+          setReferenceReady(false);
         }
       } catch (err) {
         if (!cancelled) {
@@ -264,6 +250,7 @@ export default function FaceVerification({
 
     let cancelled = false;
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    let attemptIndex = 0;
 
     const detectLiveFace = async () => {
       const video = videoRef.current;
@@ -273,7 +260,7 @@ export default function FaceVerification({
       }
 
       try {
-        const result = await detectReferenceFace(video);
+        const result = await detectReferenceFace(video, attemptIndex);
 
         if (!cancelled) {
           setLiveDescriptor(result?.descriptor || null);
@@ -281,10 +268,16 @@ export default function FaceVerification({
           autoVerifyRef.current = false;
           if (!result) {
             setError(null);
+            attemptIndex++;
+          } else {
+            attemptIndex = 0;
           }
         }
       } catch {
-        if (!cancelled) setLiveDescriptor(null);
+        if (!cancelled) {
+          setLiveDescriptor(null);
+          attemptIndex++;
+        }
       } finally {
         if (!cancelled) {
           timeoutId = setTimeout(detectLiveFace, 250);
