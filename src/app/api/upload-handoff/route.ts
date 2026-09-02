@@ -13,8 +13,8 @@ function normalizePublicOrigin(value: string | undefined, fallback: string) {
 export async function POST(request: NextRequest) {
   try {
     const { userId, slot, context } = await request.json();
-    const allowed = ["tct", "documents", "bfp", "zoning", "idFile", "proofFile", "birth_id"];
-    if (!userId || !(allowed.includes(slot) || String(slot).startsWith("bp_") || String(slot).startsWith("lcr_"))) {
+    const allowed = ["tct", "documents", "bfp", "zoning", "idFile", "proofFile", "birth_id", "occupancy_documents"];
+    if (!userId || !(allowed.includes(slot) || String(slot).startsWith("bp_") || String(slot).startsWith("lcr_") || String(slot).startsWith("rpt_"))) {
       return NextResponse.json({ error: "Invalid upload request." }, { status: 400 });
     }
 

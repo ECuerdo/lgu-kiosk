@@ -436,6 +436,7 @@ body.hide-kiosk-cursor * {
   margin-bottom: 20px;
   letter-spacing: -0.03em;
   background: linear-gradient(135deg, #fff 30%, rgba(255,255,255,0.7) 100%);
+  background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -515,6 +516,7 @@ body.hide-kiosk-cursor * {
   padding: 1.5px;
   background: linear-gradient(135deg, rgba(255,255,255,0.08), transparent 40%, color-mix(in srgb, var(--primary-theme-secondary) 15%, transparent));
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   pointer-events: none;
