@@ -67,7 +67,7 @@ const STEPS: { id: Step; label: string; icon: any }[] = [
     { id: "REVIEW", label: "Review & Submit", icon: CheckCircle2 },
 ];
 
-export default function AppointmentDeathPsaEndorsementPage() {
+export default function AppointmentDeathCertifiedTrueCopyPage() {
     const router = useRouter();
     const [userId, setUserId] = useState<string>("");
     const [currentStep, setCurrentStep] = useState<Step>("INFORMANT");
@@ -158,8 +158,8 @@ export default function AppointmentDeathPsaEndorsementPage() {
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get("revisionId")) return;
 
-        const savedStep = sessionStorage.getItem("appointment-death-psa-endorsement-step");
-        const savedForm = sessionStorage.getItem("appointment-death-psa-endorsement-form");
+        const savedStep = sessionStorage.getItem("appointment-death-certified-true-copy-step");
+        const savedForm = sessionStorage.getItem("appointment-death-certified-true-copy-form");
 
         if (savedStep) setCurrentStep(savedStep as Step);
         if (savedForm) {
@@ -177,8 +177,8 @@ export default function AppointmentDeathPsaEndorsementPage() {
 
     useEffect(() => {
         if (!loading && !revisionId) {
-            sessionStorage.setItem("appointment-death-psa-endorsement-step", currentStep);
-            sessionStorage.setItem("appointment-death-psa-endorsement-form", JSON.stringify(formData));
+            sessionStorage.setItem("appointment-death-certified-true-copy-step", currentStep);
+            sessionStorage.setItem("appointment-death-certified-true-copy-form", JSON.stringify(formData));
         }
     }, [currentStep, formData, loading, revisionId]);
 
@@ -327,13 +327,13 @@ export default function AppointmentDeathPsaEndorsementPage() {
                 }
 
                 if (typesResult.success && typesResult.data) {
-                    const psaType = typesResult.data.find((t: any) => t.code === "LCR_DEATH_PSA_APPOINTMENT_ENDORSEMENT");
+                    const psaType = typesResult.data.find((t: any) => t.code === "LCR_DEATH_CERTIFIED_TRUE_COPY_APPOINTMENT");
                     if (psaType) {
                         setTypeId(psaType.id);
                         setDbType(psaType);
                         await logDebugMessage(`Client: Found dbType ID: ${psaType.id}`);
                     } else {
-                        await logDebugMessage("Client: LCR_DEATH_PSA_APPOINTMENT_ENDORSEMENT type NOT found in dbTypes list");
+                        await logDebugMessage("Client: LCR_DEATH_CERTIFIED_TRUE_COPY_APPOINTMENT type NOT found in dbTypes list");
                     }
                 } else {
                     await logDebugMessage(`Client: getTransactionTypes was unsuccessful: ${(typesResult as any).error || "Unknown error"}`);
@@ -444,7 +444,7 @@ export default function AppointmentDeathPsaEndorsementPage() {
         try {
             const data = new FormData();
             data.append("typeId", typeId);
-            data.append("registryType", "DEATH_PSA_APPOINTMENT_ENDORSEMENT");
+            data.append("registryType", "DEATH_CERTIFIED_TRUE_COPY_APPOINTMENT");
             if (revisionId) {
                 data.append("revisionId", revisionId);
             }
@@ -495,9 +495,9 @@ export default function AppointmentDeathPsaEndorsementPage() {
             const res = await submitCivilRegistryTransaction(data, userId);
 
             if (res.success && res.data) {
-                toast.success(revisionId ? "Revision resubmitted successfully!" : "Death PSA Appointment Endorsement submitted successfully!");
-                sessionStorage.removeItem("appointment-death-psa-endorsement-step");
-                sessionStorage.removeItem("appointment-death-psa-endorsement-form");
+                toast.success(revisionId ? "Revision resubmitted successfully!" : "Death Certified True Copy Appointment submitted successfully!");
+                sessionStorage.removeItem("appointment-death-certified-true-copy-step");
+                sessionStorage.removeItem("appointment-death-certified-true-copy-form");
                 router.push("/modules/civil-registry");
             } else {
                 toast.error(res.error || "Failed to submit request");
@@ -514,7 +514,7 @@ export default function AppointmentDeathPsaEndorsementPage() {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-950">
                 <Loader2 className="w-10 h-10 animate-spin mb-4" style={{ color: "var(--primary-theme)" }} />
-                <p className="font-black uppercase tracking-widest text-[10px] text-slate-400 italic">Initializing Endorsement Form...</p>
+                <p className="font-black uppercase tracking-widest text-[10px] text-slate-400 italic">Initializing Appointment Form...</p>
             </div>
         );
     }
@@ -616,7 +616,7 @@ export default function AppointmentDeathPsaEndorsementPage() {
                             </BreadcrumbItem>
                             <BreadcrumbSeparator className="text-slate-300 dark:text-white/10" />
                             <BreadcrumbItem>
-                                <BreadcrumbPage className="text-[10px] font-black uppercase tracking-widest italic" style={{ color: themeColor }}>Death PSA Appointment Endorsement</BreadcrumbPage>
+                                <BreadcrumbPage className="text-[10px] font-black uppercase tracking-widest italic" style={{ color: themeColor }}>Death Certified True Copy Appointment</BreadcrumbPage>
                             </BreadcrumbItem>
                         </BreadcrumbList>
                     </Breadcrumb>
@@ -639,11 +639,11 @@ export default function AppointmentDeathPsaEndorsementPage() {
                             </div>
 
                             <h1 className="text-2xl md:text-4xl font-black uppercase italic tracking-tighter leading-none">
-                                Death PSA <span style={{ color: themeColor }}>Appointment Endorsement</span>
+                                Death Certified True Copy <span style={{ color: themeColor }}>Appointment</span>
                             </h1>
 
                             <p className="text-slate-600 dark:text-slate-300 font-medium text-xs leading-relaxed max-w-xl italic">
-                                Request an appointment for endorsement of a verified local death certificate record to the Philippine Statistics Authority (PSA).
+                                Schedule an appointment and request a certified true copy of an existing death certificate.
                             </p>
                         </div>
                     </div>
@@ -1065,7 +1065,7 @@ export default function AppointmentDeathPsaEndorsementPage() {
                                             Appointment <span style={{ color: themeColor }}>Schedule</span>
                                         </h2>
                                         <p className="text-[10px] md:text-xs text-slate-500 font-medium italic">
-                                            Choose your slot to claim the endorsed PSA document
+                                            Choose your slot to claim the certified true copy document
                                         </p>
                                     </div>
 
@@ -1119,7 +1119,7 @@ export default function AppointmentDeathPsaEndorsementPage() {
                                             Confirm <span style={{ color: themeColor }}>Submission</span>
                                         </h2>
                                         <p className="text-[10px] md:text-xs text-slate-500 font-medium italic">
-                                            Double check your details before processing
+                                            Double check your details before processing your certified true copy request
                                         </p>
                                     </div>
 
@@ -1191,7 +1191,7 @@ export default function AppointmentDeathPsaEndorsementPage() {
                                         <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 italic">Fee Breakdown</h3>
                                         <div className="space-y-2 text-xs font-bold">
                                             <div className="flex justify-between">
-                                                <span className="text-slate-400 uppercase">PSA Endorsement Processing Fee</span>
+                                                <span className="text-slate-400 uppercase">Certified True Copy Processing Fee</span>
                                                 <span>₱{miscFeeAmount.toFixed(2)}</span>
                                             </div>
                                             <div className="flex justify-between">
@@ -1287,7 +1287,7 @@ export default function AppointmentDeathPsaEndorsementPage() {
                                             ) : (
                                                 <>
                                                     <Check className="w-4 h-4" />
-                                                    Submit Endorsement
+                                                    Submit Certified True Copy Request
                                                 </>
                                             )}
                                         </Button>

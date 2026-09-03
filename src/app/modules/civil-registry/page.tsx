@@ -118,26 +118,26 @@ const CIVIL_REGISTRY_SERVICES: RegistryService[] = [
     }
   },
   {
-    id: "appointment-birth-psa-endorsement",
+    id: "appointment-birth-certified-true-copy",
     category: "BIRTH",
     title: {
-      en: "Birth PSA Appointment Endorsement",
-      fil: "Tipanan sa Endorso ng Kapanganakan sa PSA",
-      pang: "Tipanan ed Endorso na Inyanak ed PSA",
-      ilo: "Tipanan ti Endorso ti Nayanak iti PSA"
+      en: "Birth Certified True Copy Appointment",
+      fil: "Tipanan sa Certified True Copy ng Kapanganakan",
+      pang: "Tipanan ed Certified True Copy na Inyanak",
+      ilo: "Tipanan ti Certified True Copy ti Nayanak"
     },
     desc: {
-      en: "Schedule appointment and request endorsement of a verified local birth certificate record to the PSA.",
-      fil: "Mag-iskedyul ng tipanan at humiling ng endorso ng lokal na sertipiko ng kapanganakan sa PSA.",
-      pang: "Mag-schedule na tipanan tan kerew na endorso na lokal ya sertipiko na niyanak ed PSA.",
-      ilo: "Mag-schedule ti tipanan ken agdawat ti endorso ti lokal a sertipiko ti pannakayanak iti PSA."
+      en: "Schedule an appointment and request a certified true copy of an existing birth certificate.",
+      fil: "Mag-iskedyul ng tipanan at humiling ng certified true copy ng sertipiko ng kapanganakan.",
+      pang: "Mag-schedule na tipanan tan kerew na certified true copy na sertipiko na niyanak.",
+      ilo: "Mag-schedule ti tipanan ken agdawat ti certified true copy ti sertipiko ti pannakayanak."
     },
     icon: <FileCheck className="w-8 h-8 text-theme-primary" />,
     status: "ACTIVE",
-    path: "/modules/civil-registry/appointment-birth-psa-endorsement",
+    path: "/modules/civil-registry/appointment-birth-certified-true-copy",
     estimatedTime: "3-5 Business Days",
     baseFee: "₱150.00",
-    dbCode: "LCR_PSA_APPOINTMENT_ENDORSEMENT",
+    dbCode: "LCR_BIRTH_CERTIFIED_TRUE_COPY_APPOINTMENT",
     requirements: {
       en: [
         "Verified Local Birth Certificate Copy",
@@ -260,26 +260,26 @@ const CIVIL_REGISTRY_SERVICES: RegistryService[] = [
     }
   },
   {
-    id: "appointment-death-psa-endorsement",
+    id: "appointment-death-certified-true-copy",
     category: "DEATH",
     title: {
-      en: "Death PSA Appointment Endorsement",
-      fil: "Tipanan sa Endorso ng Pagpanaw sa PSA",
-      pang: "Tipanan ed Endorso na Inatey ed PSA",
-      ilo: "Tipanan ti Endorso ti Ipupusay iti PSA"
+      en: "Death Certified True Copy Appointment",
+      fil: "Tipanan sa Certified True Copy ng Pagpanaw",
+      pang: "Tipanan ed Certified True Copy na Inatey",
+      ilo: "Tipanan ti Certified True Copy ti Ipupusay"
     },
     desc: {
-      en: "Schedule an appointment and request endorsement of a verified local death certificate record to the PSA.",
-      fil: "Mag-iskedyul ng tipanan at humiling ng endorso ng lokal na sertipiko ng kamatayan sa PSA.",
-      pang: "Mag-schedule na tipanan tan kerew na endorso na lokal ya sertipiko na inatey ed PSA.",
-      ilo: "Mag-schedule ti tipanan ken agdawat ti endorso ti lokal a sertipiko ti ipupusay iti PSA."
+      en: "Schedule an appointment and request a certified true copy of an existing death certificate.",
+      fil: "Mag-iskedyul ng tipanan at humiling ng certified true copy ng sertipiko ng kamatayan.",
+      pang: "Mag-schedule na tipanan tan kerew na certified true copy na sertipiko na inatey.",
+      ilo: "Mag-schedule ti tipanan ken agdawat ti certified true copy ti sertipiko ti ipupusay."
     },
     icon: <FileCheck className="w-8 h-8 text-theme-primary" />,
     status: "ACTIVE",
-    path: "/modules/civil-registry/appointment-death-psa-endorsement",
+    path: "/modules/civil-registry/appointment-death-certified-true-copy",
     estimatedTime: "3-5 Business Days",
     baseFee: "₱150.00",
-    dbCode: "LCR_DEATH_PSA_APPOINTMENT_ENDORSEMENT",
+    dbCode: "LCR_DEATH_CERTIFIED_TRUE_COPY_APPOINTMENT",
     requirements: {
       en: [
         "Verified Local Death Certificate Copy",
@@ -440,26 +440,26 @@ const CIVIL_REGISTRY_SERVICES: RegistryService[] = [
     }
   },
   {
-    id: "appointment-marriage-psa-endorsement",
+    id: "appointment-marriage-certified-true-copy",
     category: "MARRIAGE",
     title: {
-      en: "Marriage PSA Appointment Endorsement",
-      fil: "Tipanan sa Endorso ng Kasal sa PSA",
-      pang: "Tipanan ed Endorso na Kasal ed PSA",
-      ilo: "Tipanan ti Endorso ti Kasar iti PSA"
+      en: "Marriage Certified True Copy Appointment",
+      fil: "Tipanan sa Certified True Copy ng Kasal",
+      pang: "Tipanan ed Certified True Copy na Kasal",
+      ilo: "Tipanan ti Certified True Copy ti Kasar"
     },
     desc: {
-      en: "Schedule an appointment and request endorsement of a verified local marriage certificate record to the PSA.",
-      fil: "Mag-iskedyul ng tipanan at humiling ng endorso ng lokal na sertipiko ng kasal sa PSA.",
-      pang: "Mag-schedule na tipanan tan kerew na endorso na lokal ya sertipiko na kasal ed PSA.",
-      ilo: "Mag-schedule ti tipanan ken agdawat ti endorso ti lokal a sertipiko ti kasar iti PSA."
+      en: "Schedule an appointment and request a certified true copy of an existing marriage certificate.",
+      fil: "Mag-iskedyul ng tipanan at humiling ng certified true copy ng sertipiko ng kasal.",
+      pang: "Mag-schedule na tipanan tan kerew na certified true copy na sertipiko na kasal.",
+      ilo: "Mag-schedule ti tipanan ken agdawat ti certified true copy ti sertipiko ti kasar."
     },
     icon: <FileCheck className="w-8 h-8 text-theme-primary" />,
     status: "ACTIVE",
-    path: "/modules/civil-registry/appointment-marriage-psa-endorsement",
+    path: "/modules/civil-registry/appointment-marriage-certified-true-copy",
     estimatedTime: "3-5 Business Days",
     baseFee: "₱150.00",
-    dbCode: "LCR_MARRIAGE_PSA_APPOINTMENT_ENDORSEMENT",
+    dbCode: "LCR_MARRIAGE_CERTIFIED_TRUE_COPY_APPOINTMENT",
     requirements: {
       en: [
         "Verified Local Marriage Contract / Certificate Copy",
@@ -708,90 +708,77 @@ export default function CivilRegistryHubPage() {
         </div>
 
         {/* Main Content Card Container */}
-        <div className="bg-white dark:bg-[#0c0d12] border border-slate-200 dark:border-[#1d2230] rounded-[3rem] p-8 md:p-16 lg:p-20 shadow-xl md:shadow-2xl transition-colors duration-300">
+        <div className="bg-white dark:bg-[#0c0d12] border border-slate-200 dark:border-[#1d2230] rounded-[3rem] p-8 md:p-14 shadow-xl md:shadow-2xl transition-colors duration-300">
 
           {/* Header Title inside Card */}
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-7xl lg:text-8xl font-black italic uppercase tracking-tighter leading-none select-none text-slate-900 dark:text-white">
+          <div className="text-center mb-8">
+            <h2 className="text-4xl md:text-6xl lg:text-7xl font-black italic uppercase tracking-tighter leading-none select-none text-slate-900 dark:text-white">
               {lang === "en" ? (
                 <>CHOOSE APPLICATION <span className="text-theme-primary">PATHWAY</span></>
               ) : (
                 <>{t.headlinePart1} <span className="text-theme-primary">{t.headlinePart2}</span></>
               )}
             </h2>
-            <p className="text-xs md:text-xl font-bold text-slate-500 dark:text-slate-400 uppercase tracking-[0.4em] mt-5 italic">
+            <p className="text-xs md:text-base font-bold text-slate-500 dark:text-slate-400 uppercase tracking-[0.4em] mt-4 italic">
               {t.subheadlineSelect}
             </p>
           </div>
 
-          {/* Categories and Grids */}
-          <div className="space-y-16">
-            {(["BIRTH", "DEATH", "MARRIAGE"] as const).map((cat) => {
-              const catTrans = CATEGORY_TRANSLATIONS[cat];
-              const services = CIVIL_REGISTRY_SERVICES.filter(
-                s => s.category === cat && (!s.dbCode || !inactiveCodes.includes(s.dbCode))
-              );
 
-              return (
-                <div key={cat} className="space-y-8">
-                  {/* Category Header with Vertical Accent Bar */}
-                  <div className="flex items-center gap-4 pl-1">
-                    <div className="w-[8px] h-12 bg-theme-primary rounded-full shrink-0"></div>
-                    <div className="space-y-1">
-                      <h3 className="text-xl md:text-3xl lg:text-4xl font-black text-slate-900 dark:text-white italic uppercase tracking-wider leading-none">
-                        {catTrans.title[lang] || catTrans.title.en}
-                      </h3>
-                      <p className="text-[10px] md:text-sm lg:text-base font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest italic leading-none">
-                        {catTrans.subtitle[lang] || catTrans.subtitle.en}
-                      </p>
-                    </div>
-                  </div>
+          {/* All Services — unified flat grid */}
 
-                  {/* Cards Grid */}
+          <div className="grid grid-cols-1 gap-4">
+            {CIVIL_REGISTRY_SERVICES
+              .filter(s => !s.dbCode || !inactiveCodes.includes(s.dbCode))
+              .map((service) => (
+                <motion.div
+                  key={service.id}
+                  onClick={() => handleServiceClick(service)}
+                  whileHover={{ y: -4 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                  className={cn(
+                    "group flex bg-slate-50/50 dark:bg-[#151821]/80 border border-slate-200/80 dark:border-[#202534] rounded-2xl hover:border-theme-primary/50 dark:hover:border-theme-primary/30 hover:bg-slate-100/30 dark:hover:bg-[#1a1e2c] active:scale-[0.98] transition-all duration-300 cursor-pointer relative overflow-hidden shadow-sm hover:shadow-lg",
+                    activeFontSize === "xl"
+                      ? "flex-row items-center gap-5 p-5"
+                      : "flex-row items-start gap-4 p-5"
+                  )}
+                >
+                  {/* Category color tag */}
                   <div className={cn(
-                    "grid gap-8",
-                    activeFontSize === "xl" ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
-                  )}>
-                    {services.map((service) => (
-                      <motion.div
-                        key={service.id}
-                        onClick={() => handleServiceClick(service)}
-                        whileHover={{ y: -6 }}
-                        transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                        className={cn(
-                          "group flex bg-slate-50/50 dark:bg-[#151821]/80 border border-slate-200/80 dark:border-[#202534] rounded-[2rem] hover:border-theme-primary/50 dark:hover:border-theme-primary/30 hover:bg-slate-100/30 dark:hover:bg-[#1a1e2c] active:scale-[0.98] transition-all duration-300 cursor-pointer relative overflow-hidden shadow-md hover:shadow-xl dark:hover:shadow-[0_0_30px_color-mix(in srgb, var(--primary-theme) 0.08 * 100%, transparent)]",
-                          activeFontSize === "xl"
-                            ? "flex-row items-center gap-6 p-6 sm:p-8 min-h-0"
-                            : "flex-col justify-start min-h-[260px] md:min-h-[300px] p-8 md:p-10"
-                        )}
-                      >
-                        {/* Card Icon */}
-                        <div className={cn(activeFontSize === "xl" ? "mb-0 shrink-0" : "mb-6")}>
-                          <div className="w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-slate-200/50 dark:bg-[#0c0d12] border border-slate-300/30 dark:border-white/5 flex items-center justify-center">
-                            {/* Render icon with scaled dimensions dynamically */}
-                            {React.cloneElement(service.icon as React.ReactElement<{ className?: string }>, { className: "w-8 h-8 md:w-10 md:h-10 text-theme-primary" })}
-                          </div>
-                        </div>
+                    "absolute top-0 left-0 w-1 h-full rounded-l-2xl",
+                    service.category === "BIRTH" ? "bg-sky-500" :
+                    service.category === "DEATH" ? "bg-slate-500" :
+                    "bg-rose-500"
+                  )} />
 
-                        {/* Text Content */}
-                        <div className="flex-1 min-w-0">
-                          {/* Title */}
-                          <h4 className="text-lg md:text-2xl lg:text-3xl font-black text-slate-900 dark:text-white group-hover:text-theme-primary transition-colors leading-tight mb-3 uppercase italic tracking-tight">
-                            {service.title[lang] || service.title.en}
-                          </h4>
-
-                          {/* Description */}
-                          <p className="text-xs md:text-sm lg:text-base font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide leading-relaxed">
-                            {service.desc[lang] || service.desc.en}
-                          </p>
-                        </div>
-                      </motion.div>
-                    ))}
+                  {/* Card Icon */}
+                  <div className="ml-2 w-11 h-11 rounded-xl bg-slate-200/50 dark:bg-[#0c0d12] border border-slate-300/30 dark:border-white/5 flex items-center justify-center shrink-0">
+                    {React.cloneElement(service.icon as React.ReactElement<{ className?: string }>, { className: "w-6 h-6 text-theme-primary" })}
                   </div>
-                </div>
-              );
-            })}
 
+                  {/* Text Content */}
+                  <div className="flex-1 min-w-0">
+                    {/* Category tag */}
+                    <span className={cn(
+                      "text-[8px] font-black uppercase tracking-widest mb-1 block",
+                      service.category === "BIRTH" ? "text-sky-500" :
+                      service.category === "DEATH" ? "text-slate-400" :
+                      "text-rose-500"
+                    )}>
+                      {service.category}
+                    </span>
+                    {/* Title */}
+                    <h4 className="text-sm md:text-base font-black text-slate-900 dark:text-white group-hover:text-theme-primary transition-colors leading-tight mb-1 uppercase italic tracking-tight break-words">
+                      {service.title[lang] || service.title.en}
+                    </h4>
+                    {/* Description */}
+                    <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 leading-snug line-clamp-2">
+                      {service.desc[lang] || service.desc.en}
+                    </p>
+                  </div>
+                </motion.div>
+              ))
+            }
           </div>
 
         </div>
