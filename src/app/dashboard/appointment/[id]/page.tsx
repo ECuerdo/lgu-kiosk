@@ -280,13 +280,15 @@ export default function KioskAppointmentDetailsPage() {
 
             {/* Print Ticket Button */}
             <Button
+              disabled={printTriggered}
               onClick={() => {
+                toast.info("Sending ticket to thermal printer...");
                 setPrintTriggered(true);
               }}
-              className="w-full bg-theme-primary hover:bg-theme-primary/95 text-white rounded-2xl shadow-lg flex items-center justify-center gap-2 py-5 text-xs font-black uppercase tracking-wider select-none"
+              className="w-full bg-theme-primary hover:bg-theme-primary/95 text-white rounded-2xl shadow-lg flex items-center justify-center gap-2 py-5 text-xs font-black uppercase tracking-wider select-none disabled:opacity-75"
             >
-              <Printer className="w-4 h-4" />
-              Print Ticket
+              <Printer className={`w-4 h-4 ${printTriggered ? "animate-bounce" : ""}`} />
+              {printTriggered ? "Printing Ticket..." : "Print Ticket"}
             </Button>
 
             {/* Cancel Button */}

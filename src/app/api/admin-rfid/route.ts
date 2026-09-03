@@ -2,10 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
-export async function GET(req: NextRequest) {
-  const cardId = req.nextUrl.searchParams.get("card");
+import { sanitizeRfid } from "@/lib/rfidSanitizer";
 
-  if (!cardId || cardId.trim() === "") {
+export async function GET(req: NextRequest) {
+  const rawCardId = req.nextUrl.searchParams.get("card");
+  const cardId = sanitizeRfid(rawCardId);
+
+  if (!cardId) {
     return NextResponse.json({ error: "No card ID provided" }, { status: 400 });
   }
 
@@ -20,7 +23,7 @@ export async function GET(req: NextRequest) {
     >(Prisma.sql`
       SELECT id, name, email, role
       FROM "User"
-      WHERE rfid = ${cardId.trim()}
+      WHERE rfid = ${cardId}
       LIMIT 1
     `);
 

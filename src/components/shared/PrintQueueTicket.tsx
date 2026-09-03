@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { createPortal } from "react-dom";
+import React, { useState, useEffect, useRef } from "react";
+import QRCode from "qrcode";
 
 interface PrintQueueTicketProps {
   queueNumber: string;
@@ -22,8 +22,8 @@ const formatDate = (dateStrOrObj: string | Date | null | undefined): string => {
   if (!dateStrOrObj) return "N/A";
   const date = new Date(dateStrOrObj);
   if (isNaN(date.getTime())) return String(dateStrOrObj);
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
   const y = date.getFullYear();
   return `${m}/${d}/${y}`;
 };
@@ -32,18 +32,18 @@ const formatDateTime = (dateStrOrObj: string | Date | null | undefined): string 
   if (!dateStrOrObj) return "N/A";
   const date = new Date(dateStrOrObj);
   if (isNaN(date.getTime())) return String(dateStrOrObj);
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
   const y = date.getFullYear();
-  
+
   let hours = date.getHours();
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  const seconds = String(date.getSeconds()).padStart(2, '0');
-  const ampm = hours >= 12 ? 'PM' : 'AM';
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const seconds = String(date.getSeconds()).padStart(2, "0");
+  const ampm = hours >= 12 ? "PM" : "AM";
   hours = hours % 12;
-  hours = hours ? hours : 12; // the hour '0' should be '12'
-  const h = String(hours).padStart(2, '0');
-  
+  hours = hours ? hours : 12;
+  const h = String(hours).padStart(2, "0");
+
   return `${m}/${d}/${y} ${h}:${minutes}:${seconds} ${ampm}`;
 };
 
@@ -55,230 +55,231 @@ export default function PrintQueueTicket({
   dateGenerated = new Date(),
   branding,
   triggerPrint = false,
-  onPrintCompleted
+  onPrintCompleted,
 }: PrintQueueTicketProps) {
-  const [mounted, setMounted] = useState(false);
-  const [qrLoaded, setQrLoaded] = useState(false);
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const [qrDataUrl, setQrDataUrl] = useState<string>("");
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    setQrLoaded(false);
+    if (!queueNumber) return;
+    QRCode.toDataURL(queueNumber, {
+      width: 200,
+      margin: 1,
+      color: { dark: "#000000", light: "#ffffff" },
+    })
+      .then((url) => setQrDataUrl(url))
+      .catch((err) => console.error("QR generation error:", err));
   }, [queueNumber]);
 
   useEffect(() => {
-    if (mounted && triggerPrint) {
-      if (qrLoaded) {
-        const timer = setTimeout(() => {
-          window.print();
-          if (onPrintCompleted) onPrintCompleted();
-        }, 150);
-        return () => clearTimeout(timer);
-      } else {
-        // Fallback timeout in case image loading fails or takes too long
-        const fallback = setTimeout(() => {
-          window.print();
-          if (onPrintCompleted) onPrintCompleted();
-        }, 1500);
-        return () => clearTimeout(fallback);
-      }
-    }
-  }, [mounted, triggerPrint, qrLoaded, queueNumber, onPrintCompleted]);
+    if (!triggerPrint || !qrDataUrl) return;
 
-  if (!mounted) return null;
+    const iframe = iframeRef.current;
+    if (!iframe) return;
 
-  return createPortal(
-    <>
-      <style dangerouslySetInnerHTML={{ __html: `
-        @media print {
-          @page { 
-            size: 80mm 150mm; 
-            margin: 0; 
-          }
-          body { 
-            margin: 0 !important; 
-            padding: 0 !important; 
-            background: white !important;
-          }
-          body > * { 
-            display: none !important; 
-          }
-          #queue-ticket-print-portal {
-            display: block !important;
-            position: fixed !important;
-            left: 0 !important;
-            top: 0 !important;
-            width: 100% !important;
-            height: 100% !important;
-            visibility: visible !important;
-            overflow: visible !important;
-            padding: 6mm !important;
-            background: white !important;
-            z-index: 99999 !important;
-            color: black !important;
-          }
-          #queue-ticket-print-portal * {
-            visibility: visible !important;
-            color-adjust: exact !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-            font-weight: 900 !important;
-            color: black !important;
-          }
-        }
-      `}} />
+    const ticketHtml = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <title>Queue Ticket</title>
+          <style>
+            @page {
+              size: 80mm auto;
+              margin: 0mm !important;
+            }
+            * {
+              box-sizing: border-box;
+              margin: 0;
+              padding: 0;
+            }
+            body {
+              width: 76mm;
+              margin: 0 auto;
+              padding: 4mm 2mm;
+              font-family: monospace, Courier, sans-serif;
+              color: #000;
+              background: #fff;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            .ticket-card {
+              border: 2px solid #000;
+              border-radius: 10px;
+              padding: 10px 8px;
+              text-align: center;
+              font-weight: 900;
+            }
+            .header-logo {
+              width: 36px;
+              height: 36px;
+              filter: grayscale(1) contrast(1.2);
+              margin-bottom: 4px;
+            }
+            .country-title {
+              font-size: 7px;
+              letter-spacing: 0.5px;
+              text-transform: uppercase;
+            }
+            .muni-title {
+              font-size: 9px;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+              margin-top: 1px;
+            }
+            .prov-title {
+              font-size: 6.5px;
+              letter-spacing: 0.5px;
+            }
+            .portal-badge {
+              font-size: 7.5px;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+              margin-top: 3px;
+              border: 1px solid #000;
+              padding: 1px 4px;
+              border-radius: 3px;
+              display: inline-block;
+            }
+            .dotted-sep {
+              border-top: 1.5px dotted #000;
+              margin: 6px 0;
+            }
+            .queue-box {
+              border: 1.5px dashed #000;
+              padding: 8px 4px;
+              border-radius: 6px;
+              background: #fcfcfc;
+              margin-top: 2px;
+            }
+            .queue-num {
+              font-size: 20px;
+              font-weight: 900;
+              letter-spacing: 0.5px;
+              display: block;
+            }
+            .details {
+              font-size: 8.5px;
+              text-align: left;
+              display: flex;
+              flex-direction: column;
+              gap: 3px;
+              margin: 4px 0;
+            }
+            .row {
+              display: flex;
+              justify-content: space-between;
+              border-bottom: 1px dotted #000;
+              padding-bottom: 2px;
+            }
+            .instructions {
+              font-size: 8px;
+              line-height: 1.3;
+              background: #fafafa;
+              padding: 6px;
+              border: 1px solid #000;
+              border-radius: 6px;
+              margin-bottom: 6px;
+            }
+            .qr-img {
+              width: 85px;
+              height: 85px;
+              border: 1px solid #000;
+              padding: 3px;
+              border-radius: 3px;
+            }
+            .footer-slogan {
+              font-size: 7px;
+              letter-spacing: 0.5px;
+              text-transform: uppercase;
+              margin-top: 4px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="ticket-card">
+            ${branding?.logo ? `<img src="${branding.logo}" class="header-logo" alt="Seal" />` : ""}
+            <div class="country-title">Republic of the Philippines</div>
+            <div class="muni-title">Municipality of Mapandan</div>
+            <div class="prov-title">Province of Pangasinan</div>
+            <div class="portal-badge">EMapandan Queue Portal</div>
 
-      <div
-        id="queue-ticket-print-portal"
-        style={{
-          position: 'fixed',
-          left: '-9999px',
-          top: 0,
-          width: '80mm',
-          visibility: 'hidden',
-          overflow: 'hidden',
-          zIndex: -1,
-          pointerEvents: 'none'
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            fontFamily: 'monospace, Courier, sans-serif',
-            lineHeight: 1.25,
-            color: 'black',
-            background: 'white',
-            padding: '12px 8px',
-            border: '2px solid black',
-            borderRadius: '12px',
-            textAlign: 'center',
-            fontWeight: '900'
-          }}
-        >
-          {/* Official LGU Logo & Header */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '4px' }}>
-            {branding?.logo ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={branding.logo}
-                alt="LGU Seal"
-                style={{ width: '36px', height: '36px', filter: 'grayscale(1) contrast(1.2)', marginBottom: '4px' }}
-              />
-            ) : (
-              <div style={{ width: '30px', height: '30px', border: '1.5px solid black', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '12px', marginBottom: '4px' }}>
-                LGU
+            <div class="dotted-sep"></div>
+
+            <span style="font-size: 8px; text-transform: uppercase; letter-spacing: 1px;">Queue Ticket Number</span>
+            <div class="queue-box">
+              <span class="queue-num">${queueNumber}</span>
+            </div>
+
+            <div class="dotted-sep"></div>
+
+            <div class="details">
+              <div class="row"><span>Service:</span><span style="text-align: right; max-width: 65%;">${serviceName}</span></div>
+              <div class="row"><span>Date:</span><span>${formatDate(appointmentDate)}</span></div>
+              <div class="row"><span>Schedule:</span><span>${appointmentSlot}</span></div>
+              <div style="display: flex; justify-content: space-between; padding-top: 1px;">
+                <span>Created:</span><span>${formatDateTime(dateGenerated)}</span>
               </div>
-            )}
-            <span style={{ fontSize: '7px', fontWeight: '900', letterSpacing: '0.5px', textTransform: 'uppercase', color: 'black' }}>
-              Republic of the Philippines
-            </span>
-            <span style={{ fontSize: '9px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: '1px' }}>
-              Municipality of Mapandan
-            </span>
-            <span style={{ fontSize: '6.5px', fontWeight: '900', letterSpacing: '0.5px', color: 'black' }}>
-              Province of Pangasinan
-            </span>
-            <span style={{ fontSize: '7.5px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: '3px', border: '1px solid black', padding: '1px 4px', borderRadius: '3px' }}>
-              EMapandan Queue Portal
-            </span>
-          </div>
-
-          {/* Dotted Divider */}
-          <div style={{ borderTop: '1.5px dotted black', margin: '6px 0' }}></div>
-
-          {/* Ticket Number Section */}
-          <div style={{ padding: '2px 0' }}>
-            <span style={{ fontSize: '8px', fontWeight: 'bold', letterSpacing: '1px', textTransform: 'uppercase', display: 'block', marginBottom: '2px' }}>
-              Queue Ticket Number
-            </span>
-            <div style={{ 
-              border: '1.5px dashed black', 
-              padding: '8px 4px', 
-              borderRadius: '6px',
-              display: 'inline-block',
-              width: '100%',
-              boxSizing: 'border-box',
-              background: '#fcfcfc'
-            }}>
-              <span style={{ 
-                fontSize: '20px', 
-                fontWeight: '900', 
-                letterSpacing: '0.5px',
-                fontFamily: 'monospace',
-                display: 'block'
-              }}>
-                {queueNumber}
-              </span>
             </div>
-          </div>
 
-          {/* Dotted Divider */}
-          <div style={{ borderTop: '1.5px dotted black', margin: '6px 0' }}></div>
+            <div class="dotted-sep"></div>
 
-          {/* Transaction Details */}
-          <div style={{ fontSize: '9px', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '4px', margin: '2px 0 6px 0', fontWeight: '900' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dotted black', paddingBottom: '2px' }}>
-              <span style={{ fontWeight: '900', color: 'black' }}>Service Type:</span>
-              <span style={{ fontWeight: '900', textAlign: 'right', maxWidth: '60%', color: 'black' }}>{serviceName}</span>
+            <div class="instructions">
+              <p>Please wait for your number to be called.</p>
+              <p style="font-style: italic; font-size: 7.5px;">(Mangyaring hintayin na tawagin ang inyong numero.)</p>
+              <p style="margin-top: 2px;">Please have your physical documents ready.</p>
+              <p style="font-style: italic; font-size: 7.5px;">(Ihanda ang mga kinakailangang dokumento.)</p>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dotted black', paddingBottom: '2px' }}>
-              <span style={{ fontWeight: '900', color: 'black' }}>Date:</span>
-              <span style={{ fontWeight: '900', color: 'black' }}>{formatDate(appointmentDate)}</span>
+
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 3px;">
+              <img src="${qrDataUrl}" class="qr-img" alt="QR" />
+              <span style="font-size: 6.5px; text-transform: uppercase; letter-spacing: 0.5px;">Scan QR Code at Counter</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dotted black', paddingBottom: '2px' }}>
-              <span style={{ fontWeight: '900', color: 'black' }}>Schedule:</span>
-              <span style={{ fontWeight: '900', color: 'black' }}>{appointmentSlot}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '1px' }}>
-              <span style={{ fontWeight: '900', color: 'black' }}>Created On:</span>
-              <span style={{ fontWeight: '900', color: 'black' }}>{formatDateTime(dateGenerated)}</span>
-            </div>
-          </div>
 
-          {/* Dotted Divider */}
-          <div style={{ borderTop: '1.5px dotted black', margin: '4px 0 6px 0' }}></div>
+            <div class="dotted-sep"></div>
 
-          {/* Waiting Instructions */}
-          <div style={{ fontSize: '8px', lineHeight: 1.3, marginBottom: '10px', background: '#fafafa', padding: '6px', border: '1px solid black', borderRadius: '6px', fontWeight: '900' }}>
-            <p style={{ margin: '0', fontWeight: '900', color: 'black' }}>Please wait for your number to be called.</p>
-            <p style={{ margin: '0 0 4px 0', fontStyle: 'italic', color: 'black', fontSize: '7.5px', fontWeight: '900' }}>
-              (Mangyaring hintayin na tawagin ang inyong numero.)
-            </p>
-            <p style={{ margin: '0', fontWeight: '900', color: 'black' }}>Please have your physical documents ready.</p>
-            <p style={{ margin: '0', fontStyle: 'italic', color: 'black', fontSize: '7.5px', fontWeight: '900' }}>
-              (Ihanda ang inyong mga kinakailangang dokumento.)
-            </p>
+            <div class="footer-slogan">Serbisyong Tapat at Totoo</div>
+            <div style="font-size: 6px; margin-top: 1px;">Mapandan, Pangasinan</div>
           </div>
+        </body>
+      </html>
+    `;
 
-          {/* QR Code */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${queueNumber}`}
-              alt="QR Code"
-              style={{ width: '85px', height: '85px', border: '1px solid black', padding: '3px', borderRadius: '3px' }}
-              onLoad={() => setQrLoaded(true)}
-            />
-            <span style={{ fontSize: '6.5px', fontWeight: '900', color: 'black', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              Scan QR Code at Counter
-            </span>
-          </div>
+    const doc = iframe.contentWindow?.document || iframe.contentDocument;
+    if (doc) {
+      doc.open();
+      doc.write(ticketHtml);
+      doc.close();
 
-          {/* Dotted Divider */}
-          <div style={{ borderTop: '1.5px dotted black', margin: '8px 0 4px 0' }}></div>
+      const timer = setTimeout(() => {
+        try {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+        } catch (e) {
+          console.error("Iframe printing error:", e);
+        } finally {
+          if (onPrintCompleted) onPrintCompleted();
+        }
+      }, 100);
 
-          {/* Footer Slogan */}
-          <div style={{ fontSize: '7px', fontWeight: '900', color: 'black', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            Serbisyong Tapat at Totoo
-          </div>
-          <div style={{ fontSize: '6px', color: 'black', marginTop: '1px', fontWeight: '900' }}>
-            Mapandan, Pangasinan
-          </div>
-        </div>
-      </div>
-    </>
-    , document.body);
+      return () => clearTimeout(timer);
+    }
+  }, [triggerPrint, qrDataUrl, queueNumber, serviceName, appointmentDate, appointmentSlot, dateGenerated, branding, onPrintCompleted]);
+
+  return (
+    <iframe
+      ref={iframeRef}
+      style={{
+        position: "fixed",
+        top: "-9999px",
+        left: "-9999px",
+        width: "80mm",
+        height: "150mm",
+        border: "none",
+        visibility: "hidden",
+        pointerEvents: "none",
+      }}
+      title="Silent Ticket Printer"
+    />
+  );
 }
