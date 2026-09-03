@@ -37,8 +37,10 @@ export default function RootLayout({
                   // ── Apply font size ────────────────────────────────────────
                   var saved = localStorage.getItem('kiosk_font_size');
                   if (saved) {
-                    var sizeMap = { sm: '14px', md: '16px', lg: '18px', xl: '20px' };
-                    root.style.fontSize = sizeMap[saved] || '16px';
+                    var sizeMap = { sm: '16px', md: '19px', lg: '22px', xl: '25px' };
+                    root.style.fontSize = sizeMap[saved] || '19px';
+                  } else {
+                    root.style.fontSize = '19px';
                   }
 
                   // ── Apply cached theme vars instantly (before first paint) ─
