@@ -5,6 +5,9 @@ import LGULogo from "./shared/LGULogo";
 import FaceVerification from "./FaceVerification";
 import OtpVerification from "./OtpVerification";
 import { useRouter } from "next/navigation";
+import { Copy, Check, Terminal } from "lucide-react";
+
+import { sanitizeRfid } from "@/lib/rfidSanitizer";
 
 type Resident = {
   id: string;
@@ -29,6 +32,7 @@ export default function RfidOverlay() {
   const [resident, setResident] = useState<Resident | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [manualCardId, setManualCardId] = useState("");
+  const [copied, setCopied] = useState(false);
   const inputBuffer = useRef<string>("");
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const router = useRouter();
@@ -45,7 +49,10 @@ export default function RfidOverlay() {
     }
   }
 
-  const handleCardTap = useCallback(async (cardId: string) => {
+  const handleCardTap = useCallback(async (rawCardId: string) => {
+    const cardId = sanitizeRfid(rawCardId);
+    if (!cardId) return;
+
     setActive(true);
     setStep("VERIFYING");
     setError(null);
@@ -210,6 +217,44 @@ export default function RfidOverlay() {
               >
                 Login with RFID
               </button>
+
+              {/* Kiosk Setup Shortcut Box */}
+              <div className="mt-6 rounded-2xl border border-white/10 bg-black/50 p-4 text-left">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-white/50">
+                    <Terminal className="h-3.5 w-3.5 text-emerald-400" />
+                    Kiosk Auto-Start Shortcut
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const cmd = `"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" --kiosk --kiosk-printing --app=https://kiosk.emapandan.com/`;
+                      navigator.clipboard.writeText(cmd);
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 2500);
+                    }}
+                    className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-emerald-400 hover:text-emerald-300 transition bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg"
+                  >
+                    {copied ? (
+                      <>
+                        <Check className="h-3 w-3 text-emerald-400" />
+                        Copied!
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-3 w-3" />
+                        Copy Command
+                      </>
+                    )}
+                  </button>
+                </div>
+                <code className="block text-[11px] font-mono text-slate-300 bg-black/60 p-2.5 rounded-xl border border-white/5 select-all whitespace-pre-wrap break-all">
+                  &quot;C:\Program Files\Google\Chrome\Application\chrome.exe&quot; --kiosk --kiosk-printing --app=https://kiosk.emapandan.com/
+                </code>
+                <p className="mt-2 text-[10px] text-white/40">
+                  Sa kiosk desktop: <strong>Right-Click</strong> &gt; <strong>New</strong> &gt; <strong>Shortcut</strong> &gt; i-paste ito.
+                </p>
+              </div>
             </div>
           )}
 
