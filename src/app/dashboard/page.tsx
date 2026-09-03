@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, Suspense } from "react";
+import React, { useState, useRef, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Image from "next/image";
 
@@ -19,7 +19,10 @@ import {
   Home,
   Search,
   ChevronRight,
+  ChevronDown,
   UserCircle,
+  User,
+  Ticket,
   Volume2,
   X
 } from "lucide-react";
@@ -251,8 +254,24 @@ function DashboardContent() {
   } | null>(null);
 
   const [profileOpen, setProfileOpen] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
   const { theme, setTheme, resolvedTheme } = useTheme();
   const [activeFontSize, setActiveFontSize] = useState<string>("md");
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
+        setProfileMenuOpen(false);
+      }
+    }
+    if (profileMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [profileMenuOpen]);
 
   React.useEffect(() => {
     try {
@@ -267,13 +286,13 @@ function DashboardContent() {
 
   React.useEffect(() => {
     const sizeMap: Record<string, string> = {
-      sm: "14px",
-      md: "16px",
-      lg: "18px",
-      xl: "20px"
+      sm: "16px",
+      md: "19px",
+      lg: "22px",
+      xl: "25px"
     };
     try {
-      document.documentElement.style.fontSize = sizeMap[activeFontSize] || "16px";
+      document.documentElement.style.fontSize = sizeMap[activeFontSize] || "19px";
     } catch (e) {
       console.error(e);
     }
@@ -591,51 +610,164 @@ function DashboardContent() {
               </div>
             </Button>
 
-            {resident && (
-              <Button
-                onClick={() => router.push("/dashboard/appointment")}
-                className="bg-theme-primary hover:bg-theme-primary/95 text-white font-bold rounded-2xl flex items-center gap-2.5 px-4 py-5 shadow-lg active:scale-95 transition-all shrink-0"
-              >
-                <Clock className="w-5 h-5 text-emerald-100" />
-                <div className="text-left select-none">
-                  <span className="block text-[8px] font-black uppercase tracking-widest leading-none opacity-85">
-                    Transactions
-                  </span>
-                  <span className="block text-[11px] font-black uppercase">
-                    My Tickets
-                  </span>
-                </div>
-              </Button>
-            )}
-
             {resident ? (
-              <button
-                type="button"
-                onClick={() => setProfileOpen(true)}
-                className="flex items-center gap-6 text-left hover:opacity-80 transition-opacity"
-              >
-                <div className="text-right hidden sm:block">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">{TRANSLATIONS[lang].authenticatedResident}</p>
-                  <div className="flex items-center gap-2 justify-end">
-                    <span className="text-lg font-black text-slate-800">
-                      {resident.fullName}
-                    </span>
-                    <Badge variant="outline" className="text-theme-primary border-theme-secondary uppercase font-black text-[9px]">{TRANSLATIONS[lang].portal}</Badge>
+              <div className="relative" ref={profileMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setProfileMenuOpen((prev) => !prev)}
+                  className="flex items-center gap-4 text-left p-2 rounded-2xl hover:bg-slate-100/60 dark:hover:bg-white/5 transition-all active:scale-[0.98]"
+                  aria-expanded={profileMenuOpen}
+                >
+                  <div className="text-right hidden sm:block">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">
+                      {TRANSLATIONS[lang].authenticatedResident}
+                    </p>
+                    <div className="flex items-center gap-2 justify-end">
+                      <span className="text-lg font-black text-slate-800 dark:text-white">
+                        {resident.fullName}
+                      </span>
+                      <Badge variant="outline" className="text-theme-primary border-theme-secondary uppercase font-black text-[9px]">
+                        {TRANSLATIONS[lang].portal}
+                      </Badge>
+                    </div>
                   </div>
-                </div>
-                <div className="w-16 h-16 rounded-[2rem] bg-slate-50 border border-slate-200 flex items-center justify-center overflow-hidden shadow-inner relative">
-                  {residentPhotoUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={residentPhotoUrl}
-                      alt={resident.fullName}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <UserCircle className="w-10 h-10 text-slate-300" />
-                  )}
-                </div>
-              </button>
+                  <div className="w-16 h-16 rounded-[2rem] bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 flex items-center justify-center overflow-hidden shadow-inner relative">
+                    {residentPhotoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={residentPhotoUrl}
+                        alt={resident.fullName}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <UserCircle className="w-10 h-10 text-slate-300 dark:text-slate-600" />
+                    )}
+                  </div>
+                  <ChevronDown
+                    className={`w-5 h-5 text-slate-400 transition-transform duration-200 ${
+                      profileMenuOpen ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+
+                {/* Profile Dropdown Menu */}
+                {profileMenuOpen && (
+                  <div className="absolute right-0 mt-3 w-80 origin-top-right rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0c1120] p-2.5 shadow-2xl ring-1 ring-black/5 dark:shadow-black/70 z-50 animate-in fade-in zoom-in-95 duration-150 text-left">
+                    {/* Header info */}
+                    <div className="p-3.5 border-b border-slate-100 dark:border-slate-800/80 mb-1.5">
+                      <p className="text-[9px] font-black uppercase tracking-[0.25em] text-emerald-600 dark:text-emerald-400">
+                        Verified Resident
+                      </p>
+                      <p className="text-base font-black text-slate-900 dark:text-white truncate mt-0.5">
+                        {resident.fullName}
+                      </p>
+                      <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 truncate">
+                        {resident.barangay ? `Brgy. ${resident.barangay}` : "Mapandan Resident"}
+                      </p>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      {/* Option 1: My Tickets */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setProfileMenuOpen(false);
+                          router.push("/dashboard/appointment");
+                        }}
+                        className="w-full flex items-center justify-between p-3 rounded-2xl hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-left transition-colors group cursor-pointer"
+                      >
+                        <div className="flex items-center gap-3.5">
+                          <div className="w-11 h-11 rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 text-theme-primary dark:text-emerald-300 flex items-center justify-center shrink-0 shadow-sm">
+                            <Ticket className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-black text-slate-900 dark:text-white group-hover:text-theme-primary transition-colors">
+                              My Tickets
+                            </p>
+                            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                              Appointments & Status
+                            </p>
+                          </div>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600 group-hover:text-theme-primary group-hover:translate-x-0.5 transition-all" />
+                      </button>
+
+                      {/* Option 2: My Profile */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setProfileMenuOpen(false);
+                          setProfileOpen(true);
+                        }}
+                        className="w-full flex items-center justify-between p-3 rounded-2xl hover:bg-slate-100 dark:hover:bg-slate-800/60 text-left transition-colors group cursor-pointer"
+                      >
+                        <div className="flex items-center gap-3.5">
+                          <div className="w-11 h-11 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center justify-center shrink-0 shadow-sm">
+                            <User className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-black text-slate-900 dark:text-white group-hover:text-theme-primary transition-colors">
+                              My Profile
+                            </p>
+                            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                              Details & Settings
+                            </p>
+                          </div>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600 group-hover:text-theme-primary group-hover:translate-x-0.5 transition-all" />
+                      </button>
+
+                      {/* Font Size Selector */}
+                      <div className="pt-2 pb-1 border-t border-slate-100 dark:border-slate-800/80 px-1">
+                        <span className="block text-[9px] font-black uppercase tracking-[0.25em] text-slate-400 dark:text-slate-500 mb-2">
+                          Font Size
+                        </span>
+                        <div className="grid grid-cols-4 gap-1.5">
+                          {[
+                            { value: "sm", label: "Small", preview: "14px" },
+                            { value: "md", label: "Normal", preview: "18px" },
+                            { value: "lg", label: "Large", preview: "22px" },
+                            { value: "xl", label: "X-Large", preview: "26px" }
+                          ].map((sz) => (
+                            <button
+                              key={sz.value}
+                              type="button"
+                              onClick={() => applyFontSize(sz.value)}
+                              className={`flex flex-col items-center justify-center rounded-xl border py-2 transition-all cursor-pointer ${
+                                activeFontSize === sz.value
+                                  ? "border-theme-primary bg-emerald-50 text-theme-primary dark:border-theme-primary dark:bg-emerald-950/40 dark:text-emerald-300 font-bold shadow-sm"
+                                  : "border-slate-200 bg-white text-slate-700 hover:border-emerald-300 hover:bg-emerald-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-emerald-700"
+                              }`}
+                            >
+                              <span style={{ fontSize: sz.preview }} className="leading-none font-sans">A</span>
+                              <span className="mt-1 text-[8px] font-black uppercase tracking-wider">{sz.label}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Option 3: Logout */}
+                      <div className="pt-1.5 border-t border-slate-100 dark:border-slate-800/80 mt-1.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setProfileMenuOpen(false);
+                            logout();
+                          }}
+                          className="w-full flex items-center gap-3.5 p-3 rounded-2xl hover:bg-red-50 dark:hover:bg-red-950/30 text-left transition-colors text-red-600 dark:text-red-400 group cursor-pointer"
+                        >
+                          <div className="w-11 h-11 rounded-2xl bg-red-50 dark:bg-red-950/50 flex items-center justify-center shrink-0">
+                            <LogOut className="w-5 h-5" />
+                          </div>
+                          <span className="text-xs font-black uppercase tracking-wider">
+                            Logout
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             ) : (
               <div className="flex items-center gap-6 text-left">
                 <div className="text-right hidden sm:block">
@@ -805,33 +937,6 @@ function DashboardContent() {
                   <Clock className="h-4 w-4" />
                   My Appointments & Tickets
                 </button>
-              </div>
-
-              {/* Font Size Selector */}
-              <div className="mt-6 border-t border-slate-200 pt-5 dark:border-slate-800">
-                <span className="block text-[9px] font-black uppercase tracking-[0.25em] text-slate-400 dark:text-slate-500">Font Size</span>
-                <div className="mt-2 grid grid-cols-4 gap-2">
-                  {[
-                    { value: "sm", label: "Small", preview: "12px" },
-                    { value: "md", label: "Normal", preview: "16px" },
-                    { value: "lg", label: "Large", preview: "20px" },
-                    { value: "xl", label: "X-Large", preview: "24px" }
-                  ].map((sz) => (
-                    <button
-                      key={sz.value}
-                      type="button"
-                      onClick={() => applyFontSize(sz.value)}
-                      className={`flex flex-col items-center justify-center rounded-xl border py-2.5 transition-all ${
-                        activeFontSize === sz.value
-                          ? "border-theme-primary bg-emerald-50 text-theme-primary dark:border-theme-primary dark:bg-emerald-950/30 dark:text-emerald-300 font-bold"
-                          : "border-slate-200 bg-white text-slate-700 hover:border-emerald-300 hover:bg-emerald-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-emerald-700"
-                      }`}
-                    >
-                      <span style={{ fontSize: sz.preview }} className="leading-none font-sans">A</span>
-                      <span className="mt-1 text-[9px] font-black uppercase tracking-wider">{sz.label}</span>
-                    </button>
-                  ))}
-                </div>
               </div>
 
               <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
