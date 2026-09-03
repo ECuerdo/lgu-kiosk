@@ -5,6 +5,7 @@ const nextConfig: NextConfig = {
     "192.168.10.181",
     "100.125.65.69",
     "superradical-hairy-samir.ngrok-free.dev",
+    "msi-eulysis",
   ],
   images: {
     remotePatterns: [

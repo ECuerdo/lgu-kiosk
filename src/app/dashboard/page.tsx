@@ -54,11 +54,25 @@ const MUNICIPAL_SERVICES = (lang: "en" | "fil" | "pang" | "ilo"): Service[] => [
     icon: <Building2 className="w-10 h-10" />
   },
   {
+    id: "p4",
+    category: "Permits",
+    title: lang === "en" ? "Occupancy Permit" : (lang === "fil" ? "Pahintulot sa Okupasyon" : (lang === "pang" ? "Permiso ed Panag-okupa" : "Permiso ti Panag-okupa")),
+    desc: lang === "en" ? "Apply for certificate of occupancy" : (lang === "fil" ? "Mag-apply para sa sertipiko ng okupasyon" : (lang === "pang" ? "Man-apply para ed sertipiko na okupasyon" : "Ag-apply para iti sertipiko ti panag-okupa")),
+    icon: <Building2 className="w-10 h-10" />
+  },
+  {
     id: "t2",
     category: "Taxes",
     title: lang === "en" ? "Community Tax" : (lang === "fil" ? "Buwis sa Komunidad" : (lang === "pang" ? "Buwis na Komunidad" : "Buis ti Komunidad")),
     desc: lang === "en" ? "Get your Cedula (CTC) quickly" : (lang === "fil" ? "Kumuha ng iyong Cedula (CTC) nang mabilis" : (lang === "pang" ? "Pangala na Cedula (CTC) ya maples" : "Mangala ti Sedula (CTC) a sipartak")),
     icon: <FileText className="w-10 h-10" />
+  },
+  {
+    id: "t3",
+    category: "Taxes",
+    title: lang === "en" ? "Real Property Tax" : (lang === "fil" ? "Amilyar (RPT)" : (lang === "pang" ? "Amilyar (RPT)" : "Amilyar (RPT)")),
+    desc: lang === "en" ? "Pay your real property tax online" : (lang === "fil" ? "Magbayad ng amilyar online" : (lang === "pang" ? "Manbayad na amilyar online" : "Agbayad ti amilyar online")),
+    icon: <CreditCard className="w-10 h-10" />
   },
   {
     id: "c1",
@@ -284,14 +298,24 @@ function DashboardContent() {
 
   React.useEffect(() => {
     const saved = sessionStorage.getItem("active_resident");
-    if (saved) {
-      try {
-        setResident(JSON.parse(saved));
-      } catch (e) {
-        console.error("Failed to parse resident session:", e);
-      }
+    if (!saved) {
+      router.replace("/");
+      return;
     }
-  }, []);
+    try {
+      const parsed = JSON.parse(saved);
+      if (!parsed) {
+        sessionStorage.removeItem("active_resident");
+        router.replace("/");
+        return;
+      }
+      setResident(parsed);
+    } catch (e) {
+      console.error("Failed to parse resident session:", e);
+      sessionStorage.removeItem("active_resident");
+      router.replace("/");
+    }
+  }, [router]);
 
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(false);
   const residentPhotoUrl =
@@ -365,10 +389,14 @@ function DashboardContent() {
       router.push("/modules/building-permit");
     } else if (service.id === "p1") {
       router.push("/modules/business-permit-appointment");
+    } else if (service.id === "p4") {
+      router.push("/modules/occupancy");
     } else if (service.id === "c1") {
       router.push("/modules/civil-registry");
     } else if (service.id === "t2") {
       router.push("/modules/cedula-appointment");
+    } else if (service.id === "t3") {
+      router.push("/modules/rpt");
     }
   };
 

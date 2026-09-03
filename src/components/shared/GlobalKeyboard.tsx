@@ -11,6 +11,18 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+const setInputValueHelper = (inputEl: HTMLElement, val: string) => {
+  const isTextArea = inputEl.tagName === "TEXTAREA";
+  const proto = isTextArea ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;
+  const setter = Object.getOwnPropertyDescriptor(proto, "value")?.set;
+
+  if (setter) {
+    setter.call(inputEl, val);
+  } else {
+    (inputEl as HTMLInputElement).value = val;
+  }
+};
+
 export default function GlobalKeyboard() {
   const [activeInput, setActiveInput] = useState<HTMLInputElement | HTMLTextAreaElement | null>(null);
   const [isVisible, setIsVisible] = useState(false);
@@ -126,9 +138,57 @@ export default function GlobalKeyboard() {
     activeInput.focus();
 
     const inputType = activeInput.tagName === "INPUT"
-      ? (activeInput as HTMLInputElement).type
+      ? (activeInput as HTMLInputElement).type.toLowerCase()
       : "";
-    const isNumberLikeInput = activeInput.tagName === "INPUT" && inputType === "number";
+
+    const isDateLikeInput = ["date", "time", "month", "week", "datetime-local"].includes(inputType);
+    const isNumberLikeInput = inputType === "number";
+    const supportsSelection =
+      activeInput.tagName === "TEXTAREA" ||
+      (activeInput.tagName === "INPUT" && !isNumberLikeInput && !isDateLikeInput && inputType !== "email");
+
+    // Special handling for date / time inputs
+    if (isDateLikeInput) {
+      if (key === "enter") {
+        activeInput.blur();
+        setIsVisible(false);
+        return;
+      }
+
+      if (key === "clear") {
+        setInputValueHelper(activeInput, "");
+        activeInput.dispatchEvent(new Event("input", { bubbles: true }));
+        activeInput.dispatchEvent(new Event("change", { bubbles: true }));
+        return;
+      }
+
+      let keyCode = 0;
+      let codeKey = key;
+      if (key === "backspace") {
+        keyCode = 8;
+        codeKey = "Backspace";
+      } else if (!isNaN(Number(key))) {
+        keyCode = 48 + Number(key);
+        codeKey = `Digit${key}`;
+      }
+
+      const keyOptions = {
+        key: key === "backspace" ? "Backspace" : key,
+        code: codeKey,
+        keyCode: keyCode,
+        which: keyCode,
+        bubbles: true,
+        cancelable: true,
+        composed: true,
+      };
+
+      activeInput.dispatchEvent(new KeyboardEvent("keydown", keyOptions));
+      activeInput.dispatchEvent(new KeyboardEvent("keypress", keyOptions));
+      activeInput.dispatchEvent(new KeyboardEvent("keyup", keyOptions));
+      activeInput.dispatchEvent(new Event("input", { bubbles: true }));
+      activeInput.dispatchEvent(new Event("change", { bubbles: true }));
+      return;
+    }
 
     if (key === "backspace") {
       // Dispatch keydown for backspace to allow custom handling (like in OTP inputs)
@@ -148,8 +208,21 @@ export default function GlobalKeyboard() {
       }
     }
 
-    const start = isNumberLikeInput ? activeInput.value.length : (activeInput.selectionStart ?? 0);
-    const end = isNumberLikeInput ? activeInput.value.length : (activeInput.selectionEnd ?? 0);
+    let start = 0;
+    let end = 0;
+    if (supportsSelection) {
+      try {
+        start = activeInput.selectionStart ?? 0;
+        end = activeInput.selectionEnd ?? 0;
+      } catch {
+        start = activeInput.value.length;
+        end = activeInput.value.length;
+      }
+    } else {
+      start = activeInput.value.length;
+      end = activeInput.value.length;
+    }
+
     const val = activeInput.value;
 
     let newVal = val;
@@ -198,18 +271,7 @@ export default function GlobalKeyboard() {
     }
 
     // Trigger standard React state updates
-    const setter = Object.getOwnPropertyDescriptor(
-      activeInput.tagName === "TEXTAREA" 
-        ? window.HTMLTextAreaElement.prototype 
-        : window.HTMLInputElement.prototype,
-      "value"
-    )?.set;
-
-    if (setter) {
-      setter.call(activeInput, newVal);
-    } else {
-      Object.assign(activeInput, { value: newVal });
-    }
+    setInputValueHelper(activeInput, newVal);
 
     // Fire the React input change event
     activeInput.dispatchEvent(new Event("input", { bubbles: true }));
@@ -217,15 +279,10 @@ export default function GlobalKeyboard() {
     // Only set cursor position if the input is still focused
     if (document.activeElement === activeInput) {
       setTimeout(() => {
-        if (document.activeElement === activeInput) {
-          const inputType = (activeInput as HTMLInputElement).type;
-          const supportsSelection =
-            activeInput.tagName === "TEXTAREA" ||
-            !["number", "date", "time", "month", "week", "datetime-local"].includes(inputType);
-
-          if (supportsSelection) {
+        if (document.activeElement === activeInput && supportsSelection) {
+          try {
             activeInput.setSelectionRange(newCursorPos, newCursorPos);
-          }
+          } catch {}
         }
       }, 0);
     }
