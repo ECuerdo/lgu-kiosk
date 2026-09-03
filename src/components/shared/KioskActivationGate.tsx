@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { LockKeyhole, RefreshCw, ShieldCheck, ScanLine } from "lucide-react";
+import { LockKeyhole, RefreshCw, ShieldCheck, ScanLine, Copy, Check, Terminal } from "lucide-react";
 
 type Role = "ADMIN" | "BARANGAY_ADMIN" | "USER" | "CONTENT_ADMIN" | "TREASURY_STAFF" | "ADMIN_AIDE" | "RIDER" | "ENGINEER" | null;
 
@@ -34,6 +34,7 @@ export default function KioskActivationGate({ children }: { children: React.Reac
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [manualCardId, setManualCardId] = useState("");
+  const [copied, setCopied] = useState(false);
   const inputBuffer = useRef("");
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const accentStyle = {
@@ -238,6 +239,44 @@ export default function KioskActivationGate({ children }: { children: React.Reac
             {error}
           </div>
         )}
+
+        {/* Kiosk Setup Command Snippet */}
+        <div className="mt-8 rounded-2xl border border-white/10 bg-black/40 p-4 text-left">
+          <div className="flex items-center justify-between mb-2">
+            <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-white/50">
+              <Terminal className="h-3.5 w-3.5 text-emerald-400" />
+              Windows Kiosk Auto-Start Shortcut
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                const cmd = `"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" --kiosk --kiosk-printing --app=https://kiosk.emapandan.com/`;
+                navigator.clipboard.writeText(cmd);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2500);
+              }}
+              className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-emerald-400 hover:text-emerald-300 transition bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg"
+            >
+              {copied ? (
+                <>
+                  <Check className="h-3 w-3 text-emerald-400" />
+                  Copied!
+                </>
+              ) : (
+                <>
+                  <Copy className="h-3 w-3" />
+                  Copy Command
+                </>
+              )}
+            </button>
+          </div>
+          <code className="block text-[11px] font-mono text-slate-300 bg-black/50 p-2.5 rounded-xl border border-white/5 overflow-x-auto select-all whitespace-pre-wrap break-all">
+            &quot;C:\Program Files\Google\Chrome\Application\chrome.exe&quot; --kiosk --kiosk-printing --app=https://kiosk.emapandan.com/
+          </code>
+          <p className="mt-2 text-[10px] text-white/40">
+            Right-click desktop sa kiosk machine &gt; <strong>New</strong> &gt; <strong>Shortcut</strong> &gt; i-paste ito.
+          </p>
+        </div>
 
         <div className="mt-6 flex flex-col gap-3 sm:flex-row">
           <button
