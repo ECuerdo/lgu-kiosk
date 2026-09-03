@@ -54,7 +54,10 @@ export default function KioskActivationGate({ children }: { children: React.Reac
     setActivated(activation);
   }, []);
 
-  const verifyAdminCard = useCallback(async (cardId: string) => {
+  const verifyAdminCard = useCallback(async (rawCardId: string) => {
+    const cardId = rawCardId.replace(/[;?+=%\r\n\t]/g, "").trim();
+    if (!cardId) return;
+
     setChecking(true);
     setError(null);
 

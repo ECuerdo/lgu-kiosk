@@ -30,16 +30,19 @@ function parseFacialRecognition(value: unknown) {
   return null;
 }
 
-export async function GET(req: NextRequest) {
-  const cardId = req.nextUrl.searchParams.get("card");
+import { sanitizeRfid } from "@/lib/rfidSanitizer";
 
-  if (!cardId || cardId.trim() === "") {
+export async function GET(req: NextRequest) {
+  const rawCardId = req.nextUrl.searchParams.get("card");
+  const cardId = sanitizeRfid(rawCardId);
+
+  if (!cardId) {
     return NextResponse.json({ error: "No card ID provided" }, { status: 400 });
   }
 
   try {
     const resident = await prisma.resident.findUnique({
-      where: { rfid: cardId.trim() },
+      where: { rfid: cardId },
       select: {
         id: true,
         userId: true,

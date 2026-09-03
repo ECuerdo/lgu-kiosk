@@ -1,582 +1,853 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef, Fragment } from "react";
+import Image from "next/image";
 import LGULogo from "./shared/LGULogo";
+import { 
+  Building2, 
+  FileText, 
+  ShieldAlert, 
+  Newspaper, 
+  PhoneCall, 
+  Users, 
+  HardHat, 
+  Clock, 
+  Radio, 
+  CreditCard, 
+  ChevronRight, 
+  ArrowRight,
+  Sparkles,
+  MapPin,
+  CheckCircle2,
+  AlertTriangle
+} from "lucide-react";
 
-// ────────── Types ──────────
-type Slide = {
-  id: number | string;
-  type: "hero" | "info" | "announce" | "programs" | "news";
-  data: Record<string, unknown>;
-};
+// ────────── Data Interfaces ──────────
+interface HeroSlideData {
+  id: string;
+  title: string;
+  subtitle: string | null;
+  tagline: string | null;
+  imageUrl: string;
+}
 
-type LiveAnnouncement = {
-  id: string | number;
+interface AnnouncementItem {
+  id: string;
   title: string;
   content: string;
-  createdAt: string | Date;
-};
-
-type LiveNewsItem = {
-  id: string | number;
-  title: string;
-  content: string;
+  priority: string;
   category: string;
-  publishDate: string | Date;
-  imageUrl?: string;
+  isPinned: boolean;
+  createdAt: string;
+}
+
+interface NewsItem {
+  id: string;
+  title: string;
+  content: string;
+  author: string | null;
+  category: string;
+  imageUrl: string | null;
+  publishDate: string;
+}
+
+interface ServiceItem {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  category: string;
+  baseFee: number;
+  processingTime: string | null;
+  slaDays: number;
+  requiredDocs: unknown;
+  pickupAddress: string | null;
+}
+
+interface OfficialItem {
+  id: string;
+  name: string;
+  position: string;
+  imageUrl: string | null;
+  motto: string | null;
+  category: string;
+}
+
+interface ProjectItem {
+  id: string;
+  title: string;
+  category: string;
+  status: string;
+  location: string;
+  budget: string | null;
+  progress: number;
+  imageUrl: string | null;
+}
+
+interface HotlineItem {
+  id: string;
+  name: string;
+  category: string;
+  mobileNumber: string | null;
+  telephone: string | null;
+}
+
+interface KioskFeedData {
+  heroSlides: HeroSlideData[];
+  announcements: AnnouncementItem[];
+  newsList: NewsItem[];
+  services: ServiceItem[];
+  officials: OfficialItem[];
+  projects: ProjectItem[];
+  hotlines: HotlineItem[];
+}
+
+const SLIDE_DURATION = 20000; // 20 seconds per slide for a slower, relaxed ambient pace
+
+// ────────── Fallback / Default Data ──────────
+const DEFAULT_HERO = {
+  title: "Welcome to the Municipality of Mapandan",
+  subtitle: "Province of Pangasinan • Republic of the Philippines",
+  tagline: "Empowering our citizens through digital transparency, progressive governance, and rapid public service.",
+  bg: "/slide-welcome.png",
 };
 
-
-// ────────── Slide data ──────────
-const slides: Slide[] = [
+const DEFAULT_SERVICES = [
   {
-    id: 1,
-    type: "hero",
-    data: {
-      badge: "📢 Official Kiosk Portal",
-      headline: "Welcome to\nMunicipality of Mapandan",
-      sub: "Serving our community with transparency, integrity, and excellence. We are here to assist you.",
-      bg: "/slide-welcome.png",
-    },
+    name: "Barangay ID & Clearance",
+    category: "Community Affairs",
+    processingTime: "Same Day",
+    desc: "Official residency identification card and community clearance valid for local verification and legal transactions.",
   },
   {
-    id: 2,
-    type: "info",
-    data: {
-      icon: "🏛️",
-      title: "Citizen\nServices",
-      sub: "Access government services quickly and efficiently.",
-      cards: [
-        { 
-          icon: "🪪", 
-          title: "Barangay ID Card", 
-          desc: "Process and secure your official Barangay Resident Identification Card required for local community verification and essential government transactions." 
-        },
-        { 
-          icon: "📄", 
-          title: "Civil Registry Records", 
-          desc: "Obtain official, certified true copies of Birth Certificates, Marriage Licenses, or Death Certificates from the Municipal Civil Registry Office." 
-        },
-        { 
-          icon: "🏪", 
-          title: "Business Licensing", 
-          desc: "Apply for or renew business permits, register commercial entities, process sanitary clearances, and secure local operational tax assessments." 
-        },
-        { 
-          icon: "🏠", 
-          title: "Property & Land Tax", 
-          desc: "Verify local real property declarations, check assessment values, pay your annual Amilyar taxes, and request zoning clearance records." 
-        },
-      ],
-    },
+    name: "Civil Registry Documents",
+    category: "Civil Registry",
+    processingTime: "1-2 Business Days",
+    desc: "Certified true copies of Birth Certificate, Marriage License, and Death Registration certificates.",
   },
   {
-    id: 3,
-    type: "announce",
-    data: {
-      heading: "Mapandan Announcements",
-      items: [],
-      emptyStateTitle: "No announcements available",
-      emptyStateDesc: "Please check back later for official updates from the municipality.",
-    },
+    name: "Business Permit & Licensing",
+    category: "BPLO / Treasury",
+    processingTime: "2-3 Days",
+    desc: "Commercial operations registration, annual business renewals, tax assessments, and sanitary inspection permits.",
   },
   {
-    id: 4,
-    type: "programs",
-    data: {
-      heading: "LGU Programs & Initiatives",
-      programs: [
-        { 
-          icon: "🌾", 
-          color: "green",  
-          title: "AgriSupport Program",    
-          desc: "Providing high-yield hybrid seeds, premium fertilizers, modern farm equipment, and direct technical seminars to increase harvests and support local Mapandan farming families." 
-        },
-        { 
-          icon: "📚", 
-          color: "blue",   
-          title: "Edukasyon Mo Scholarship",   
-          desc: "Empowering youth through educational financial grants, tuition assistance, textbook subsidies, and academic counseling for high-performing secondary and tertiary students." 
-        },
-        { 
-          icon: "💊", 
-          color: "red",    
-          title: "Health for All Mission", 
-          desc: "Bringing mobile medical consultations, free dental services, pediatric care, diagnostic tests, and critical maintenance medicines directly to citizens in all barangays." 
-        },
-        { 
-          icon: "💼", 
-          color: "gold",   
-          title: "PESO Livelihood Projects",
-          desc: "Organizing vocational skills workshops, local employment fairs, job matching systems, and startup capital support for displaced workers and small micro-entrepreneurs." 
-        },
-        { 
-          icon: "♻️", 
-          color: "teal",   
-          title: "EcoMunicipyo Clean Drive",   
-          desc: "Promoting green living through municipal zero-waste campaigns, plastic waste collection hubs, neighborhood recycling awards, and seasonal community tree planting drives." 
-        },
-        { 
-          icon: "🏘️", 
-          color: "purple", 
-          title: "Pabahay Shelter Program",        
-          desc: "Facilitating secure socialized housing registration, housing development grants, land rights assessment, and construction supply subsidies for families in need." 
-        },
-      ],
-    },
+    name: "Real Property Tax (Amilyar)",
+    category: "Assessor / Treasury",
+    processingTime: "Immediate",
+    desc: "Check land & property assessment declarations, pay annual Amilyar dues, and request zoning clearance records.",
   },
 ];
 
-const SLIDE_DURATION = 8000; // ms each slide stays
-const MANUAL_RFID_INPUT_ENABLED =
-  process.env.NEXT_PUBLIC_KIOSK_RFID_MANUAL_INPUT?.toLowerCase() === "true";
+const DEFAULT_HOTLINES = [
+  { name: "MDRRMO Rescue Dispatch", category: "Emergency", phone: "0998-123-4567" },
+  { name: "Mapandan Municipal Police (PNP)", category: "Security", phone: "0998-555-0100" },
+  { name: "Bureau of Fire Protection (BFP)", category: "Fire", phone: "(075) 555-1199" },
+  { name: "Rural Health Unit (RHU Clinic)", category: "Medical", phone: "0920-777-2233" },
+];
 
-// ────────── Sub-components ──────────
-
-function HeroSlide({ data }: { data: Record<string, unknown> }) {
-  const lines = (data.headline as string).split("\n");
+// ────────── Sub-Slide 1: Executive Welcome (Hero) ──────────
+function HeroSlideView({ slide }: { slide?: HeroSlideData }) {
   return (
-    <div className="slide-hero">
-      <div
-        className="bg-image"
-        style={{ backgroundImage: `url(${data.bg as string})` }}
+    <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
+      {/* Background Image with Cinematic Overlay */}
+      <div 
+        className="absolute inset-0 bg-cover bg-center filter brightness-[0.38] scale-105 transition-transform duration-1000 ease-out"
+        style={{ backgroundImage: `url(${slide?.imageUrl || DEFAULT_HERO.bg})` }}
       />
-      <div className="content">
-        <div className="hero-badge">{data.badge as string}</div>
-        <h2>
-          {lines.map((l, i) => (
-            <span key={i}>
-              {l}
-              {i < lines.length - 1 && <br />}
-            </span>
-          ))}
-        </h2>
-        <div className="divider" />
-        <p>{data.sub as string}</p>
+      <div className="absolute inset-0 bg-gradient-to-t from-[#050816] via-transparent to-[#050816]/70 pointer-events-none" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_color-mix(in_srgb,var(--primary-theme)_15%,transparent)_0%,transparent_70%)] pointer-events-none" />
+
+      <div className="relative z-10 max-w-5xl px-8 text-center flex flex-col items-center">
+        <div className="inline-flex items-center gap-2.5 px-5 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-emerald-300 text-xs font-black uppercase tracking-[0.25em] shadow-2xl mb-8 animate-pulse">
+          <Sparkles className="w-4 h-4 text-amber-400" />
+          Official Municipal Terminal
+        </div>
+
+        <h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold text-white tracking-tight leading-[1.15] drop-shadow-2xl mb-6">
+          {slide?.title || DEFAULT_HERO.title}
+        </h1>
+
+        <div className="w-24 h-1.5 bg-gradient-to-r from-amber-400 via-emerald-400 to-amber-400 rounded-full mb-6 shadow-lg shadow-emerald-500/20" />
+
+        <p className="text-lg md:text-2xl font-light text-slate-200 max-w-3xl leading-relaxed mb-4">
+          {slide?.subtitle || DEFAULT_HERO.subtitle}
+        </p>
+
+        <p className="text-sm md:text-base text-slate-400 max-w-2xl font-normal leading-relaxed">
+          {slide?.tagline || DEFAULT_HERO.tagline}
+        </p>
       </div>
     </div>
   );
 }
 
-function InfoSlide({ data }: { data: Record<string, unknown> }) {
-  const cards = data.cards as Array<{ icon: string; title: string; desc: string }>;
-  const titleLines = (data.title as string).split("\n");
+// ────────── Sub-Slide 2: Live Citizen Services Directory ──────────
+function ServicesSlideView({ services }: { services: ServiceItem[] }) {
+  const displayServices = services && services.length > 0 ? services.slice(0, 6) : DEFAULT_SERVICES;
+
   return (
-    <div className="slide-info">
-      <div className="side-panel">
+    <div className="relative w-full h-full flex flex-col justify-between p-10 md:p-14 overflow-hidden bg-gradient-to-br from-[#07121e] via-[#050816] to-[#041a12]">
+      {/* Ambient background blur */}
+      <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-24 -left-24 w-96 h-96 rounded-full bg-blue-500/10 blur-3xl pointer-events-none" />
+
+      {/* Slide Header */}
+      <div className="relative z-10 flex items-end justify-between border-b border-white/10 pb-6">
         <div>
-          <div className="panel-icon">{data.icon as string}</div>
-          <div className="gold-line" />
-          <h2>
-            {titleLines.map((l, i) => (
-              <span key={i}>
-                {l}
-                {i < titleLines.length - 1 && <br />}
-              </span>
-            ))}
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-[11px] font-black uppercase tracking-widest mb-2">
+            <Building2 className="w-3.5 h-3.5" />
+            Citizen Charter & Services
+          </div>
+          <h2 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">
+            Municipal Service Directory
           </h2>
-          <p>{data.sub as string}</p>
+          <p className="text-sm text-slate-400 mt-1">
+            Tap your Resident RFID Card anytime to directly request, track, or calculate processing assessments.
+          </p>
         </div>
-        
-        <div className="panel-footer">
-          <div className="panel-footer-item">
-            <span className="dot"></span>
-            <span>Fast & Secure Verification</span>
-          </div>
-          <div className="panel-footer-item">
-            <span className="dot"></span>
-            <span>Official LGU Records</span>
-          </div>
-          <div className="panel-footer-item">
-            <span className="dot"></span>
-            <span>Real-time Processing Status</span>
-          </div>
+        <div className="hidden md:flex items-center gap-2 text-xs text-slate-400 bg-white/5 border border-white/10 px-4 py-2 rounded-xl backdrop-blur-md">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+          <span>Real-time LGU Verification Active</span>
         </div>
       </div>
 
-      <div className="cards-area">
-        {cards.map((c, i) => (
-          <div 
-            className="service-card" 
-            key={i}
-            style={{ animationDelay: `${i * 100}ms` }}
-          >
-            <div className="card-top-content">
-              <div className="card-header-row">
-                <div className="card-icon">{c.icon}</div>
-                <div className="status-pill">Available</div>
+      {/* Service Cards Grid */}
+      <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 my-auto py-4">
+        {displayServices.map((srv, idx) => {
+          const isReal = "slaDays" in srv;
+          const name = srv.name;
+          const category = srv.category || "Municipal Service";
+          const time = isReal 
+            ? (srv as ServiceItem).processingTime || `${(srv as ServiceItem).slaDays || 1} Day SLA`
+            : (srv as { processingTime: string }).processingTime;
+          const desc = isReal 
+            ? (srv as ServiceItem).description || "Fast-tracked municipal document request service." 
+            : (srv as { desc: string }).desc;
+
+          return (
+            <div 
+              key={idx}
+              className="group relative rounded-2xl bg-slate-900/60 border border-white/10 hover:border-emerald-500/40 p-6 flex flex-col justify-between backdrop-blur-xl transition-all duration-300 shadow-xl hover:shadow-2xl hover:shadow-emerald-950/40"
+            >
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <span className="text-[10px] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded bg-white/10 text-emerald-300 border border-white/10">
+                  {category}
+                </span>
+                <span className="text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full">
+                  Available
+                </span>
               </div>
-              <h3>{c.title}</h3>
-              <p>{c.desc}</p>
-            </div>
-            <div className="card-arrow">
-              <span>Tap to inquire</span>
-              <span>&rarr;</span>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
 
-function AnnounceSlide({ data }: { data: Record<string, unknown> }) {
-  const items = data.items as Array<{
-    title: string;
-    desc: string;
-    date: string;
-    delay: number;
-  }>;
-  return (
-    <div className="slide-announce">
-      <div className="announce-header">
-        <div className="tag">📌 Official Notices</div>
-        <h2>{data.heading as string}</h2>
-      </div>
-      <div className="announce-list">
-        {items.map((item, i) => (
-          <div
-            className="announce-item"
-            key={i}
-            style={{ animationDelay: `${item.delay}ms` }}
-          >
-            <div className="item-num">{i + 1}</div>
-            <div className="item-body">
-              <h3>{item.title}</h3>
-              <p>{item.desc}</p>
-              <span className="date-badge">📅 {item.date}</span>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// Custom programs background is handled nicely in programs slide logic
-function ProgramsSlide({ data }: { data: Record<string, unknown> }) {
-  const programs = data.programs as Array<{
-    icon: string;
-    color: string;
-    title: string;
-    desc: string;
-  }>;
-  return (
-    <div className="slide-programs">
-      <div className="announce-header pb-4">
-        <div className="tag bg-theme-primary/15 border-theme-primary/30 text-theme-primary">⚙️ LGU Initiatives</div>
-        <h2>{data.heading as string}</h2>
-      </div>
-      <div className="programs-grid">
-        {programs.map((p, i) => (
-          <div 
-            className={`program-card ${p.color}`} 
-            key={i}
-            style={{ animationDelay: `${i * 100}ms` }}
-          >
-            <div className="prog-icon">{p.icon}</div>
-            <h3>{p.title}</h3>
-            <p className="flex-1">{p.desc}</p>
-            <div className="card-action-text">Active Initiative &rarr;</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function NewsSlide({ data }: { data: Record<string, unknown> }) {
-  const news = data.items as Array<{
-    title: string;
-    content: string;
-    category: string;
-    date: string;
-    image?: string;
-  }>;
-  return (
-    <div className="slide-announce">
-      <div className="announce-header">
-        <div className="tag bg-theme-primary/20 border-theme-primary text-theme-primary">📰 Latest News</div>
-        <h2>Local Updates & Stories</h2>
-      </div>
-      <div className="announce-list">
-        {news.map((item, i) => (
-          <div
-            className="announce-item"
-            key={i}
-            style={{ animationDelay: `${i * 100}ms` }}
-          >
-            <div className="item-num bg-theme-primary/20 border-theme-primary text-theme-primary">{i + 1}</div>
-            <div className="item-body">
-              <div className="flex items-center gap-2 mb-1">
-                 <span className="text-[10px] font-black bg-slate-800 text-slate-300 px-2 py-0.5 rounded uppercase tracking-widest">{item.category}</span>
-                 <span className="text-[10px] text-slate-500 font-bold">{item.date}</span>
+              <div>
+                <h3 className="text-lg font-bold text-white mb-2 leading-snug group-hover:text-emerald-300 transition-colors">
+                  {name}
+                </h3>
+                <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
+                  {desc}
+                </p>
               </div>
-              <h3 className="line-clamp-1">{item.title}</h3>
-              <p className="line-clamp-1">{item.content}</p>
+
+              <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between text-xs">
+                <span className="text-slate-400 flex items-center gap-1.5 font-medium">
+                  <Clock className="w-3.5 h-3.5 text-blue-400" />
+                  {time}
+                </span>
+                <span className="text-emerald-400 font-bold flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
+                  RFID Tap Ready <ChevronRight className="w-3.5 h-3.5" />
+                </span>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
+      </div>
+
+      {/* Service Footer Note */}
+      <div className="relative z-10 flex items-center justify-between text-xs text-slate-400 pt-3 border-t border-white/10">
+        <span>* Requirements and guidelines are based on the Citizen&apos;s Charter of Mapandan.</span>
+        <span className="font-semibold text-emerald-400">Mapandan Municipal Frontline Services</span>
       </div>
     </div>
   );
 }
 
-// ────────── Clock ──────────
-function KioskClock() {
-  const [now, setNow] = useState(new Date());
-  const [mounted, setMounted] = useState(false);
+// ────────── Sub-Slide 3: Transparency, Leaders & Public Works ──────────
+function TransparencySlideView({ officials, projects }: { officials: OfficialItem[]; projects: ProjectItem[] }) {
+  const topOfficials = officials.slice(0, 4);
+  const activeProjects = projects.slice(0, 3);
+
+  return (
+    <div className="relative w-full h-full flex flex-col justify-between p-10 md:p-14 overflow-hidden bg-gradient-to-br from-[#0c1626] via-[#050816] to-[#0d1f18]">
+      {/* Header */}
+      <div className="relative z-10 flex items-end justify-between border-b border-white/10 pb-6">
+        <div>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-amber-500/20 border border-amber-400/30 text-amber-300 text-[11px] font-black uppercase tracking-widest mb-2">
+            <Users className="w-3.5 h-3.5" />
+            Good Governance & Transparency
+          </div>
+          <h2 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">
+            Municipal Leadership & Public Works
+          </h2>
+          <p className="text-sm text-slate-400 mt-1">
+            Serving the people of Mapandan with full accountability, open budgets, and integrity.
+          </p>
+        </div>
+        <div className="text-right">
+          <span className="text-xs font-bold text-slate-300 bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg">
+            Fiscal Year 2026
+          </span>
+        </div>
+      </div>
+
+      {/* Content Grid: 2 Columns (Leaders & Ongoing Projects) */}
+      <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 my-auto py-4">
+        {/* Left Column: Officials (5 cols) */}
+        <div className="lg:col-span-5 flex flex-col gap-3">
+          <h3 className="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center gap-2 mb-1">
+            <Users className="w-4 h-4" />
+            Municipal Officials
+          </h3>
+
+          {topOfficials.length > 0 ? (
+            topOfficials.map((off, idx) => (
+              <div 
+                key={idx}
+                className="flex items-center gap-4 p-3.5 rounded-xl bg-slate-900/50 border border-white/10 backdrop-blur-md"
+              >
+                <div className="w-12 h-12 rounded-full overflow-hidden bg-slate-800 border-2 border-amber-400/30 flex-shrink-0 flex items-center justify-center">
+                  {off.imageUrl ? (
+                    <Image 
+                      src={off.imageUrl} 
+                      alt={off.name} 
+                      width={48} 
+                      height={48} 
+                      className="w-full h-full object-cover" 
+                      unoptimized 
+                    />
+                  ) : (
+                    <Users className="w-6 h-6 text-slate-400" />
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <h4 className="text-sm font-bold text-white truncate">{off.name}</h4>
+                  <p className="text-xs text-amber-300 font-semibold">{off.position}</p>
+                  {off.motto && <p className="text-[11px] text-slate-400 italic truncate">&quot;{off.motto}&quot;</p>}
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="p-6 rounded-xl bg-slate-900/40 border border-white/10 text-center text-slate-400 text-xs">
+              Honorable Mayor, Vice Mayor, and Sangguniang Bayan Members of Mapandan.
+            </div>
+          )}
+        </div>
+
+        {/* Right Column: Infrastructure & Transparency Projects (7 cols) */}
+        <div className="lg:col-span-7 flex flex-col gap-3">
+          <h3 className="text-xs font-black uppercase tracking-wider text-emerald-400 flex items-center gap-2 mb-1">
+            <HardHat className="w-4 h-4" />
+            Active Infrastructure & Community Projects
+          </h3>
+
+          {activeProjects.length > 0 ? (
+            activeProjects.map((proj, idx) => (
+              <div 
+                key={idx}
+                className="p-4 rounded-xl bg-slate-900/50 border border-white/10 backdrop-blur-md flex flex-col gap-2.5"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <h4 className="text-sm font-bold text-white leading-tight">{proj.title}</h4>
+                    <span className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
+                      <MapPin className="w-3 h-3 text-emerald-400" /> {proj.location}
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    {proj.status}
+                  </span>
+                </div>
+
+                {/* Progress bar */}
+                <div>
+                  <div className="flex justify-between text-xs font-bold mb-1">
+                    <span className="text-slate-400 text-[11px]">Completion Progress</span>
+                    <span className="text-emerald-400">{proj.progress}%</span>
+                  </div>
+                  <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-500"
+                      style={{ width: `${Math.min(proj.progress, 100)}%` }}
+                    />
+                  </div>
+                </div>
+
+                {proj.budget && (
+                  <div className="text-right text-[11px] font-semibold text-slate-400">
+                    Allocated Budget: <span className="text-white font-mono">{proj.budget}</span>
+                  </div>
+                )}
+              </div>
+            ))
+          ) : (
+            <div className="p-8 rounded-xl bg-slate-900/40 border border-white/10 text-center text-slate-400 text-xs flex flex-col items-center justify-center h-full">
+              <HardHat className="w-8 h-8 text-emerald-400/40 mb-2" />
+              <span>Full Project Transparency records accessible via the Municipal Engineering Office.</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="relative z-10 flex items-center justify-between text-xs text-slate-400 pt-3 border-t border-white/10">
+        <span>Public Funds Transparency Act • Local Government Code Compliance</span>
+        <span className="font-semibold text-amber-400">Municipality of Mapandan Portal</span>
+      </div>
+    </div>
+  );
+}
+
+// ────────── Sub-Slide 4: News & Municipal Advisories ──────────
+function NewsSlideView({ news, announcements }: { news: NewsItem[]; announcements: AnnouncementItem[] }) {
+  const latestNews = news.slice(0, 3);
+  const notices = announcements.slice(0, 4);
+
+  return (
+    <div className="relative w-full h-full flex flex-col justify-between p-10 md:p-14 overflow-hidden bg-gradient-to-br from-[#051124] via-[#050816] to-[#121c2b]">
+      {/* Header */}
+      <div className="relative z-10 flex items-end justify-between border-b border-white/10 pb-6">
+        <div>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-blue-500/20 border border-blue-400/30 text-blue-300 text-[11px] font-black uppercase tracking-widest mb-2">
+            <Newspaper className="w-3.5 h-3.5" />
+            Official Bulletin
+          </div>
+          <h2 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">
+            News & Municipal Advisories
+          </h2>
+          <p className="text-sm text-slate-400 mt-1">
+            Stay informed with verified updates and administrative orders from the local government.
+          </p>
+        </div>
+        <div className="hidden md:block text-right text-xs text-slate-400">
+          Updated Daily • Public Information Office
+        </div>
+      </div>
+
+      {/* Grid */}
+      <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 my-auto py-4">
+        {/* Left: News Cards (7 cols) */}
+        <div className="lg:col-span-7 flex flex-col gap-4">
+          <h3 className="text-xs font-black uppercase tracking-wider text-blue-400 flex items-center gap-2">
+            <Newspaper className="w-4 h-4" /> Latest Municipal News
+          </h3>
+
+          {latestNews.length > 0 ? (
+            latestNews.map((item, idx) => (
+              <div 
+                key={idx}
+                className="p-4 rounded-xl bg-slate-900/60 border border-white/10 backdrop-blur-md flex gap-4 items-start"
+              >
+                {item.imageUrl && (
+                  <div className="w-24 h-24 rounded-lg overflow-hidden bg-slate-800 flex-shrink-0">
+                    <Image 
+                      src={item.imageUrl} 
+                      alt={item.title} 
+                      width={96} 
+                      height={96} 
+                      className="w-full h-full object-cover" 
+                      unoptimized 
+                    />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-blue-500/20 text-blue-300">
+                      {item.category}
+                    </span>
+                    <span className="text-[11px] text-slate-400 font-medium">
+                      {new Date(item.publishDate).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })}
+                    </span>
+                  </div>
+                  <h4 className="text-sm md:text-base font-bold text-white line-clamp-1 mb-1">
+                    {item.title}
+                  </h4>
+                  <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
+                    {item.content}
+                  </p>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="p-8 rounded-xl bg-slate-900/40 border border-white/10 text-center text-slate-400 text-xs">
+              No recent news articles published today. Check back shortly for official press releases.
+            </div>
+          )}
+        </div>
+
+        {/* Right: Urgent Bulletins & Notices (5 cols) */}
+        <div className="lg:col-span-5 flex flex-col gap-4">
+          <h3 className="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4" /> Official Notices & Circulars
+          </h3>
+
+          <div className="flex flex-col gap-3">
+            {notices.length > 0 ? (
+              notices.map((n, idx) => (
+                <div 
+                  key={idx}
+                  className="p-3.5 rounded-xl bg-slate-900/50 border border-white/10 backdrop-blur-md flex flex-col gap-1"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-amber-300 uppercase">
+                      {n.priority === "URGENT" ? "🔴 URGENT ADVISORY" : "📌 Announcement"}
+                    </span>
+                    <span className="text-[10px] text-slate-400">
+                      {new Date(n.createdAt).toLocaleDateString("en-PH", { month: "short", day: "numeric" })}
+                    </span>
+                  </div>
+                  <h5 className="text-xs font-bold text-white leading-snug">{n.title}</h5>
+                  <p className="text-[11px] text-slate-400 line-clamp-2">{n.content}</p>
+                </div>
+              ))
+            ) : (
+              <div className="p-6 rounded-xl bg-slate-900/40 border border-white/10 text-center text-slate-400 text-xs">
+                Office Hours: 8:00 AM - 5:00 PM, Mondays through Fridays.
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="relative z-10 flex items-center justify-between text-xs text-slate-400 pt-3 border-t border-white/10">
+        <span>Information & Communications Technology Office (ICTO)</span>
+        <span className="font-semibold text-blue-400">Mapandan Press Release</span>
+      </div>
+    </div>
+  );
+}
+
+// ────────── Sub-Slide 5: Public Safety & Emergency Hotlines ──────────
+function EmergencySlideView({ hotlines }: { hotlines: HotlineItem[] }) {
+  const displayHotlines = hotlines.length > 0 ? hotlines : DEFAULT_HOTLINES;
+
+  return (
+    <div className="relative w-full h-full flex flex-col justify-between p-10 md:p-14 overflow-hidden bg-gradient-to-br from-[#1a0c10] via-[#050816] to-[#140a12]">
+      {/* Header */}
+      <div className="relative z-10 flex items-end justify-between border-b border-white/10 pb-6">
+        <div>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-rose-500/20 border border-rose-400/30 text-rose-300 text-[11px] font-black uppercase tracking-widest mb-2 animate-pulse">
+            <ShieldAlert className="w-3.5 h-3.5" />
+            Public Safety & Disaster Response
+          </div>
+          <h2 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">
+            Emergency Hotlines & Medical Dispatch
+          </h2>
+          <p className="text-sm text-slate-400 mt-1">
+            24/7 First Responders, Police Assistance, Fire Protection, and Rural Health Services.
+          </p>
+        </div>
+        <div className="text-right">
+          <span className="text-xs font-bold text-rose-400 bg-rose-500/10 border border-rose-500/30 px-3.5 py-1.5 rounded-full">
+            ● 24/7 Hotline Operations Active
+          </span>
+        </div>
+      </div>
+
+      {/* Hotline Cards Grid */}
+      <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-6 my-auto py-4">
+        {displayHotlines.map((h, idx) => {
+          const number = "telephone" in h 
+            ? (h as HotlineItem).mobileNumber || (h as HotlineItem).telephone || "Direct Hall Line"
+            : (h as { phone: string }).phone;
+
+          return (
+            <div 
+              key={idx}
+              className="p-6 rounded-2xl bg-slate-900/60 border border-white/10 hover:border-rose-500/40 backdrop-blur-xl flex items-center justify-between shadow-xl"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 flex-shrink-0">
+                  <PhoneCall className="w-7 h-7" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-extrabold uppercase tracking-widest text-rose-300 bg-rose-500/10 px-2 py-0.5 rounded">
+                    {h.category}
+                  </span>
+                  <h4 className="text-lg font-bold text-white mt-1">{h.name}</h4>
+                  <p className="text-xs text-slate-400">Toll-free inside Mapandan municipal jurisdiction</p>
+                </div>
+              </div>
+
+              <div className="text-right">
+                <div className="text-lg md:text-xl font-black font-mono text-amber-400 tracking-wider">
+                  {number}
+                </div>
+                <span className="text-[10px] text-slate-400 font-semibold">Immediate Dispatch</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="relative z-10 flex items-center justify-between text-xs text-slate-400 pt-3 border-t border-white/10">
+        <span>In case of severe typhoons, flooding, or medical crisis, call MDRRMO directly.</span>
+        <span className="font-semibold text-rose-400">Mapandan Emergency Operations Center</span>
+      </div>
+    </div>
+  );
+}
+
+// ────────── Live PST Digital Clock ──────────
+function PSTClock() {
+  const [timeStr, setTimeStr] = useState("");
+  const [dateStr, setDateStr] = useState("");
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setMounted(true);
-    }, 0);
-    const id = setInterval(() => setNow(new Date()), 1000);
-    return () => {
-      clearTimeout(timer);
-      clearInterval(id);
-    };
+    function update() {
+      const now = new Date();
+      setTimeStr(
+        now.toLocaleTimeString("en-PH", {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+          hour12: true,
+        })
+      );
+      setDateStr(
+        now.toLocaleDateString("en-PH", {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        })
+      );
+    }
+    update();
+    const timer = setInterval(update, 1000);
+    return () => clearInterval(timer);
   }, []);
 
-  if (!mounted) return <div className="clock opacity-0" />;
-
-  const time = now.toLocaleTimeString("en-PH", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: true,
-  });
-  const date = now.toLocaleDateString("en-PH", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
   return (
-    <div className="clock">
-      <div className="time">{time}</div>
-      <div className="date">{date}</div>
+    <div className="text-right flex flex-col justify-center">
+      <div className="text-xl md:text-2xl font-black font-mono text-white tracking-wide leading-none">
+        {timeStr || "--:--:--"}
+      </div>
+      <div className="text-[11px] font-bold uppercase tracking-widest text-emerald-400 mt-1">
+        PST • {dateStr || "Philippine Time"}
+      </div>
     </div>
   );
 }
 
-// ────────── Main Slideshow ──────────
+// ────────── Main Kiosk Slideshow Component ──────────
 export default function KioskSlideshow() {
-  const [current, setCurrent] = useState(0);
+  const [feed, setFeed] = useState<KioskFeedData | null>(null);
+  const [currentSlide, setCurrentSlide] = useState(0);
   const [progress, setProgress] = useState(0);
-  const [allSlides, setAllSlides] = useState<Slide[]>(slides);
-  const [liveAnnouncements, setLiveAnnouncements] = useState<LiveAnnouncement[]>([]);
-  
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const progressRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Fetch live data
+  // Total slides count:
+  // 0: Hero Slide
+  // 1: Services Directory
+  // 2: Transparency & Projects
+  // 3: News & Notices
+  // 4: Emergency & Hotlines
+  const TOTAL_SLIDES = 5;
+
+  const nextSlide = useCallback(() => {
+    setCurrentSlide((prev) => (prev + 1) % TOTAL_SLIDES);
+    setProgress(0);
+  }, [TOTAL_SLIDES]);
+
+  const prevSlide = useCallback(() => {
+    setCurrentSlide((prev) => (prev - 1 + TOTAL_SLIDES) % TOTAL_SLIDES);
+    setProgress(0);
+  }, [TOTAL_SLIDES]);
+
+  // Fetch Kiosk Feed Data
   useEffect(() => {
-    async function fetchSlides() {
+    async function loadFeed() {
       try {
-        const res = await fetch("/api/slides");
-        if (!res.ok) throw new Error("Failed to fetch");
-        const data = await res.json();
-        
-        // Base slides always shown
-        const finalSlides: Slide[] = [
-           slides[0], // Hero
-           slides[1], // Info
-           slides[3], // Programs
-        ];
-
-        // Add Announcements if they exist
-        if (data.announcements && data.announcements.length > 0) {
-            setLiveAnnouncements(data.announcements);
-            finalSlides.push({
-                id: "announce-live",
-                type: "announce",
-                data: {
-                    heading: "Mapandan Announcements",
-                    items: data.announcements.map((a: LiveAnnouncement, i: number) => ({
-                        title: a.title,
-                        desc: a.content,
-                        date: new Date(a.createdAt).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" }),
-                        delay: i * 100
-                    }))
-                }
-            });
+        const res = await fetch("/api/kiosk/feed");
+        if (res.ok) {
+          const data = await res.json();
+          setFeed(data);
         }
-
-        // Add News if they exist
-        if (data.news && data.news.length > 0) {
-            finalSlides.push({
-                id: "news-live",
-                type: "news",
-                data: {
-                    items: data.news.map((n: LiveNewsItem) => ({
-                        title: n.title,
-                        content: n.content,
-                        category: n.category,
-                        date: new Date(n.publishDate).toLocaleDateString("en-PH", { month: "short", day: "numeric" }),
-                        image: n.imageUrl
-                    }))
-                }
-            });
-        }
-        
-        setAllSlides(finalSlides);
       } catch (err) {
-        console.error("Slideshow fetch error:", err);
-        // Fallback to static slides but filter out announce if it was placeholder
-        setAllSlides(slides.filter(s => s.type !== "announce"));
+        console.error("Failed to load kiosk feed data:", err);
       }
     }
-    fetchSlides();
+    loadFeed();
+    // Poll updates every 3 minutes
+    const interval = setInterval(loadFeed, 180000);
+    return () => clearInterval(interval);
   }, []);
 
-  const goTo = useCallback((idx: number) => {
-    setCurrent(idx);
-    setProgress(0);
-  }, []);
-
-  const goNext = useCallback(() => {
-    setCurrent((c) => (c + 1) % allSlides.length);
-    setProgress(0);
-  }, [allSlides.length]);
-
-  const goPrev = useCallback(() => {
-    setCurrent((c) => (c - 1 + allSlides.length) % allSlides.length);
-    setProgress(0);
-  }, [allSlides.length]);
-
-  // Auto-advance
+  // Automatic Slide Rotation
   useEffect(() => {
-    intervalRef.current = setInterval(goNext, SLIDE_DURATION);
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, [goNext, current, allSlides.length]);
+    const timer = setInterval(nextSlide, SLIDE_DURATION);
+    return () => clearInterval(timer);
+  }, [nextSlide, currentSlide]);
 
-  // Progress bar
+  // Smooth Progress Bar
   useEffect(() => {
     setProgress(0);
     const step = 100 / (SLIDE_DURATION / 100);
-    progressRef.current = setInterval(() => {
-      setProgress((p) => Math.min(p + step, 100));
+    const pTimer = setInterval(() => {
+      setProgress((old) => Math.min(old + step, 100));
     }, 100);
-    return () => {
-      if (progressRef.current) clearInterval(progressRef.current);
-    };
-  }, [current]);
-
-  function renderSlide(slide: Slide) {
-    switch (slide.type) {
-      case "hero":
-        return <HeroSlide data={slide.data} />;
-      case "info":
-        return <InfoSlide data={slide.data} />;
-      case "announce":
-        return <AnnounceSlide data={slide.data} />;
-      case "programs":
-        return <ProgramsSlide data={slide.data} />;
-      case "news":
-        return <NewsSlide data={slide.data} />;
-    }
-  }
+    return () => clearInterval(pTimer);
+  }, [currentSlide]);
 
   return (
-    <div className="kiosk-container" style={{ backgroundColor: "#050816" }}>
-      {/* Header */}
-      <header className="kiosk-header">
-        <div className="logo-area">
-          <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center p-1 shadow-md">
-            <LGULogo size={48} className="object-contain" />
+    <div className="relative w-screen h-screen flex flex-col bg-[#050816] text-white overflow-hidden select-none">
+      {/* ────────── Persistent Top Executive Header ────────── */}
+      <header className="relative z-50 h-20 px-8 bg-slate-950/90 border-b border-white/10 backdrop-blur-xl flex items-center justify-between flex-shrink-0">
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center p-1 shadow-lg shadow-black/50 border border-emerald-500/30 flex-shrink-0">
+            <LGULogo size={46} className="object-contain" />
           </div>
-          <div className="logo-text">
-            <h1>Municipality of Mapandan</h1>
-            <p>Province of Pangasinan &nbsp;|&nbsp; Official Public Kiosk</p>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-lg md:text-xl font-black uppercase tracking-wider text-white">
+                Municipality of Mapandan
+              </h1>
+              <span className="hidden md:inline-block px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-black uppercase tracking-widest border border-emerald-500/30">
+                Pangasinan
+              </span>
+            </div>
+            <p className="text-xs text-slate-400 font-medium">
+              Official Interactive Public Service & Information Terminal
+            </p>
           </div>
         </div>
-        <div className="flex items-center gap-4">
-          {MANUAL_RFID_INPUT_ENABLED ? (
-            <button
-              type="button"
-              onClick={() => window.dispatchEvent(new Event("open-rfid-overlay"))}
-              className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-[10px] font-black uppercase tracking-[0.25em] text-white/80 transition hover:bg-white/10 hover:text-white"
-            >
-              RFID Login
-            </button>
-          ) : null}
-          <KioskClock />
+
+        {/* Right Status Badges & PST Clock */}
+        <div className="flex items-center gap-6">
+          {/* RFID Hardware Active Pulse */}
+          <div className="hidden sm:flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+            </span>
+            <span>RFID Scanner Ready</span>
+          </div>
+
+          <div className="h-8 w-px bg-white/10 hidden sm:block" />
+
+          <PSTClock />
         </div>
       </header>
 
-      {/* Ticker */}
-      <div className="ticker-wrap">
-        <span className="ticker-inner">
-          {liveAnnouncements.length > 0 && liveAnnouncements.map((a, i) => (
-            <Fragment key={`live-${i}`}>
-                📌&nbsp; {a.title}: {a.content}
-                <span className="ticker-sep">●</span>
-            </Fragment>
-          ))}
-          📌&nbsp; NOTICE: Office hours are Monday to Friday, 8:00 AM – 5:00 PM
-          <span className="ticker-sep">●</span>
-          🏥&nbsp; Mapandan Health Mission - Every Wednesday at the RHU
-          <span className="ticker-sep">●</span>
-          📋&nbsp; Business permit renewals deadline extended to April 15, 2026
-          <span className="ticker-sep">●</span>
-          📞&nbsp; For inquiries, call the Mapandan Hall Hotline: (075) 555-0000
-          <span className="ticker-sep">●</span>
-          🌐&nbsp; Visit: www.mapandan.gov.ph for online services
-          <span className="ticker-sep">●</span>
-          ♻️&nbsp; Let&apos;s keep Mapandan clean — join the Linis Bayan program
-          <span className="ticker-sep">●</span>
-        </span>
-      </div>
+      {/* ────────── Urgent Announcement Marquee Ticker ────────── */}
+      <div className="relative z-40 bg-gradient-to-r from-emerald-900 via-teal-900 to-slate-900 border-b border-emerald-500/20 py-1.5 px-6 flex items-center overflow-hidden flex-shrink-0">
+        <div className="flex items-center gap-2 text-emerald-300 font-black text-xs uppercase tracking-widest pr-4 border-r border-emerald-400/20 flex-shrink-0">
+          <Radio className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+          <span>Notice:</span>
+        </div>
 
-      {/* Slides */}
-      <div className="slides-wrapper" style={{ backgroundColor: "#050816" }}>
-        {allSlides.map((slide, i) => (
-          <div 
-            key={slide.id} 
-            className={`slide ${i === current ? "active" : ""}`}
-            style={{ backgroundColor: "#050816" }}
-          >
-            {renderSlide(slide)}
+        <div className="overflow-hidden whitespace-nowrap w-full pl-4">
+          <div className="inline-block animate-[ticker_700s_linear_infinite] text-xs font-semibold text-slate-200">
+            {feed?.announcements && feed.announcements.length > 0 ? (
+              feed.announcements.map((a, i) => (
+                <Fragment key={i}>
+                  <span className="text-amber-300 font-bold">[{a.category}]</span> {a.title}: {a.content}
+                  <span className="mx-6 text-emerald-400">●</span>
+                </Fragment>
+              ))
+            ) : null}
+            <span>Welcome to the Municipal Hall of Mapandan • Office hours: Mon to Fri, 8:00 AM – 5:00 PM</span>
+            <span className="mx-6 text-emerald-400">●</span>
+            <span>For inquiries, contact the Mayor&apos;s Information Desk at (075) 555-0000</span>
+            <span className="mx-6 text-emerald-400">●</span>
+            <span>Always secure and present your official Resident ID for fast lane verification</span>
+            <span className="mx-6 text-emerald-400">●</span>
           </div>
-        ))}
+        </div>
       </div>
 
-      {/* Footer */}
-      <footer className="kiosk-footer">
-        <button className="slide-nav-btn" onClick={goPrev}>
+      {/* ────────── Center Carousel Showcase ────────── */}
+      <main className="relative flex-1 w-full overflow-hidden">
+        {/* Slide 0: Hero */}
+        <div className={`absolute inset-0 transition-opacity duration-1000 ${currentSlide === 0 ? "opacity-100 z-10 pointer-events-auto" : "opacity-0 z-0 pointer-events-none"}`}>
+          <HeroSlideView slide={feed?.heroSlides?.[0]} />
+        </div>
+
+        {/* Slide 1: Services Directory */}
+        <div className={`absolute inset-0 transition-opacity duration-1000 ${currentSlide === 1 ? "opacity-100 z-10 pointer-events-auto" : "opacity-0 z-0 pointer-events-none"}`}>
+          <ServicesSlideView services={feed?.services || []} />
+        </div>
+
+        {/* Slide 2: Transparency & Projects */}
+        <div className={`absolute inset-0 transition-opacity duration-1000 ${currentSlide === 2 ? "opacity-100 z-10 pointer-events-auto" : "opacity-0 z-0 pointer-events-none"}`}>
+          <TransparencySlideView officials={feed?.officials || []} projects={feed?.projects || []} />
+        </div>
+
+        {/* Slide 3: News & Notices */}
+        <div className={`absolute inset-0 transition-opacity duration-1000 ${currentSlide === 3 ? "opacity-100 z-10 pointer-events-auto" : "opacity-0 z-0 pointer-events-none"}`}>
+          <NewsSlideView news={feed?.newsList || []} announcements={feed?.announcements || []} />
+        </div>
+
+        {/* Slide 4: Emergency Hotlines */}
+        <div className={`absolute inset-0 transition-opacity duration-1000 ${currentSlide === 4 ? "opacity-100 z-10 pointer-events-auto" : "opacity-0 z-0 pointer-events-none"}`}>
+          <EmergencySlideView hotlines={feed?.hotlines || []} />
+        </div>
+      </main>
+
+      {/* ────────── Persistent Bottom Beacon ("Tap RFID to Start") ────────── */}
+      <footer className="relative z-50 h-24 px-8 bg-slate-950/95 border-t border-white/10 backdrop-blur-2xl flex items-center justify-between flex-shrink-0">
+        {/* Previous Slide Button */}
+        <button 
+          onClick={prevSlide}
+          className="px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-xs font-bold text-slate-300 transition-colors flex items-center gap-1.5"
+        >
           ← Prev
         </button>
 
-        <div className="progress-bar-wrap">
-          <div
-            className="progress-bar-inner progress-bar-inner-left"
-            style={{ transform: `scaleX(${progress / 100})` }}
-          />
+        {/* Prominent Tap Card CTA */}
+        <div className="flex flex-col items-center">
+          <div className="flex items-center gap-3 px-6 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600/30 via-teal-500/30 to-emerald-600/30 border border-emerald-400/40 shadow-2xl shadow-emerald-500/20 animate-pulse">
+            <CreditCard className="w-6 h-6 text-emerald-300 animate-bounce" />
+            <div className="text-center">
+              <div className="text-sm font-black uppercase tracking-widest text-white">
+                Tap Resident RFID Card To Begin
+              </div>
+              <div className="text-[11px] font-medium text-emerald-300">
+                I-tap ang inyong RFID card upang mag-transact
+              </div>
+            </div>
+            <ArrowRight className="w-4 h-4 text-emerald-300" />
+          </div>
+
+          {/* Dots Indicator */}
+          <div className="flex items-center gap-2 mt-2">
+            {Array.from({ length: TOTAL_SLIDES }).map((_, idx) => (
+              <button
+                key={idx}
+                onClick={() => {
+                  setCurrentSlide(idx);
+                  setProgress(0);
+                }}
+                className={`h-1.5 transition-all duration-300 rounded-full ${
+                  currentSlide === idx ? "w-8 bg-emerald-400 shadow-md shadow-emerald-400/50" : "w-2 bg-white/20"
+                }`}
+              />
+            ))}
+          </div>
         </div>
 
-        <div className="slide-dots">
-          {allSlides.map((_, i) => (
-            <button
-              key={i}
-              className={`slide-dot ${i === current ? "active" : ""}`}
-              onClick={() => goTo(i)}
-            />
-          ))}
-        </div>
-
-        <div className="progress-bar-wrap">
-          <div
-            className="progress-bar-inner progress-bar-inner-right"
-            style={{ transform: `scaleX(${progress / 100})` }}
-          />
-        </div>
-
-        <button className="slide-nav-btn" onClick={goNext}>
+        {/* Next Slide Button */}
+        <button 
+          onClick={nextSlide}
+          className="px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-xs font-bold text-slate-300 transition-colors flex items-center gap-1.5"
+        >
           Next →
         </button>
+
+        {/* Bottom edge progress line */}
+        <div className="absolute bottom-0 left-0 right-0 h-1 bg-slate-900">
+          <div 
+            className="h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500 transition-all duration-100 ease-linear"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
       </footer>
     </div>
   );

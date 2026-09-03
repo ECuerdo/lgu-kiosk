@@ -6,6 +6,8 @@ import FaceVerification from "./FaceVerification";
 import OtpVerification from "./OtpVerification";
 import { useRouter } from "next/navigation";
 
+import { sanitizeRfid } from "@/lib/rfidSanitizer";
+
 type Resident = {
   id: string;
   fullName: string;
@@ -45,7 +47,10 @@ export default function RfidOverlay() {
     }
   }
 
-  const handleCardTap = useCallback(async (cardId: string) => {
+  const handleCardTap = useCallback(async (rawCardId: string) => {
+    const cardId = sanitizeRfid(rawCardId);
+    if (!cardId) return;
+
     setActive(true);
     setStep("VERIFYING");
     setError(null);
