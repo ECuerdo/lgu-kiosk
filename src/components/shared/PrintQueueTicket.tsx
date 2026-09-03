@@ -278,16 +278,18 @@ export default function PrintQueueTicket({
       doc.write(ticketHtml);
       doc.close();
 
+      // Trigger print smoothly without stealing window focus
       const timer = setTimeout(() => {
         try {
-          iframe.contentWindow?.focus();
           iframe.contentWindow?.print();
         } catch (e) {
           console.error("Iframe printing error:", e);
         } finally {
-          if (onPrintCompleted) onPrintCompleted();
+          setTimeout(() => {
+            if (onPrintCompleted) onPrintCompleted();
+          }, 800);
         }
-      }, 100);
+      }, 50);
 
       return () => clearTimeout(timer);
     }
