@@ -120,9 +120,9 @@ export default function PrintQueueTicket({
               padding: 0;
             }
             body {
-              width: 76mm;
-              margin: 0 auto;
-              padding: 4mm 2mm;
+              width: 70mm;
+              margin: 0;
+              padding: 2mm 1mm 2mm 0mm;
               font-family: monospace, Courier, sans-serif;
               color: #000;
               background: #fff;
@@ -130,9 +130,10 @@ export default function PrintQueueTicket({
               print-color-adjust: exact;
             }
             .ticket-card {
+              width: 68mm;
               border: 2px solid #000;
-              border-radius: 10px;
-              padding: 10px 8px;
+              border-radius: 8px;
+              padding: 8px 6px;
               text-align: center;
               font-weight: 900;
             }
