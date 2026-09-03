@@ -5,8 +5,8 @@ echo   STARTING LGU MAPANDAN KIOSK WITH SILENT PRINTING
 echo ============================================================
 echo.
 
-:: Set URL of kiosk
-set KIOSK_URL=http://localhost:3000/
+:: Set URL of kiosk (Official Vercel Production URL)
+set KIOSK_URL=https://kiosk.emapandan.com/
 
 :: Set a dedicated temp profile directory so Chrome ignores your currently open windows
 set KIOSK_DATA_DIR=%LOCALAPPDATA%\LguKioskBrowserSession
