@@ -23,7 +23,7 @@ export async function GET() {
       prisma.announcement.findMany({
         where: { isActive: true },
         orderBy: [{ isPinned: "desc" }, { createdAt: "desc" }],
-        take: 6,
+        take: 8,
         select: {
           id: true,
           title: true,
@@ -39,7 +39,7 @@ export async function GET() {
       prisma.news.findMany({
         where: { isPublished: true },
         orderBy: { publishDate: "desc" },
-        take: 6,
+        take: 8,
         select: {
           id: true,
           title: true,
@@ -105,7 +105,7 @@ export async function GET() {
       prisma.hotline.findMany({
         where: { isActive: true },
         orderBy: { order: "asc" },
-        take: 8,
+        take: 12,
         select: {
           id: true,
           name: true,
