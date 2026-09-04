@@ -585,33 +585,35 @@ function DashboardContent() {
       {/* MAIN VIEWPORT WRAPPER */}
       <div className="flex-1 flex flex-col relative min-w-0 h-full overflow-hidden transition-colors duration-300 ease-out">
 
-        {/* TOPBAR HEADER - ULTRA MODERN FROSTED CIVIC BANNER */}
-        <header className="h-20 md:h-28 bg-white/90 dark:bg-[#0b1020]/90 backdrop-blur-2xl border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between px-4 sm:px-8 md:px-12 shadow-sm z-20 shrink-0 transition-colors duration-300 ease-out">
-          <div className="flex items-center gap-4 md:gap-5">
-            <div className="hidden sm:block">
-              <div className="w-1.5 h-12 md:h-14 bg-gradient-to-b from-theme-primary to-theme-secondary rounded-full shadow-sm shadow-theme-primary/30"></div>
+        {/* TOPBAR HEADER - ULTRA MODERN FROSTED CIVIC BANNER (UN-CROWDED & ADAPTIVE) */}
+        <header className="min-h-[4.5rem] md:min-h-[5.5rem] py-3 px-4 sm:px-6 lg:px-8 bg-white/90 dark:bg-[#0b1020]/90 backdrop-blur-2xl border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shadow-sm z-20 shrink-0 transition-colors duration-300 ease-out gap-4">
+          {/* LEFT: CIVIC BRANDING & TITLE */}
+          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+            <div className="hidden sm:block shrink-0">
+              <div className="w-1.5 h-10 md:h-12 bg-gradient-to-b from-theme-primary to-theme-secondary rounded-full shadow-sm shadow-theme-primary/30"></div>
             </div>
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <Badge className="bg-theme-primary border-none text-white font-black text-[8px] md:text-[9px] tracking-widest uppercase py-0.5 px-2.5 shadow-sm shadow-theme-primary/20">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 mb-0.5">
+                <Badge className="bg-theme-primary border-none text-white font-black text-[8px] tracking-widest uppercase py-0.5 px-2 shadow-sm shadow-theme-primary/20 shrink-0">
                   {TRANSLATIONS[lang].verifiedSession}
                 </Badge>
-                <div className="flex items-center gap-1 text-slate-400 dark:text-slate-500 text-[9px] font-black uppercase tracking-widest">
-                  <Clock size={12} className="text-theme-secondary" />
+                <div className="flex items-center gap-1 text-slate-400 dark:text-slate-500 text-[8px] sm:text-[9px] font-black uppercase tracking-widest shrink-0">
+                  <Clock size={11} className="text-theme-secondary" />
                   <span>Kiosk Map-01</span>
                 </div>
               </div>
-              <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black text-slate-900 dark:text-white tracking-tight uppercase transition-colors duration-300 ease-out">
+              <h1 className="text-base sm:text-xl md:text-2xl font-black text-slate-900 dark:text-white tracking-tight uppercase truncate transition-colors duration-300 ease-out leading-tight">
                 {type === "municipal" ? TRANSLATIONS[lang].municipalCenter : TRANSLATIONS[lang].barangayCenter}
               </h1>
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5 sm:gap-4">
-            {/* THEME TOGGLE (DARK / LIGHT MODE) */}
+          {/* RIGHT: COMPACT CONTROLS CLUSTER */}
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            {/* THEME QUICK TOGGLE (COMPACT & INTUITIVE) */}
             <Button
               onClick={() => setTheme(isDarkMode ? "light" : "dark")}
-              className="font-bold rounded-2xl flex items-center gap-2 px-3 py-3 md:px-3.5 md:py-4 shadow-md active:scale-95 transition-all shrink-0 border bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 border-slate-200 dark:border-white/10"
+              className="h-10 w-10 sm:h-11 sm:w-11 p-0 rounded-2xl flex items-center justify-center shadow-sm active:scale-95 transition-all shrink-0 border bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 border-slate-200 dark:border-white/10 cursor-pointer"
               title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
             >
               {isDarkMode ? (
@@ -619,40 +621,28 @@ function DashboardContent() {
               ) : (
                 <Moon className="w-5 h-5 text-slate-600 animate-in spin-in-90 duration-300" />
               )}
-              <div className="text-left select-none hidden xl:block">
-                <span className="block text-[7px] font-black uppercase tracking-widest leading-none text-slate-400">
-                  Theme
-                </span>
-                <span className="block text-[10px] font-black uppercase">
-                  {isDarkMode ? "Dark" : "Light"}
-                </span>
-              </div>
             </Button>
 
-            {/* VOICE GUIDE TOGGLE WITH ANIMATED AUDIO WAVE */}
+            {/* VOICE GUIDE QUICK TOGGLE WITH DYNAMIC SOUNDWAVE */}
             <Button
               onClick={toggleVoice}
-              className={`font-bold rounded-2xl flex items-center gap-2.5 px-3 py-3 md:px-4 md:py-4 shadow-md active:scale-95 transition-all shrink-0 border ${
+              className={`h-10 sm:h-11 px-3 rounded-2xl flex items-center gap-2 shadow-sm active:scale-95 transition-all shrink-0 border cursor-pointer ${
                 isVoiceEnabled
                   ? "bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-400/30 shadow-emerald-600/20"
                   : "bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 border-slate-200 dark:border-white/5"
               }`}
+              title={isVoiceEnabled ? "Voice Guide Active - Click to Turn Off" : "Click to Turn On Voice Guide"}
             >
-              <Volume2 className={`w-5 h-5 ${isVoiceEnabled ? "text-emerald-200 animate-pulse" : "text-slate-500 dark:text-slate-400"}`} />
-              <div className="text-left select-none hidden sm:block">
-                <span className={`block text-[7px] md:text-[8px] font-black uppercase tracking-widest leading-none ${isVoiceEnabled ? "text-emerald-200" : "text-slate-400 dark:text-slate-400"}`}>
-                  {TRANSLATIONS[lang].voiceGuide}
-                </span>
-                <span className="block text-[10px] md:text-[11px] font-black uppercase">
-                  {isVoiceEnabled ? "Guide ON" : "Guide OFF"}
-                </span>
-              </div>
-              {/* Dynamic waveform visualizer bar */}
+              <Volume2 className={`w-4 h-4 sm:w-5 sm:h-5 ${isVoiceEnabled ? "text-emerald-200 animate-pulse" : "text-slate-500 dark:text-slate-400"}`} />
+              <span className="text-[10px] font-black uppercase hidden md:inline">
+                {isVoiceEnabled ? "Voice ON" : "Voice OFF"}
+              </span>
+              {/* Animated waveform bars */}
               {isVoiceEnabled && (
-                <div className="flex items-end gap-0.5 h-3.5 ml-1">
-                  <span className="w-1 bg-white rounded-full animate-[pulse_0.6s_ease-in-out_infinite] h-3" />
-                  <span className="w-1 bg-white rounded-full animate-[pulse_0.4s_ease-in-out_infinite] h-4" />
-                  <span className="w-1 bg-white rounded-full animate-[pulse_0.8s_ease-in-out_infinite] h-2" />
+                <div className="flex items-end gap-0.5 h-3">
+                  <span className="w-0.5 bg-white rounded-full animate-[pulse_0.6s_ease-in-out_infinite] h-2.5" />
+                  <span className="w-0.5 bg-white rounded-full animate-[pulse_0.4s_ease-in-out_infinite] h-3.5" />
+                  <span className="w-0.5 bg-white rounded-full animate-[pulse_0.8s_ease-in-out_infinite] h-2" />
                 </div>
               )}
             </Button>
@@ -663,23 +653,23 @@ function DashboardContent() {
                 <button
                   type="button"
                   onClick={() => setProfileMenuOpen((prev) => !prev)}
-                  className="flex items-center gap-3 text-left p-1.5 sm:p-2 rounded-2xl hover:bg-slate-100 dark:hover:bg-white/5 transition-all active:scale-[0.98] border border-transparent hover:border-slate-200/60 dark:hover:border-white/10"
+                  className="flex items-center gap-2.5 text-left p-1 sm:p-1.5 rounded-2xl hover:bg-slate-100 dark:hover:bg-white/5 transition-all active:scale-[0.98] border border-transparent hover:border-slate-200/60 dark:hover:border-white/10 cursor-pointer"
                   aria-expanded={profileMenuOpen}
                 >
-                  <div className="text-right hidden sm:block">
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">
+                  <div className="text-right hidden sm:block max-w-[160px] lg:max-w-[240px] xl:max-w-xs">
+                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none mb-0.5">
                       {TRANSLATIONS[lang].authenticatedResident}
                     </p>
                     <div className="flex items-center gap-1.5 justify-end">
-                      <span className="text-sm md:text-base font-black text-slate-800 dark:text-white whitespace-nowrap">
+                      <span className="text-xs sm:text-sm font-black text-slate-800 dark:text-white truncate">
                         {resident.fullName}
                       </span>
-                      <Badge variant="outline" className="text-theme-primary border-theme-secondary/40 uppercase font-black text-[8px] py-0 px-1.5 shrink-0">
+                      <Badge variant="outline" className="text-theme-primary border-theme-secondary/40 uppercase font-black text-[7px] py-0 px-1 shrink-0">
                         {TRANSLATIONS[lang].portal}
                       </Badge>
                     </div>
                   </div>
-                  <div className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-slate-50 dark:bg-slate-900 border-2 border-theme-primary/40 flex items-center justify-center overflow-hidden shadow-md relative ring-2 ring-theme-primary/10 shrink-0">
+                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-slate-50 dark:bg-slate-900 border-2 border-theme-primary/40 flex items-center justify-center overflow-hidden shadow-md relative ring-2 ring-theme-primary/10 shrink-0">
                     {residentPhotoUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
@@ -688,11 +678,11 @@ function DashboardContent() {
                         className="h-full w-full object-cover"
                       />
                     ) : (
-                      <UserCircle className="w-9 h-9 md:w-10 md:h-10 text-slate-400 dark:text-slate-600" />
+                      <UserCircle className="w-8 h-8 sm:w-9 sm:h-9 text-slate-400 dark:text-slate-600" />
                     )}
                   </div>
                   <ChevronDown
-                    className={`w-4 h-4 text-slate-400 transition-transform duration-200 shrink-0 ${
+                    className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 shrink-0 ${
                       profileMenuOpen ? "rotate-180" : ""
                     }`}
                   />
