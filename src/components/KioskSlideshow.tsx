@@ -137,6 +137,30 @@ const DEFAULT_SERVICES = [
     processingTime: "Immediate",
     desc: "Check land & property assessment declarations, pay annual Amilyar dues, and request zoning clearance records.",
   },
+  {
+    name: "Senior Citizen & PWD Benefits",
+    category: "MSWDO Office",
+    processingTime: "Same Day",
+    desc: "Application for National Senior Citizen ID, PWD Booklet, social pension assessment, and special financial assistance.",
+  },
+  {
+    name: "Zoning & Building Clearances",
+    category: "Engineering Office",
+    processingTime: "3-5 Business Days",
+    desc: "Locational clearances, residential construction permits, electrical inspection certificates, and fencing permits.",
+  },
+  {
+    name: "Health Certificate & Sanitary Permit",
+    category: "Rural Health Unit",
+    processingTime: "Same Day",
+    desc: "Medical laboratory assessments, food handler certifications, and sanitary clearances for local establishments.",
+  },
+  {
+    name: "Farmer & Agricultural Assistance",
+    category: "Agriculture Office",
+    processingTime: "1-2 Days",
+    desc: "RSBSA farmer registration, seed distribution programs, crop insurance verification, and livestock vaccination.",
+  },
 ];
 
 const DEFAULT_HOTLINES = [
@@ -184,18 +208,35 @@ function HeroSlideView({ slide }: { slide?: HeroSlideData }) {
 
 // ────────── Sub-Slide 2: Live Citizen Services Directory ──────────
 function ServicesSlideView({ services }: { services: ServiceItem[] }) {
-  const displayServices = services && services.length > 0 ? services.slice(0, 6) : DEFAULT_SERVICES;
+  const allServices = services && services.length > 0 ? services : DEFAULT_SERVICES;
+  const ITEMS_PER_PAGE = 4;
+  const totalPages = Math.max(1, Math.ceil(allServices.length / ITEMS_PER_PAGE));
+  const [page, setPage] = useState(0);
+
+  // Auto-rotate service pages every 7 seconds with smooth fade
+  useEffect(() => {
+    if (totalPages <= 1) return;
+    const interval = setInterval(() => {
+      setPage((prev) => (prev + 1) % totalPages);
+    }, 7000);
+    return () => clearInterval(interval);
+  }, [totalPages]);
+
+  const currentPageServices = allServices.slice(
+    page * ITEMS_PER_PAGE,
+    (page + 1) * ITEMS_PER_PAGE
+  );
 
   return (
-    <div className="relative w-full h-full flex flex-col justify-between p-5 sm:p-7 md:p-10 lg:p-12 overflow-y-auto lg:overflow-hidden bg-gradient-to-br from-[#07121e] via-[#050816] to-[#041a12]">
+    <div className="relative w-full h-full flex flex-col justify-between p-5 sm:p-7 md:p-9 lg:p-10 overflow-hidden bg-gradient-to-br from-[#07121e] via-[#050816] to-[#041a12]">
       {/* Ambient background blur */}
       <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
       <div className="absolute -bottom-24 -left-24 w-96 h-96 rounded-full bg-blue-500/10 blur-3xl pointer-events-none" />
 
-      {/* Slide Header */}
-      <div className="relative z-10 flex flex-col sm:flex-row sm:items-end justify-between border-b border-white/10 pb-4 md:pb-5 gap-2 flex-shrink-0">
+      {/* Slide Header with Page Counter & Interactive Dots */}
+      <div className="relative z-10 flex flex-col sm:flex-row sm:items-end justify-between border-b border-white/10 pb-3 md:pb-4 gap-2 flex-shrink-0">
         <div>
-          <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-[10px] sm:text-[11px] font-black uppercase tracking-widest mb-1.5">
+          <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-[10px] sm:text-[11px] font-black uppercase tracking-widest mb-1">
             <Building2 className="w-3.5 h-3.5" />
             Citizen Charter & Services
           </div>
@@ -206,15 +247,41 @@ function ServicesSlideView({ services }: { services: ServiceItem[] }) {
             Tap your Resident RFID Card anytime to directly request, track, or calculate processing assessments.
           </p>
         </div>
-        <div className="hidden sm:flex items-center gap-2 text-xs text-slate-400 bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl backdrop-blur-md flex-shrink-0">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-          <span>LGU Active</span>
+
+        {/* Right Status & Page Pills */}
+        <div className="flex items-center gap-3 flex-shrink-0">
+          {totalPages > 1 && (
+            <div className="flex items-center gap-2 bg-slate-900/80 border border-emerald-500/30 px-3 py-1.5 rounded-xl backdrop-blur-md">
+              <span className="text-[11px] font-bold text-emerald-300">
+                Page {page + 1} of {totalPages}
+              </span>
+              <div className="flex items-center gap-1.5 ml-1">
+                {Array.from({ length: totalPages }).map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setPage(i)}
+                    className={`h-1.5 transition-all duration-300 rounded-full ${
+                      page === i ? "w-5 bg-emerald-400" : "w-1.5 bg-white/20 hover:bg-white/40"
+                    }`}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="hidden sm:flex items-center gap-2 text-xs text-slate-400 bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl backdrop-blur-md">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+            <span>LGU Active</span>
+          </div>
         </div>
       </div>
 
-      {/* Service Cards Grid */}
-      <div className="relative z-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 my-auto py-3">
-        {displayServices.map((srv, idx) => {
+      {/* Service Cards Grid - Full Vertical & Horizontal Stretch with Smooth Page Transition */}
+      <div 
+        key={page}
+        className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5 flex-1 my-3 md:my-4 min-h-0 animate-in fade-in duration-500"
+      >
+        {currentPageServices.map((srv, idx) => {
           const isReal = "slaDays" in srv;
           const name = srv.name;
           const category = srv.category || "Municipal Service";
@@ -228,33 +295,43 @@ function ServicesSlideView({ services }: { services: ServiceItem[] }) {
           return (
             <div 
               key={idx}
-              className="group relative rounded-xl sm:rounded-2xl bg-slate-900/60 border border-white/10 hover:border-emerald-500/40 p-4 sm:p-5 flex flex-col justify-between backdrop-blur-xl transition-all duration-200 shadow-lg hover:shadow-emerald-950/40"
+              className="group relative rounded-2xl bg-slate-900/70 border border-white/10 hover:border-emerald-500/50 p-5 sm:p-6 md:p-7 flex flex-col justify-between backdrop-blur-xl transition-all duration-200 shadow-xl hover:shadow-2xl hover:shadow-emerald-950/50"
             >
-              <div className="flex items-start justify-between gap-2 mb-2">
-                <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-widest px-2 py-0.5 rounded bg-white/10 text-emerald-300 border border-white/10">
-                  {category}
-                </span>
-                <span className="text-[10px] sm:text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+              {/* Top Row: Category + Available Pill */}
+              <div className="flex items-center justify-between gap-3 mb-2 flex-shrink-0">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center text-emerald-400">
+                    <FileText className="w-4 h-4" />
+                  </div>
+                  <span className="text-[10px] sm:text-xs font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-md bg-white/10 text-emerald-300 border border-white/10">
+                    {category}
+                  </span>
+                </div>
+                <span className="text-[11px] sm:text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                   Available
                 </span>
               </div>
 
-              <div>
-                <h3 className="text-sm sm:text-base font-bold text-white mb-1 leading-snug group-hover:text-emerald-300 transition-colors">
+              {/* Middle: Prominent Service Title & Full Clear Description */}
+              <div className="my-auto py-2">
+                <h3 className="text-lg sm:text-xl md:text-2xl font-black text-white mb-2 leading-snug group-hover:text-emerald-300 transition-colors">
                   {name}
                 </h3>
-                <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
+                <p className="text-xs sm:text-sm md:text-base text-slate-300 leading-relaxed line-clamp-3 font-normal">
                   {desc}
                 </p>
               </div>
 
-              <div className="mt-3 pt-3 border-t border-white/5 flex items-center justify-between text-[11px] sm:text-xs">
-                <span className="text-slate-400 flex items-center gap-1.5 font-medium">
-                  <Clock className="w-3.5 h-3.5 text-blue-400" />
-                  {time}
+              {/* Bottom Row: SLA Tag & RFID Tap Ready CTA */}
+              <div className="pt-3 md:pt-4 border-t border-white/10 flex items-center justify-between text-xs sm:text-sm flex-shrink-0">
+                <span className="text-slate-300 flex items-center gap-2 font-medium bg-slate-800/60 px-3 py-1.5 rounded-lg border border-white/5">
+                  <Clock className="w-4 h-4 text-blue-400" />
+                  <span className="font-semibold text-white">{time}</span>
                 </span>
-                <span className="text-emerald-400 font-bold flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
-                  RFID Tap Ready <ChevronRight className="w-3.5 h-3.5" />
+                <span className="text-emerald-400 font-bold flex items-center gap-1.5 opacity-90 group-hover:opacity-100 transition-opacity bg-emerald-500/10 hover:bg-emerald-500/20 px-3.5 py-1.5 rounded-lg border border-emerald-500/30">
+                  <span>RFID Tap Ready</span>
+                  <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
                 </span>
               </div>
             </div>
@@ -263,7 +340,7 @@ function ServicesSlideView({ services }: { services: ServiceItem[] }) {
       </div>
 
       {/* Service Footer Note */}
-      <div className="relative z-10 flex items-center justify-between text-[11px] sm:text-xs text-slate-400 pt-2.5 border-t border-white/10 flex-shrink-0">
+      <div className="relative z-10 flex items-center justify-between text-[11px] sm:text-xs text-slate-400 pt-2 border-t border-white/10 flex-shrink-0">
         <span>* Requirements and guidelines are based on the Citizen&apos;s Charter of Mapandan.</span>
         <span className="font-semibold text-emerald-400">Mapandan Municipal Frontline Services</span>
       </div>

@@ -54,7 +54,7 @@ export async function GET() {
       // 4. Citizen Services (Transaction Types)
       prisma.transactionType.findMany({
         orderBy: [{ level: "asc" }, { name: "asc" }],
-        take: 8,
+        take: 16,
         select: {
           id: true,
           code: true,
