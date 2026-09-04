@@ -351,20 +351,43 @@ export default function KioskAppointmentDetailsPage() {
         </div>
       </main>
 
-      {/* Silent Printer Integration */}
-      <PrintQueueTicket
-        queueNumber={request.queueNumber || request.id.substring(0, 8).toUpperCase()}
-        serviceName={request.type?.name}
-        appointmentDate={appointmentDate}
-        appointmentSlot={appointmentSlot}
-        triggerPrint={printTriggered}
-        branding={branding}
-        themeColor={themeColor}
-        onPrintCompleted={() => {
-          setPrintTriggered(false);
-          toast.success("Ticket printed successfully!");
-        }}
-      />
+      {/* Printer Portal portal integration */}
+      {printTriggered && (
+        <>
+          {/* Visual Kiosk Print Mask: Masks any 100ms browser canvas repaints gracefully */}
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 backdrop-blur-sm transition-all duration-300">
+            <div className="flex flex-col items-center gap-4 rounded-3xl bg-slate-900/90 border border-white/10 p-8 shadow-2xl text-center max-w-xs animate-in fade-in zoom-in-95 duration-200">
+              <div className="h-16 w-16 rounded-2xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                <Printer className="w-8 h-8 animate-bounce" />
+              </div>
+              <div>
+                <h3 className="text-base font-black uppercase text-white tracking-wider">Printing Ticket</h3>
+                <p className="text-xs text-slate-400 mt-1">Please collect your queue receipt below.</p>
+              </div>
+              <div className="flex items-center gap-2 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
+                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping" />
+                Thermal Dispenser Active
+              </div>
+            </div>
+          </div>
+
+          <PrintQueueTicket
+            queueNumber={request.queueNumber || request.id.substring(0, 8).toUpperCase()}
+            serviceName={request.type?.name}
+            appointmentDate={appointmentDate}
+            appointmentSlot={appointmentSlot}
+            triggerPrint={printTriggered}
+            branding={branding}
+            themeColor={themeColor}
+            onPrintCompleted={() => {
+              setTimeout(() => {
+                setPrintTriggered(false);
+                toast.success("Ticket printed successfully!");
+              }, 600);
+            }}
+          />
+        </>
+      )}
 
       {/* Cancel Dialog */}
       <Dialog open={cancelConfirmOpen} onOpenChange={setCancelConfirmOpen}>
