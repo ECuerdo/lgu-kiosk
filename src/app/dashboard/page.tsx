@@ -915,10 +915,10 @@ function DashboardContent() {
           </div>
         </main>
 
-        {/* FOOTER BAR - SEGMENTED LANGUAGE TOGGLES (UN-CROWDED) */}
-        <footer className="h-16 md:h-20 bg-white/95 dark:bg-[#0b1020]/95 backdrop-blur-2xl border-t border-slate-200/80 dark:border-white/10 px-4 sm:px-8 md:px-12 flex items-center justify-between z-20 shrink-0 transition-colors duration-300 ease-out">
-          {/* ACCESSIBLE SEGMENTED LANGUAGE SWITCHER */}
-          <div className="flex items-center bg-slate-100 dark:bg-slate-900/80 p-1.5 rounded-2xl border border-slate-200 dark:border-white/10 shadow-inner gap-1">
+        {/* FOOTER BAR - RESPONSIVE SEGMENTED LANGUAGE TOGGLES (FLUID & ADAPTIVE) */}
+        <footer className="min-h-[3.5rem] md:min-h-[4.25rem] py-2 bg-white/95 dark:bg-[#0b1020]/95 backdrop-blur-2xl border-t border-slate-200/80 dark:border-white/10 px-3 sm:px-6 md:px-10 flex items-center justify-between z-20 shrink-0 transition-colors duration-300 ease-out gap-3">
+          {/* ACCESSIBLE ADAPTIVE LANGUAGE SWITCHER */}
+          <div className="flex items-center bg-slate-100/90 dark:bg-slate-900/80 p-1 sm:p-1.5 rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-inner gap-1 max-w-full overflow-x-auto no-scrollbar">
             {[
               { id: "en", label: "English" },
               { id: "fil", label: "Filipino" },
@@ -930,10 +930,10 @@ function DashboardContent() {
                 <button
                   key={id}
                   onClick={() => setLang(id as "en" | "fil" | "pang" | "ilo")}
-                  className={`font-black uppercase tracking-wider px-4 sm:px-6 py-2 md:py-2.5 text-xs sm:text-sm rounded-xl transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer select-none ${
+                  className={`font-black uppercase tracking-wider px-2.5 sm:px-4 md:px-5 py-1.5 md:py-2 text-[10px] sm:text-xs md:text-sm rounded-xl transition-all active:scale-95 flex items-center justify-center shrink-0 cursor-pointer select-none whitespace-nowrap ${
                     isSelected
-                      ? "bg-theme-primary text-white shadow-md shadow-theme-primary/30 scale-105 font-black ring-2 ring-theme-primary/40"
-                      : "text-slate-600 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white hover:bg-white/60 dark:hover:bg-white/5"
+                      ? "bg-theme-primary text-white shadow-md shadow-theme-primary/30 font-black ring-1 sm:ring-2 ring-theme-primary/40 scale-[1.02]"
+                      : "text-slate-600 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white hover:bg-white/60 dark:hover:bg-white/5"
                   }`}
                 >
                   <span>{label}</span>
@@ -942,7 +942,7 @@ function DashboardContent() {
             })}
           </div>
 
-          <div className="text-[11px] md:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest hidden lg:block">
+          <div className="text-[9px] sm:text-[10px] md:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest hidden md:block shrink-0">
             Municipality of Mapandan • © 2026
           </div>
         </footer>
