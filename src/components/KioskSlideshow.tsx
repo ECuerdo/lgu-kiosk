@@ -102,7 +102,7 @@ interface KioskFeedData {
   hotlines: HotlineItem[];
 }
 
-const SLIDE_DURATION = 20000; // 20 seconds per slide for a slower, relaxed ambient pace
+const SLIDE_DURATION = 15000; // 15 seconds per slide - well-paced ambient cycle
 
 // ────────── Fallback / Default Data ──────────
 const DEFAULT_HERO = {
@@ -187,33 +187,33 @@ function ServicesSlideView({ services }: { services: ServiceItem[] }) {
   const displayServices = services && services.length > 0 ? services.slice(0, 6) : DEFAULT_SERVICES;
 
   return (
-    <div className="relative w-full h-full flex flex-col justify-between p-10 md:p-14 overflow-hidden bg-gradient-to-br from-[#07121e] via-[#050816] to-[#041a12]">
+    <div className="relative w-full h-full flex flex-col justify-between p-5 sm:p-7 md:p-10 lg:p-12 overflow-y-auto lg:overflow-hidden bg-gradient-to-br from-[#07121e] via-[#050816] to-[#041a12]">
       {/* Ambient background blur */}
       <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
       <div className="absolute -bottom-24 -left-24 w-96 h-96 rounded-full bg-blue-500/10 blur-3xl pointer-events-none" />
 
       {/* Slide Header */}
-      <div className="relative z-10 flex items-end justify-between border-b border-white/10 pb-6">
+      <div className="relative z-10 flex flex-col sm:flex-row sm:items-end justify-between border-b border-white/10 pb-4 md:pb-5 gap-2 flex-shrink-0">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-[11px] font-black uppercase tracking-widest mb-2">
+          <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-[10px] sm:text-[11px] font-black uppercase tracking-widest mb-1.5">
             <Building2 className="w-3.5 h-3.5" />
             Citizen Charter & Services
           </div>
-          <h2 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-white tracking-tight leading-snug">
             Municipal Service Directory
           </h2>
-          <p className="text-sm text-slate-400 mt-1">
+          <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
             Tap your Resident RFID Card anytime to directly request, track, or calculate processing assessments.
           </p>
         </div>
-        <div className="hidden md:flex items-center gap-2 text-xs text-slate-400 bg-white/5 border border-white/10 px-4 py-2 rounded-xl backdrop-blur-md">
+        <div className="hidden sm:flex items-center gap-2 text-xs text-slate-400 bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl backdrop-blur-md flex-shrink-0">
           <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-          <span>Real-time LGU Verification Active</span>
+          <span>LGU Active</span>
         </div>
       </div>
 
       {/* Service Cards Grid */}
-      <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 my-auto py-4">
+      <div className="relative z-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 my-auto py-3">
         {displayServices.map((srv, idx) => {
           const isReal = "slaDays" in srv;
           const name = srv.name;
@@ -228,19 +228,19 @@ function ServicesSlideView({ services }: { services: ServiceItem[] }) {
           return (
             <div 
               key={idx}
-              className="group relative rounded-2xl bg-slate-900/60 border border-white/10 hover:border-emerald-500/40 p-6 flex flex-col justify-between backdrop-blur-xl transition-all duration-300 shadow-xl hover:shadow-2xl hover:shadow-emerald-950/40"
+              className="group relative rounded-xl sm:rounded-2xl bg-slate-900/60 border border-white/10 hover:border-emerald-500/40 p-4 sm:p-5 flex flex-col justify-between backdrop-blur-xl transition-all duration-200 shadow-lg hover:shadow-emerald-950/40"
             >
-              <div className="flex items-start justify-between gap-3 mb-3">
-                <span className="text-[10px] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded bg-white/10 text-emerald-300 border border-white/10">
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-widest px-2 py-0.5 rounded bg-white/10 text-emerald-300 border border-white/10">
                   {category}
                 </span>
-                <span className="text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full">
+                <span className="text-[10px] sm:text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
                   Available
                 </span>
               </div>
 
               <div>
-                <h3 className="text-lg font-bold text-white mb-2 leading-snug group-hover:text-emerald-300 transition-colors">
+                <h3 className="text-sm sm:text-base font-bold text-white mb-1 leading-snug group-hover:text-emerald-300 transition-colors">
                   {name}
                 </h3>
                 <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
@@ -248,7 +248,7 @@ function ServicesSlideView({ services }: { services: ServiceItem[] }) {
                 </p>
               </div>
 
-              <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between text-xs">
+              <div className="mt-3 pt-3 border-t border-white/5 flex items-center justify-between text-[11px] sm:text-xs">
                 <span className="text-slate-400 flex items-center gap-1.5 font-medium">
                   <Clock className="w-3.5 h-3.5 text-blue-400" />
                   {time}
@@ -263,7 +263,7 @@ function ServicesSlideView({ services }: { services: ServiceItem[] }) {
       </div>
 
       {/* Service Footer Note */}
-      <div className="relative z-10 flex items-center justify-between text-xs text-slate-400 pt-3 border-t border-white/10">
+      <div className="relative z-10 flex items-center justify-between text-[11px] sm:text-xs text-slate-400 pt-2.5 border-t border-white/10 flex-shrink-0">
         <span>* Requirements and guidelines are based on the Citizen&apos;s Charter of Mapandan.</span>
         <span className="font-semibold text-emerald-400">Mapandan Municipal Frontline Services</span>
       </div>
@@ -277,33 +277,33 @@ function TransparencySlideView({ officials, projects }: { officials: OfficialIte
   const activeProjects = projects.slice(0, 3);
 
   return (
-    <div className="relative w-full h-full flex flex-col justify-between p-10 md:p-14 overflow-hidden bg-gradient-to-br from-[#0c1626] via-[#050816] to-[#0d1f18]">
+    <div className="relative w-full h-full flex flex-col justify-between p-5 sm:p-7 md:p-10 lg:p-12 overflow-y-auto lg:overflow-hidden bg-gradient-to-br from-[#0c1626] via-[#050816] to-[#0d1f18]">
       {/* Header */}
-      <div className="relative z-10 flex items-end justify-between border-b border-white/10 pb-6">
+      <div className="relative z-10 flex flex-col sm:flex-row sm:items-end justify-between border-b border-white/10 pb-4 md:pb-5 gap-2 flex-shrink-0">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-amber-500/20 border border-amber-400/30 text-amber-300 text-[11px] font-black uppercase tracking-widest mb-2">
+          <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-md bg-amber-500/20 border border-amber-400/30 text-amber-300 text-[10px] sm:text-[11px] font-black uppercase tracking-widest mb-1.5">
             <Users className="w-3.5 h-3.5" />
             Good Governance & Transparency
           </div>
-          <h2 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-white tracking-tight leading-snug">
             Municipal Leadership & Public Works
           </h2>
-          <p className="text-sm text-slate-400 mt-1">
+          <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
             Serving the people of Mapandan with full accountability, open budgets, and integrity.
           </p>
         </div>
-        <div className="text-right">
-          <span className="text-xs font-bold text-slate-300 bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg">
+        <div className="sm:text-right flex-shrink-0">
+          <span className="inline-block text-[11px] sm:text-xs font-bold text-slate-300 bg-white/5 border border-white/10 px-3 py-1 rounded-lg">
             Fiscal Year 2026
           </span>
         </div>
       </div>
 
       {/* Content Grid: 2 Columns (Leaders & Ongoing Projects) */}
-      <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 my-auto py-4">
+      <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-5 md:gap-6 my-auto py-3">
         {/* Left Column: Officials (5 cols) */}
-        <div className="lg:col-span-5 flex flex-col gap-3">
-          <h3 className="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center gap-2 mb-1">
+        <div className="lg:col-span-5 flex flex-col gap-2.5">
+          <h3 className="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center gap-2 mb-0.5">
             <Users className="w-4 h-4" />
             Municipal Officials
           </h3>
@@ -312,39 +312,39 @@ function TransparencySlideView({ officials, projects }: { officials: OfficialIte
             topOfficials.map((off, idx) => (
               <div 
                 key={idx}
-                className="flex items-center gap-4 p-3.5 rounded-xl bg-slate-900/50 border border-white/10 backdrop-blur-md"
+                className="flex items-center gap-3 p-3 rounded-xl bg-slate-900/50 border border-white/10 backdrop-blur-md"
               >
-                <div className="w-12 h-12 rounded-full overflow-hidden bg-slate-800 border-2 border-amber-400/30 flex-shrink-0 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-800 border-2 border-amber-400/30 flex-shrink-0 flex items-center justify-center">
                   {off.imageUrl ? (
                     <Image 
                       src={off.imageUrl} 
                       alt={off.name} 
-                      width={48} 
-                      height={48} 
+                      width={40} 
+                      height={40} 
                       className="w-full h-full object-cover" 
                       unoptimized 
                     />
                   ) : (
-                    <Users className="w-6 h-6 text-slate-400" />
+                    <Users className="w-5 h-5 text-slate-400" />
                   )}
                 </div>
                 <div className="min-w-0">
-                  <h4 className="text-sm font-bold text-white truncate">{off.name}</h4>
-                  <p className="text-xs text-amber-300 font-semibold">{off.position}</p>
-                  {off.motto && <p className="text-[11px] text-slate-400 italic truncate">&quot;{off.motto}&quot;</p>}
+                  <h4 className="text-xs sm:text-sm font-bold text-white truncate">{off.name}</h4>
+                  <p className="text-[11px] sm:text-xs text-amber-300 font-semibold">{off.position}</p>
+                  {off.motto && <p className="text-[10px] text-slate-400 italic truncate">&quot;{off.motto}&quot;</p>}
                 </div>
               </div>
             ))
           ) : (
-            <div className="p-6 rounded-xl bg-slate-900/40 border border-white/10 text-center text-slate-400 text-xs">
+            <div className="p-4 rounded-xl bg-slate-900/40 border border-white/10 text-center text-slate-400 text-xs">
               Honorable Mayor, Vice Mayor, and Sangguniang Bayan Members of Mapandan.
             </div>
           )}
         </div>
 
         {/* Right Column: Infrastructure & Transparency Projects (7 cols) */}
-        <div className="lg:col-span-7 flex flex-col gap-3">
-          <h3 className="text-xs font-black uppercase tracking-wider text-emerald-400 flex items-center gap-2 mb-1">
+        <div className="lg:col-span-7 flex flex-col gap-2.5">
+          <h3 className="text-xs font-black uppercase tracking-wider text-emerald-400 flex items-center gap-2 mb-0.5">
             <HardHat className="w-4 h-4" />
             Active Infrastructure & Community Projects
           </h3>
@@ -353,51 +353,50 @@ function TransparencySlideView({ officials, projects }: { officials: OfficialIte
             activeProjects.map((proj, idx) => (
               <div 
                 key={idx}
-                className="p-4 rounded-xl bg-slate-900/50 border border-white/10 backdrop-blur-md flex flex-col gap-2.5"
+                className="p-3.5 rounded-xl bg-slate-900/50 border border-white/10 backdrop-blur-md flex flex-col gap-2"
               >
                 <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <h4 className="text-sm font-bold text-white leading-tight">{proj.title}</h4>
-                    <span className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
-                      <MapPin className="w-3 h-3 text-emerald-400" /> {proj.location}
+                  <div className="min-w-0">
+                    <h4 className="text-xs sm:text-sm font-bold text-white leading-tight truncate">{proj.title}</h4>
+                    <span className="text-[10px] sm:text-[11px] text-slate-400 flex items-center gap-1 mt-0.5 truncate">
+                      <MapPin className="w-3 h-3 text-emerald-400 flex-shrink-0" /> {proj.location}
                     </span>
                   </div>
-                  <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                  <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex-shrink-0">
                     {proj.status}
                   </span>
                 </div>
 
                 {/* Progress bar */}
-                <div>
-                  <div className="flex justify-between text-xs font-bold mb-1">
-                    <span className="text-slate-400 text-[11px]">Completion Progress</span>
-                    <span className="text-emerald-400">{proj.progress}%</span>
-                  </div>
-                  <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
                     <div 
-                      className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-500"
-                      style={{ width: `${Math.min(proj.progress, 100)}%` }}
+                      className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full"
+                      style={{ width: `${proj.progress || 0}%` }}
                     />
                   </div>
+                  <span className="text-[11px] font-bold text-emerald-300 font-mono flex-shrink-0">
+                    {proj.progress || 0}%
+                  </span>
                 </div>
 
                 {proj.budget && (
-                  <div className="text-right text-[11px] font-semibold text-slate-400">
+                  <div className="text-right text-[10px] sm:text-[11px] font-semibold text-slate-400">
                     Allocated Budget: <span className="text-white font-mono">{proj.budget}</span>
                   </div>
                 )}
               </div>
             ))
           ) : (
-            <div className="p-8 rounded-xl bg-slate-900/40 border border-white/10 text-center text-slate-400 text-xs flex flex-col items-center justify-center h-full">
-              <HardHat className="w-8 h-8 text-emerald-400/40 mb-2" />
+            <div className="p-6 rounded-xl bg-slate-900/40 border border-white/10 text-center text-slate-400 text-xs flex flex-col items-center justify-center h-full">
+              <HardHat className="w-7 h-7 text-emerald-400/40 mb-1.5" />
               <span>Full Project Transparency records accessible via the Municipal Engineering Office.</span>
             </div>
           )}
         </div>
       </div>
 
-      <div className="relative z-10 flex items-center justify-between text-xs text-slate-400 pt-3 border-t border-white/10">
+      <div className="relative z-10 flex items-center justify-between text-[11px] sm:text-xs text-slate-400 pt-2.5 border-t border-white/10 flex-shrink-0">
         <span>Public Funds Transparency Act • Local Government Code Compliance</span>
         <span className="font-semibold text-amber-400">Municipality of Mapandan Portal</span>
       </div>
@@ -411,22 +410,22 @@ function NewsSlideView({ news, announcements }: { news: NewsItem[]; announcement
   const notices = announcements.slice(0, 4);
 
   return (
-    <div className="relative w-full h-full flex flex-col justify-between p-10 md:p-14 overflow-hidden bg-gradient-to-br from-[#051124] via-[#050816] to-[#121c2b]">
+    <div className="relative w-full h-full flex flex-col justify-between p-5 sm:p-7 md:p-10 lg:p-12 overflow-y-auto lg:overflow-hidden bg-gradient-to-br from-[#051124] via-[#050816] to-[#121c2b]">
       {/* Header */}
-      <div className="relative z-10 flex items-end justify-between border-b border-white/10 pb-6">
+      <div className="relative z-10 flex flex-col sm:flex-row sm:items-end justify-between border-b border-white/10 pb-4 md:pb-5 gap-2 flex-shrink-0">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-blue-500/20 border border-blue-400/30 text-blue-300 text-[11px] font-black uppercase tracking-widest mb-2">
+          <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-md bg-blue-500/20 border border-blue-400/30 text-blue-300 text-[10px] sm:text-[11px] font-black uppercase tracking-widest mb-1.5">
             <Newspaper className="w-3.5 h-3.5" />
             Official Bulletin
           </div>
-          <h2 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-white tracking-tight leading-snug">
             News & Municipal Advisories
           </h2>
-          <p className="text-sm text-slate-400 mt-1">
+          <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
             Stay informed with verified updates and administrative orders from the local government.
           </p>
         </div>
-        <div className="hidden md:block text-right text-xs text-slate-400">
+        <div className="hidden md:block text-right text-[11px] sm:text-xs text-slate-400 flex-shrink-0">
           Updated Daily • Public Information Office
         </div>
       </div>
@@ -529,30 +528,30 @@ function EmergencySlideView({ hotlines }: { hotlines: HotlineItem[] }) {
   const displayHotlines = hotlines.length > 0 ? hotlines : DEFAULT_HOTLINES;
 
   return (
-    <div className="relative w-full h-full flex flex-col justify-between p-10 md:p-14 overflow-hidden bg-gradient-to-br from-[#1a0c10] via-[#050816] to-[#140a12]">
+    <div className="relative w-full h-full flex flex-col justify-between p-5 sm:p-7 md:p-10 lg:p-12 overflow-y-auto lg:overflow-hidden bg-gradient-to-br from-[#1a0c10] via-[#050816] to-[#140a12]">
       {/* Header */}
-      <div className="relative z-10 flex items-end justify-between border-b border-white/10 pb-6">
+      <div className="relative z-10 flex flex-col sm:flex-row sm:items-end justify-between border-b border-white/10 pb-4 md:pb-5 gap-2 flex-shrink-0">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-rose-500/20 border border-rose-400/30 text-rose-300 text-[11px] font-black uppercase tracking-widest mb-2 animate-pulse">
+          <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-md bg-rose-500/20 border border-rose-400/30 text-rose-300 text-[10px] sm:text-[11px] font-black uppercase tracking-widest mb-1.5 animate-pulse">
             <ShieldAlert className="w-3.5 h-3.5" />
             Public Safety & Disaster Response
           </div>
-          <h2 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-white tracking-tight leading-snug">
             Emergency Hotlines & Medical Dispatch
           </h2>
-          <p className="text-sm text-slate-400 mt-1">
+          <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
             24/7 First Responders, Police Assistance, Fire Protection, and Rural Health Services.
           </p>
         </div>
-        <div className="text-right">
-          <span className="text-xs font-bold text-rose-400 bg-rose-500/10 border border-rose-500/30 px-3.5 py-1.5 rounded-full">
+        <div className="sm:text-right flex-shrink-0">
+          <span className="inline-block text-[11px] sm:text-xs font-bold text-rose-400 bg-rose-500/10 border border-rose-500/30 px-3 py-1 rounded-full">
             ● 24/7 Hotline Operations Active
           </span>
         </div>
       </div>
 
       {/* Hotline Cards Grid */}
-      <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-6 my-auto py-4">
+      <div className="relative z-10 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 my-auto py-3">
         {displayHotlines.map((h, idx) => {
           const number = "telephone" in h 
             ? (h as HotlineItem).mobileNumber || (h as HotlineItem).telephone || "Direct Hall Line"
@@ -561,33 +560,33 @@ function EmergencySlideView({ hotlines }: { hotlines: HotlineItem[] }) {
           return (
             <div 
               key={idx}
-              className="p-6 rounded-2xl bg-slate-900/60 border border-white/10 hover:border-rose-500/40 backdrop-blur-xl flex items-center justify-between shadow-xl"
+              className="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-slate-900/70 border border-white/10 hover:border-rose-500/40 backdrop-blur-xl flex items-center justify-between gap-3 shadow-lg hover:shadow-rose-950/30 transition-all duration-200"
             >
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 flex-shrink-0">
-                  <PhoneCall className="w-7 h-7" />
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 flex-shrink-0">
+                  <PhoneCall className="w-5 h-5" />
                 </div>
-                <div>
-                  <span className="text-[10px] font-extrabold uppercase tracking-widest text-rose-300 bg-rose-500/10 px-2 py-0.5 rounded">
+                <div className="min-w-0">
+                  <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-widest text-rose-300 bg-rose-500/15 px-1.5 py-0.5 rounded">
                     {h.category}
                   </span>
-                  <h4 className="text-lg font-bold text-white mt-1">{h.name}</h4>
-                  <p className="text-xs text-slate-400">Toll-free inside Mapandan municipal jurisdiction</p>
+                  <h4 className="text-xs sm:text-sm md:text-base font-bold text-white mt-0.5 truncate">{h.name}</h4>
+                  <p className="text-[10px] sm:text-xs text-slate-400 hidden sm:block truncate">Toll-free within Mapandan jurisdiction</p>
                 </div>
               </div>
 
-              <div className="text-right">
-                <div className="text-lg md:text-xl font-black font-mono text-amber-400 tracking-wider">
+              <div className="text-right flex-shrink-0">
+                <div className="text-xs sm:text-sm md:text-base font-bold font-mono text-amber-400 tracking-wide">
                   {number}
                 </div>
-                <span className="text-[10px] text-slate-400 font-semibold">Immediate Dispatch</span>
+                <span className="text-[9px] sm:text-[10px] text-slate-400 font-semibold uppercase tracking-wider block">Immediate Dispatch</span>
               </div>
             </div>
           );
         })}
       </div>
 
-      <div className="relative z-10 flex items-center justify-between text-xs text-slate-400 pt-3 border-t border-white/10">
+      <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between text-[11px] sm:text-xs text-slate-400 pt-2.5 border-t border-white/10 gap-1 flex-shrink-0">
         <span>In case of severe typhoons, flooding, or medical crisis, call MDRRMO directly.</span>
         <span className="font-semibold text-rose-400">Mapandan Emergency Operations Center</span>
       </div>
@@ -699,66 +698,66 @@ export default function KioskSlideshow() {
   return (
     <div className="relative w-screen h-screen flex flex-col bg-[#050816] text-white overflow-hidden select-none">
       {/* ────────── Persistent Top Executive Header ────────── */}
-      <header className="relative z-50 h-20 px-8 bg-slate-950/90 border-b border-white/10 backdrop-blur-xl flex items-center justify-between flex-shrink-0">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center p-1 shadow-lg shadow-black/50 border border-emerald-500/30 flex-shrink-0">
-            <LGULogo size={46} className="object-contain" />
+      <header className="relative z-50 h-16 sm:h-20 px-4 sm:px-8 bg-slate-950/90 border-b border-white/10 backdrop-blur-xl flex items-center justify-between flex-shrink-0">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className="w-10 h-10 sm:w-14 sm:h-14 bg-white rounded-full flex items-center justify-center p-1 shadow-lg shadow-black/50 border border-emerald-500/30 flex-shrink-0">
+            <LGULogo size={40} className="object-contain" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-lg md:text-xl font-black uppercase tracking-wider text-white">
+              <h1 className="text-base sm:text-lg md:text-xl font-black uppercase tracking-wider text-white">
                 Municipality of Mapandan
               </h1>
               <span className="hidden md:inline-block px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-black uppercase tracking-widest border border-emerald-500/30">
                 Pangasinan
               </span>
             </div>
-            <p className="text-xs text-slate-400 font-medium">
+            <p className="text-[10px] sm:text-xs text-slate-400 font-medium line-clamp-1">
               Official Interactive Public Service & Information Terminal
             </p>
           </div>
         </div>
 
         {/* Right Status Badges & PST Clock */}
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-3 sm:gap-6">
           {/* RFID Hardware Active Pulse */}
-          <div className="hidden sm:flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold">
-            <span className="relative flex h-2.5 w-2.5">
+          <div className="hidden sm:flex items-center gap-2.5 px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] sm:text-xs font-bold">
+            <span className="relative flex h-2 w-2 sm:h-2.5 sm:w-2.5">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 sm:h-2.5 sm:w-2.5 bg-emerald-500"></span>
             </span>
-            <span>RFID Scanner Ready</span>
+            <span>RFID Ready</span>
           </div>
 
-          <div className="h-8 w-px bg-white/10 hidden sm:block" />
+          <div className="h-6 sm:h-8 w-px bg-white/10 hidden sm:block" />
 
           <PSTClock />
         </div>
       </header>
 
       {/* ────────── Urgent Announcement Marquee Ticker ────────── */}
-      <div className="relative z-40 bg-gradient-to-r from-emerald-900 via-teal-900 to-slate-900 border-b border-emerald-500/20 py-1.5 px-6 flex items-center overflow-hidden flex-shrink-0">
-        <div className="flex items-center gap-2 text-emerald-300 font-black text-xs uppercase tracking-widest pr-4 border-r border-emerald-400/20 flex-shrink-0">
-          <Radio className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+      <div className="relative z-40 bg-gradient-to-r from-emerald-900 via-teal-900 to-slate-900 border-b border-emerald-500/20 py-1.5 px-3 sm:px-6 flex items-center overflow-hidden flex-shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-2 text-emerald-300 font-black text-[10px] sm:text-xs uppercase tracking-widest pr-2 sm:pr-4 border-r border-emerald-400/20 flex-shrink-0">
+          <Radio className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-400 animate-pulse" />
           <span>Notice:</span>
         </div>
 
-        <div className="overflow-hidden whitespace-nowrap w-full pl-4">
-          <div className="inline-block animate-[ticker_700s_linear_infinite] text-xs font-semibold text-slate-200">
+        <div className="overflow-hidden whitespace-nowrap w-full pl-3 sm:pl-4">
+          <div className="inline-block animate-[ticker_110s_linear_infinite] hover:[animation-play-state:paused] text-xs font-semibold text-slate-200">
             {feed?.announcements && feed.announcements.length > 0 ? (
               feed.announcements.map((a, i) => (
                 <Fragment key={i}>
                   <span className="text-amber-300 font-bold">[{a.category}]</span> {a.title}: {a.content}
-                  <span className="mx-6 text-emerald-400">●</span>
+                  <span className="mx-4 sm:mx-6 text-emerald-400">●</span>
                 </Fragment>
               ))
             ) : null}
             <span>Welcome to the Municipal Hall of Mapandan • Office hours: Mon to Fri, 8:00 AM – 5:00 PM</span>
-            <span className="mx-6 text-emerald-400">●</span>
+            <span className="mx-4 sm:mx-6 text-emerald-400">●</span>
             <span>For inquiries, contact the Mayor&apos;s Information Desk at (075) 555-0000</span>
-            <span className="mx-6 text-emerald-400">●</span>
+            <span className="mx-4 sm:mx-6 text-emerald-400">●</span>
             <span>Always secure and present your official Resident ID for fast lane verification</span>
-            <span className="mx-6 text-emerald-400">●</span>
+            <span className="mx-4 sm:mx-6 text-emerald-400">●</span>
           </div>
         </div>
       </div>
@@ -792,32 +791,32 @@ export default function KioskSlideshow() {
       </main>
 
       {/* ────────── Persistent Bottom Beacon ("Tap RFID to Start") ────────── */}
-      <footer className="relative z-50 h-24 px-8 bg-slate-950/95 border-t border-white/10 backdrop-blur-2xl flex items-center justify-between flex-shrink-0">
+      <footer className="relative z-50 h-20 sm:h-24 px-4 sm:px-8 bg-slate-950/95 border-t border-white/10 backdrop-blur-2xl flex items-center justify-between flex-shrink-0">
         {/* Previous Slide Button */}
         <button 
           onClick={prevSlide}
-          className="px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-xs font-bold text-slate-300 transition-colors flex items-center gap-1.5"
+          className="px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-[11px] sm:text-xs font-bold text-slate-300 transition-colors flex items-center gap-1.5"
         >
-          ← Prev
+          ← <span className="hidden sm:inline">Prev</span>
         </button>
 
         {/* Prominent Tap Card CTA */}
         <div className="flex flex-col items-center">
-          <div className="flex items-center gap-3 px-6 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600/30 via-teal-500/30 to-emerald-600/30 border border-emerald-400/40 shadow-2xl shadow-emerald-500/20 animate-pulse">
-            <CreditCard className="w-6 h-6 text-emerald-300 animate-bounce" />
+          <div className="flex items-center gap-2 sm:gap-3 px-3.5 sm:px-6 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl bg-gradient-to-r from-emerald-600/30 via-teal-500/30 to-emerald-600/30 border border-emerald-400/40 shadow-2xl shadow-emerald-500/20 animate-pulse">
+            <CreditCard className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-300 animate-bounce" />
             <div className="text-center">
-              <div className="text-sm font-black uppercase tracking-widest text-white">
+              <div className="text-xs sm:text-sm font-black uppercase tracking-wider sm:tracking-widest text-white">
                 Tap Resident RFID Card To Begin
               </div>
-              <div className="text-[11px] font-medium text-emerald-300">
+              <div className="text-[10px] sm:text-[11px] font-medium text-emerald-300 hidden sm:block">
                 I-tap ang inyong RFID card upang mag-transact
               </div>
             </div>
-            <ArrowRight className="w-4 h-4 text-emerald-300" />
+            <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-300 hidden sm:block" />
           </div>
 
           {/* Dots Indicator */}
-          <div className="flex items-center gap-2 mt-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 mt-1.5 sm:mt-2">
             {Array.from({ length: TOTAL_SLIDES }).map((_, idx) => (
               <button
                 key={idx}
@@ -826,7 +825,7 @@ export default function KioskSlideshow() {
                   setProgress(0);
                 }}
                 className={`h-1.5 transition-all duration-300 rounded-full ${
-                  currentSlide === idx ? "w-8 bg-emerald-400 shadow-md shadow-emerald-400/50" : "w-2 bg-white/20"
+                  currentSlide === idx ? "w-6 sm:w-8 bg-emerald-400 shadow-md shadow-emerald-400/50" : "w-1.5 sm:w-2 bg-white/20"
                 }`}
               />
             ))}
@@ -836,9 +835,9 @@ export default function KioskSlideshow() {
         {/* Next Slide Button */}
         <button 
           onClick={nextSlide}
-          className="px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-xs font-bold text-slate-300 transition-colors flex items-center gap-1.5"
+          className="px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-[11px] sm:text-xs font-bold text-slate-300 transition-colors flex items-center gap-1.5"
         >
-          Next →
+          <span className="hidden sm:inline">Next</span> →
         </button>
 
         {/* Bottom edge progress line */}
