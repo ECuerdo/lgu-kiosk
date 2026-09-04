@@ -23,7 +23,7 @@ export async function GET() {
       prisma.announcement.findMany({
         where: { isActive: true },
         orderBy: [{ isPinned: "desc" }, { createdAt: "desc" }],
-        take: 6,
+        take: 8,
         select: {
           id: true,
           title: true,
@@ -39,7 +39,7 @@ export async function GET() {
       prisma.news.findMany({
         where: { isPublished: true },
         orderBy: { publishDate: "desc" },
-        take: 6,
+        take: 8,
         select: {
           id: true,
           title: true,
@@ -54,7 +54,7 @@ export async function GET() {
       // 4. Citizen Services (Transaction Types)
       prisma.transactionType.findMany({
         orderBy: [{ level: "asc" }, { name: "asc" }],
-        take: 8,
+        take: 16,
         select: {
           id: true,
           code: true,
@@ -73,7 +73,7 @@ export async function GET() {
       prisma.official.findMany({
         where: { isActive: true },
         orderBy: { order: "asc" },
-        take: 8,
+        take: 16,
         select: {
           id: true,
           name: true,
@@ -88,7 +88,7 @@ export async function GET() {
       prisma.project.findMany({
         where: { isPublished: true },
         orderBy: { updatedAt: "desc" },
-        take: 6,
+        take: 8,
         select: {
           id: true,
           title: true,
@@ -105,7 +105,7 @@ export async function GET() {
       prisma.hotline.findMany({
         where: { isActive: true },
         orderBy: { order: "asc" },
-        take: 8,
+        take: 12,
         select: {
           id: true,
           name: true,

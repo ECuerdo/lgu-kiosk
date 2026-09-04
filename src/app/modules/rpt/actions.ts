@@ -295,7 +295,7 @@ export async function submitRptAppointment(formData: FormData, userId: string) {
         let customQueueNum = `${queuePrefix}${String(existingCount + 1).padStart(3, '0')}`;
         let attempts = 0;
         while (attempts < 10) {
-            const collision = await prisma.transaction.findUnique({
+            const collision = await prisma.transaction.findFirst({
                 where: { queueNumber: customQueueNum }
             });
             if (!collision) break;

@@ -545,7 +545,7 @@ export function CedulaAppointmentClient({
       <SecureIdleTimer />
 
 
-      <main className="flex-1 max-w-5xl mx-auto px-6 py-8 w-full space-y-8 relative">
+      <main className="flex-1 max-w-6xl xl:max-w-7xl mx-auto px-4 sm:px-8 md:px-12 py-8 w-full space-y-8 relative">
         <PrivacyTermsModal
           isOpen={isPrivacyModalOpen}
           onClose={() => setIsPrivacyModalOpen(false)}
@@ -566,7 +566,7 @@ export function CedulaAppointmentClient({
 
         {/* Progress Stepper */}
         {currentStep !== "SUCCESS" && (
-          <div className="grid grid-cols-4 gap-1.5 md:gap-4 relative px-1 md:px-2 print:hidden">
+          <div className="grid grid-cols-4 gap-2 md:gap-5 relative px-2 md:px-4 print:hidden">
             {STEPS.map((step, idx) => {
               const isActive = currentStep === step.id;
               const isCompleted = STEPS.findIndex(s => s.id === currentStep) > idx;
@@ -587,15 +587,15 @@ export function CedulaAppointmentClient({
                   )}
                 >
                   <div className={cn(
-                    "w-11 h-11 md:w-16 md:h-16 rounded-xl md:rounded-2xl flex items-center justify-center transition-all duration-500 border-2",
-                    isActive ? "bg-theme-primary text-white border-theme-primary shadow-[0_0_20px_rgba(var(--primary),0.3)] scale-105" :
+                    "w-12 h-12 md:w-18 md:h-18 rounded-2xl md:rounded-[1.5rem] flex items-center justify-center transition-all duration-500 border-2 shadow-sm",
+                    isActive ? "bg-theme-primary text-white border-theme-primary shadow-[0_0_25px_rgba(var(--primary),0.35)] scale-105" :
                       isCompleted ? "bg-theme-primary/10 text-theme-primary border-theme-primary/30" :
                         "bg-slate-100 dark:bg-white/5 text-slate-400 border-transparent group-hover:border-theme-primary/30"
                   )}>
-                    <Icon className="w-4 h-4 md:w-7 md:h-7" />
+                    <Icon className="w-5 h-5 md:w-8 md:h-8" />
                   </div>
                   <span className={cn(
-                    "text-[7px] md:text-[10px] uppercase tracking-widest text-center italic hidden sm:block",
+                    "text-[8px] md:text-xs uppercase tracking-widest text-center italic hidden sm:block",
                     isActive ? "text-theme-primary opacity-100 font-black" : "opacity-40 group-hover:opacity-100 transition-opacity"
                   )}>
                     {step.label}
@@ -607,7 +607,7 @@ export function CedulaAppointmentClient({
         )}
 
         {/* Form container */}
-        <div className="bg-white dark:bg-[#0c1120] rounded-[2.5rem] border border-slate-200 dark:border-white/5 p-6 md:p-12 shadow-xl relative min-h-[400px] flex flex-col">
+        <div className="bg-white dark:bg-[#0c1120] rounded-[3rem] border border-slate-200 dark:border-white/5 p-8 md:p-14 lg:p-16 shadow-2xl relative min-h-[500px] flex flex-col">
           <div className="flex-1">
             <AnimatePresence mode="wait">
               <motion.div
@@ -618,29 +618,29 @@ export function CedulaAppointmentClient({
                 transition={{ duration: 0.4 }}
               >
                 {currentStep === "STATUS" && (
-                  <div className="space-y-8 text-center">
-                    <div className="space-y-2">
-                      <h2 className="text-3xl font-black italic uppercase tracking-tighter leading-none pt-2">
+                  <div className="space-y-10 text-center">
+                    <div className="space-y-3">
+                      <h2 className="text-3xl md:text-5xl font-black italic uppercase tracking-tighter leading-tight pt-2">
                         Choose Application <span className="text-theme-primary">Pathway</span>
                       </h2>
-                      <p className="text-slate-500 dark:text-slate-400 font-medium italic text-xs uppercase tracking-widest max-w-2xl mx-auto">
-                        Select your current community tax status to proceed.
+                      <p className="text-slate-500 dark:text-slate-400 font-medium italic text-xs md:text-sm uppercase tracking-widest max-w-2xl mx-auto">
+                        Select your current community tax status to proceed with your booking.
                       </p>
                     </div>
 
                     {((hasActiveIndividual && applicantType === "INDIVIDUAL") || (hasActiveJuridical && applicantType === "JURIDICAL")) && (
-                      <div className="p-6 rounded-[2rem] bg-amber-500/10 border border-amber-500/20 max-w-3xl mx-auto text-amber-600 dark:text-amber-400 flex items-start gap-4 text-left">
+                      <div className="p-6 rounded-[2rem] bg-amber-500/10 border border-amber-500/20 max-w-4xl mx-auto text-amber-600 dark:text-amber-400 flex items-start gap-4 text-left">
                         <ShieldAlert className="w-6 h-6 shrink-0 mt-0.5" />
                         <div>
                           <h4 className="text-sm font-black uppercase tracking-wider italic">Ongoing Cedula Request Detected</h4>
-                          <p className="text-[10px] font-bold uppercase tracking-wide opacity-80 mt-1">
+                          <p className="text-xs font-bold uppercase tracking-wide opacity-80 mt-1">
                             You currently have an active {applicantType.toLowerCase()} community tax certificate transaction that is not yet completed. Please wait for your existing request to be Released, Rejected, or Cancelled.
                           </p>
                         </div>
                       </div>
                     )}
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto w-full">
                       {[
                         {
                           id: "INDIVIDUAL",
@@ -672,42 +672,42 @@ export function CedulaAppointmentClient({
                               }
                             }}
                             className={cn(
-                              "p-6 rounded-[2rem] border-2 text-left relative group select-none overflow-hidden transition-all duration-350 min-h-[180px] flex flex-col justify-between cursor-pointer",
+                              "p-8 md:p-10 rounded-[2.5rem] border-2 text-left relative group select-none overflow-hidden transition-all duration-350 min-h-[260px] md:min-h-[290px] flex flex-col justify-between cursor-pointer shadow-lg hover:shadow-2xl",
                               hasActive && "opacity-50 cursor-not-allowed",
                               isSelected && !hasActive
-                                ? "border-theme-primary bg-theme-primary/[0.04] dark:bg-theme-primary/[0.08] shadow-lg scale-[1.01]"
-                                : "border-slate-200 dark:border-white/5 bg-white/40 dark:bg-white/5 backdrop-blur-sm hover:border-theme-primary/30"
+                                ? "border-theme-primary bg-theme-primary/[0.04] dark:bg-theme-primary/[0.08] shadow-2xl scale-[1.02] ring-2 ring-theme-primary/20"
+                                : "border-slate-200 dark:border-white/10 bg-white/60 dark:bg-white/5 backdrop-blur-md hover:border-theme-primary/40 hover:scale-[1.01]"
                             )}
                           >
                             <div className="flex items-center justify-between w-full">
                               <div className={cn(
-                                "w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300",
-                                isSelected ? "bg-theme-primary/20 text-theme-primary" : "bg-theme-primary/10 text-theme-primary"
+                                "w-14 h-14 md:w-16 md:h-16 rounded-2xl flex items-center justify-center transition-all duration-300 shadow-md",
+                                isSelected ? "bg-theme-primary text-white shadow-theme-primary/30" : "bg-theme-primary/10 text-theme-primary"
                               )}>
-                                <Icon className="w-4 h-4 stroke-[2.5]" />
+                                <Icon className="w-7 h-7 md:w-8 md:h-8 stroke-[2.5]" />
                               </div>
                               {hasActive && (
-                                <div className="px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-[8px] font-black uppercase tracking-wider animate-pulse">
+                                <div className="px-3.5 py-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-[10px] font-black uppercase tracking-wider animate-pulse">
                                   Ongoing Request
                                 </div>
                               )}
                               {isSelected && !hasActive && (
-                                <div className="w-5 h-5 rounded-full bg-theme-primary flex items-center justify-center shadow-md animate-in zoom-in-50">
-                                  <Check className="w-3 h-3 text-white stroke-[3]" />
+                                <div className="w-8 h-8 rounded-full bg-theme-primary flex items-center justify-center shadow-lg animate-in zoom-in-50">
+                                  <Check className="w-4 h-4 text-white stroke-[3]" />
                                 </div>
                               )}
                             </div>
 
-                            <div className="space-y-1.5 mt-4">
+                            <div className="space-y-2 mt-6">
                               <h4 className={cn(
-                                "text-base font-black uppercase italic tracking-wider leading-tight",
+                                "text-xl md:text-2xl font-black uppercase italic tracking-wider leading-tight",
                                 isSelected ? "text-slate-900 dark:text-white" : "text-slate-800 dark:text-slate-200"
                               )}>
                                 {opt.label.toUpperCase()}
                               </h4>
                               <p className={cn(
-                                "text-[9px] font-bold uppercase tracking-wider leading-relaxed",
-                                isSelected ? "text-slate-500 dark:text-slate-400" : "text-slate-400 dark:text-slate-500"
+                                "text-xs md:text-sm font-semibold uppercase tracking-wider leading-relaxed",
+                                isSelected ? "text-slate-600 dark:text-slate-300" : "text-slate-400 dark:text-slate-400"
                               )}>
                                 {opt.desc.toUpperCase()}
                               </p>
@@ -722,20 +722,20 @@ export function CedulaAppointmentClient({
                 {currentStep === "TAX_DECLARATION" && (
                   <div className="space-y-8 animate-in fade-in duration-300">
                     <div className="space-y-2">
-                      <h2 className="text-2xl font-black italic uppercase tracking-tighter leading-tight">
+                      <h2 className="text-2xl md:text-3xl font-black italic uppercase tracking-tighter leading-tight">
                         Tax <span className="text-theme-primary">Declaration</span>
                       </h2>
-                      <p className="text-slate-500 font-medium italic text-xs">
+                      <p className="text-slate-500 font-medium italic text-xs md:text-sm">
                         Declare your annual financial status for the tax computation.
                       </p>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10">
                       {/* Left Column: Inputs */}
                       <div className="space-y-6">
                         {applicantType === "JURIDICAL" && (
                           <div className="space-y-2">
-                            <Label className="text-[9px] font-black uppercase tracking-widest text-slate-400 italic ml-1">
+                            <Label className="text-xs font-black uppercase tracking-widest text-slate-400 italic ml-1">
                               Business Name
                             </Label>
                             <Input
@@ -749,7 +749,7 @@ export function CedulaAppointmentClient({
                               }}
                               placeholder="Enter registered business name"
                               className={cn(
-                                "h-12 px-4 rounded-xl dark:bg-white/5 text-sm font-bold bg-white transition-all",
+                                "h-14 md:h-16 px-5 rounded-2xl dark:bg-white/5 text-base md:text-lg font-bold bg-white transition-all shadow-sm",
                                 businessNameError
                                   ? "border-red-500 ring-2 ring-red-500/20"
                                   : "border-slate-200 dark:border-white/5"
@@ -760,11 +760,11 @@ export function CedulaAppointmentClient({
                         )}
 
                         <div className="space-y-2">
-                          <Label className="text-[9px] font-black uppercase tracking-widest text-slate-400 italic ml-1">
+                          <Label className="text-xs font-black uppercase tracking-widest text-slate-400 italic ml-1">
                             Annual Gross Income
                           </Label>
                           <div className="relative">
-                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-black text-slate-350 italic">₱</span>
+                            <span className="absolute left-5 top-1/2 -translate-y-1/2 text-2xl font-black text-slate-400 italic">₱</span>
                             <Input
                               ref={incomeInputRef}
                               type="text"
@@ -775,15 +775,17 @@ export function CedulaAppointmentClient({
                                   setFormState(p => ({ ...p, income: '' }));
                                   return;
                                 }
-                                const parts = val.split('.');
-                                parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-                                const formatted = parts.length > 1 ? `${parts[0]}.${parts[1].slice(0, 2)}` : parts[0];
-                                setFormState(p => ({ ...p, income: formatted }));
+                                parts_fn: {
+                                  const parts = val.split('.');
+                                  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                                  const formatted = parts.length > 1 ? `${parts[0]}.${parts[1].slice(0, 2)}` : parts[0];
+                                  setFormState(p => ({ ...p, income: formatted }));
+                                }
                                 if (incomeError) setIncomeError(false);
                               }}
                               placeholder="0.00"
                               className={cn(
-                                "h-12 pl-10 rounded-xl dark:bg-white/5 text-lg font-black italic bg-white transition-all",
+                                "h-14 md:h-16 pl-12 pr-6 rounded-2xl dark:bg-white/5 text-xl md:text-2xl font-black italic bg-white transition-all shadow-sm",
                                 incomeError
                                   ? "border-red-500 ring-2 ring-red-500/20"
                                   : "border-slate-200 dark:border-white/5"
@@ -792,11 +794,11 @@ export function CedulaAppointmentClient({
                           </div>
                         </div>
 
-                        <div className="space-y-4">
-                          <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 italic ml-1">
+                        <div className="space-y-3">
+                          <Label className="text-xs font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 italic ml-1">
                             Income Source Category
                           </Label>
-                          <div className="flex flex-col gap-2">
+                          <div className="flex flex-col gap-3">
                             {[
                               {
                                 id: "PROFESSION",
@@ -826,21 +828,29 @@ export function CedulaAppointmentClient({
                                   type="button"
                                   onClick={() => setFormState(p => ({ ...p, incomeSource: opt.id }))}
                                   className={cn(
-                                    "px-5 py-4 rounded-xl border-2 transition-all duration-305 text-left relative overflow-hidden flex items-center justify-between gap-4 group select-none shadow-sm cursor-pointer",
+                                    "px-6 py-4 md:py-5 rounded-2xl border-2 transition-all duration-300 text-left relative overflow-hidden flex items-center justify-between gap-4 group select-none shadow-sm cursor-pointer min-h-[72px]",
                                     isSelected
-                                      ? "border-theme-primary bg-theme-primary/[0.05] dark:bg-theme-primary/[0.1] shadow-sm scale-[1.005]"
-                                      : "border-slate-200 dark:border-white/5 bg-white/40 dark:bg-white/5 backdrop-blur-sm hover:border-theme-primary/30"
+                                      ? "border-theme-primary bg-theme-primary/[0.06] dark:bg-theme-primary/[0.12] shadow-md scale-[1.01]"
+                                      : "border-slate-200 dark:border-white/5 bg-white/50 dark:bg-white/5 backdrop-blur-sm hover:border-theme-primary/30 hover:bg-slate-50 dark:hover:bg-white/10"
                                   )}
                                 >
-                                  <h4 className={cn(
-                                    "text-sm font-black uppercase italic tracking-wider whitespace-nowrap",
-                                    isSelected ? "text-theme-primary" : "text-slate-800 dark:text-slate-200"
-                                  )}>
-                                    {opt.label}
-                                  </h4>
+                                  <div className="flex items-center gap-3">
+                                    <div className={cn(
+                                      "w-3.5 h-3.5 rounded-full border-2 transition-all flex items-center justify-center",
+                                      isSelected ? "border-theme-primary bg-theme-primary" : "border-slate-300 dark:border-white/20"
+                                    )}>
+                                      {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                                    </div>
+                                    <h4 className={cn(
+                                      "text-base md:text-lg font-black uppercase italic tracking-wider whitespace-nowrap",
+                                      isSelected ? "text-theme-primary" : "text-slate-800 dark:text-slate-200"
+                                    )}>
+                                      {opt.label}
+                                    </h4>
+                                  </div>
                                   <p className={cn(
-                                    "text-[10px] font-bold uppercase tracking-tighter text-right",
-                                    isSelected ? "text-theme-primary/70" : "text-slate-500 dark:text-slate-400"
+                                    "text-xs md:text-sm font-bold uppercase tracking-tight text-right",
+                                    isSelected ? "text-theme-primary/80" : "text-slate-500 dark:text-slate-400"
                                   )}>
                                     {opt.desc}
                                   </p>
@@ -852,32 +862,35 @@ export function CedulaAppointmentClient({
                       </div>
 
                       {/* Right Column: Calculation Overlay */}
-                      <div className="bg-slate-900 dark:bg-slate-950 border border-slate-800 dark:border-white/5 rounded-3xl p-6 md:p-10 text-white space-y-6 shadow-2xl relative overflow-hidden flex flex-col justify-between">
-                        <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
-                          <Calculator className="w-24 h-24 rotate-12" />
+                      <div className="bg-slate-900 dark:bg-slate-950 border border-slate-800 dark:border-white/5 rounded-[2.5rem] p-8 md:p-12 text-white space-y-8 shadow-2xl relative overflow-hidden flex flex-col justify-between min-h-[380px]">
+                        <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none">
+                          <Calculator className="w-32 h-32 rotate-12" />
                         </div>
 
-                        <div className="space-y-4 relative z-10 font-bold">
-                          <div className="flex justify-between items-center text-[10px] uppercase tracking-widest italic opacity-70">
+                        <div className="space-y-5 relative z-10 font-bold">
+                          <div className="pb-3 border-b border-white/10">
+                            <span className="text-xs font-black uppercase tracking-widest text-slate-400 italic">Breakdown of Tax computation</span>
+                          </div>
+                          <div className="flex justify-between items-center text-sm md:text-base uppercase tracking-widest italic opacity-80">
                             <span>Basic Tax</span>
-                            <span>₱{(calcResult?.basicTax ?? (applicantType === "INDIVIDUAL" ? 5.00 : 500.00)).toFixed(2)}</span>
+                            <span className="font-mono font-black">₱{(calcResult?.basicTax ?? (applicantType === "INDIVIDUAL" ? 5.00 : 500.00)).toFixed(2)}</span>
                           </div>
-                          <div className="flex justify-between items-center text-[10px] uppercase tracking-widest italic opacity-70">
+                          <div className="flex justify-between items-center text-sm md:text-base uppercase tracking-widest italic opacity-80">
                             <span>Additional Tax</span>
-                            <span>₱{(calcResult?.additionalTax ?? 0).toFixed(2)}</span>
+                            <span className="font-mono font-black">₱{(calcResult?.additionalTax ?? 0).toFixed(2)}</span>
                           </div>
-                          <div className="flex justify-between items-center text-[10px] uppercase tracking-widest italic text-amber-500">
+                          <div className="flex justify-between items-center text-sm md:text-base uppercase tracking-widest italic text-amber-400">
                             <span>
                               Penalty ({Math.round(getCedulaPenaltyRate(cedulaSettings) * 100)}%)
                             </span>
-                            <span>₱{(calcResult?.penalty ?? 0).toFixed(2)}</span>
+                            <span className="font-mono font-black">₱{(calcResult?.penalty ?? 0).toFixed(2)}</span>
                           </div>
                         </div>
 
-                        <div className="relative z-10 pt-6 border-t border-white/10 flex justify-between items-end">
+                        <div className="relative z-10 pt-6 border-t border-white/15 flex justify-between items-end">
                           <div>
-                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 italic block mb-1">Estimated CTC Due</span>
-                            <span className="text-3xl font-black italic tracking-tighter text-theme-primary font-mono">
+                            <span className="text-xs font-black uppercase tracking-widest text-slate-400 italic block mb-1.5">Estimated CTC Due</span>
+                            <span className="text-4xl md:text-5xl font-black italic tracking-tighter text-theme-primary font-mono">
                               ₱{(calcResult?.totalAmount ?? 0).toFixed(2)}
                             </span>
                           </div>
@@ -952,27 +965,27 @@ export function CedulaAppointmentClient({
                         </p>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* ID File Card */}
                         <div className={cn(
-                          "bg-slate-50 dark:bg-white/[0.02] border rounded-2xl p-6 flex flex-col justify-between items-center text-center transition-all min-h-[180px]",
-                          existingIdUrl ? "border-emerald-500/30" : "border-slate-150 dark:border-white/5"
+                          "bg-slate-50 dark:bg-white/[0.02] border-2 rounded-3xl p-6 md:p-8 flex flex-col justify-between items-center text-center transition-all min-h-[260px] md:min-h-[290px] shadow-sm",
+                          existingIdUrl ? "border-emerald-500/30" : "border-slate-200 dark:border-white/5 hover:border-theme-primary/30"
                         )}>
                           {existingIdUrl ? (
-                            <div className="flex flex-col items-center justify-between h-full w-full space-y-2">
-                              <div className="space-y-0.5">
-                                <span className="block text-[9px] font-black text-emerald-600 uppercase tracking-widest">Valid ID Attached</span>
-                                <p className="text-slate-500 text-[8px] font-bold truncate max-w-[150px]">{idFileName || "Government-issued ID"}</p>
+                            <div className="flex flex-col items-center justify-between h-full w-full space-y-3">
+                              <div className="space-y-1">
+                                <span className="block text-xs font-black text-emerald-600 uppercase tracking-widest">Valid ID Attached</span>
+                                <p className="text-slate-500 text-xs font-bold truncate max-w-[200px]">{idFileName || "Government-issued ID"}</p>
                               </div>
 
                               <div
                                 onClick={() => handleViewFile(null, existingIdUrl, "Valid ID Card")}
-                                className="relative rounded-2xl overflow-hidden border border-slate-100 dark:border-white/5 bg-slate-100 dark:bg-black/30 h-24 w-full flex items-center justify-center group/preview cursor-pointer"
+                                className="relative rounded-2xl overflow-hidden border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-black/30 h-32 md:h-36 w-full flex items-center justify-center group/preview cursor-pointer shadow-inner"
                               >
                                 {existingIdUrl.toLowerCase().endsWith(".pdf") ? (
-                                  <div className="flex flex-col items-center justify-center gap-1 text-slate-500">
-                                    <FileText className="w-8 h-8 text-rose-500" />
-                                    <span className="text-[8px] font-black uppercase tracking-wider">{idFileName || "PDF Document"}</span>
+                                  <div className="flex flex-col items-center justify-center gap-1.5 text-slate-500">
+                                    <FileText className="w-10 h-10 text-rose-500" />
+                                    <span className="text-[10px] font-black uppercase tracking-wider">{idFileName || "PDF Document"}</span>
                                   </div>
                                 ) : (
                                   <>
@@ -983,24 +996,24 @@ export function CedulaAppointmentClient({
                                       className="object-cover w-full h-full group-hover/preview:scale-105 transition-all"
                                     />
                                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/preview:opacity-100 transition-opacity flex items-center justify-center">
-                                      <span className="text-[9px] text-white font-black uppercase tracking-widest">🔍 VIEW FULL SIZE</span>
+                                      <span className="text-xs text-white font-black uppercase tracking-widest">🔍 VIEW FULL SIZE</span>
                                     </div>
                                   </>
                                 )}
                               </div>
 
-                              <div className="flex items-center gap-2 pt-1 w-full">
+                              <div className="flex items-center gap-3 pt-2 w-full">
                                 <button
                                   type="button"
                                   onClick={() => handleViewFile(null, existingIdUrl, "Valid ID Card")}
-                                  className="px-3 py-1.5 rounded-full bg-slate-200 dark:bg-white/10 hover:bg-slate-300 text-slate-800 dark:text-white font-black text-[8px] uppercase tracking-wider transition-all flex-1"
+                                  className="px-4 py-2.5 rounded-xl bg-slate-200 dark:bg-white/10 hover:bg-slate-300 text-slate-800 dark:text-white font-black text-[10px] md:text-xs uppercase tracking-wider transition-all flex-1 cursor-pointer"
                                 >
                                   View Document
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => startHandoff("idFile")}
-                                  className="px-3 py-1.5 rounded-full bg-theme-primary text-white font-black text-[8px] uppercase tracking-wider transition-all flex-1"
+                                  className="px-4 py-2.5 rounded-xl bg-theme-primary text-white font-black text-[10px] md:text-xs uppercase tracking-wider transition-all flex-1 cursor-pointer"
                                   style={{ backgroundColor: themeColor }}
                                 >
                                   Change
@@ -1008,18 +1021,20 @@ export function CedulaAppointmentClient({
                               </div>
                             </div>
                           ) : (
-                            <div className="flex flex-col items-center justify-between h-full w-full space-y-3">
-                              <div className="space-y-1">
-                                <ShieldAlert className="text-slate-400 mx-auto w-8 h-8" />
-                                <h5 className="font-black text-slate-800 dark:text-slate-200 text-[10px] uppercase tracking-wider">Valid ID Card</h5>
-                                <p className="text-slate-400 text-[8px] leading-relaxed max-w-[200px] mx-auto">
+                            <div className="flex flex-col items-center justify-between h-full w-full space-y-4 my-auto">
+                              <div className="space-y-2">
+                                <div className="w-16 h-16 rounded-2xl bg-slate-200/50 dark:bg-white/5 flex items-center justify-center mx-auto">
+                                  <ShieldAlert className="text-slate-400 w-8 h-8" />
+                                </div>
+                                <h5 className="font-black text-slate-800 dark:text-slate-200 text-sm md:text-base uppercase tracking-wider">Valid ID Card</h5>
+                                <p className="text-slate-400 text-xs leading-relaxed max-w-[240px] mx-auto font-medium">
                                   Optional: Government-issued Identification.
                                 </p>
                               </div>
                               <button
                                 type="button"
                                 onClick={() => startHandoff("idFile")}
-                                className="px-4 py-2 rounded-lg bg-slate-200 dark:bg-white/10 text-slate-800 dark:text-white hover:bg-slate-300 font-black uppercase tracking-widest text-[8px] transition-all"
+                                className="px-6 py-3 rounded-xl bg-slate-200 dark:bg-white/10 text-slate-800 dark:text-white hover:bg-theme-primary hover:text-white font-black uppercase tracking-widest text-[10px] md:text-xs transition-all shadow-sm cursor-pointer"
                               >
                                 Upload via QR
                               </button>
@@ -1029,24 +1044,24 @@ export function CedulaAppointmentClient({
 
                         {/* Proof of Income Card */}
                         <div className={cn(
-                          "bg-slate-50 dark:bg-white/[0.02] border rounded-2xl p-6 flex flex-col justify-between items-center text-center transition-all min-h-[180px]",
-                          existingProofUrl ? "border-emerald-500/30" : "border-slate-150 dark:border-white/5"
+                          "bg-slate-50 dark:bg-white/[0.02] border-2 rounded-3xl p-6 md:p-8 flex flex-col justify-between items-center text-center transition-all min-h-[260px] md:min-h-[290px] shadow-sm",
+                          existingProofUrl ? "border-emerald-500/30" : "border-slate-200 dark:border-white/5 hover:border-theme-primary/30"
                         )}>
                           {existingProofUrl ? (
-                            <div className="flex flex-col items-center justify-between h-full w-full space-y-2">
-                              <div className="space-y-0.5">
-                                <span className="block text-[9px] font-black text-emerald-600 uppercase tracking-widest">Proof Attached</span>
-                                <p className="text-slate-500 text-[8px] font-bold truncate max-w-[150px]">{proofFileName || "Income Statement"}</p>
+                            <div className="flex flex-col items-center justify-between h-full w-full space-y-3">
+                              <div className="space-y-1">
+                                <span className="block text-xs font-black text-emerald-600 uppercase tracking-widest">Proof Attached</span>
+                                <p className="text-slate-500 text-xs font-bold truncate max-w-[200px]">{proofFileName || "Income Statement"}</p>
                               </div>
 
                               <div
                                 onClick={() => handleViewFile(null, existingProofUrl, "Proof of Income")}
-                                className="relative rounded-2xl overflow-hidden border border-slate-100 dark:border-white/5 bg-slate-100 dark:bg-black/30 h-24 w-full flex items-center justify-center group/preview cursor-pointer"
+                                className="relative rounded-2xl overflow-hidden border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-black/30 h-32 md:h-36 w-full flex items-center justify-center group/preview cursor-pointer shadow-inner"
                               >
                                 {existingProofUrl.toLowerCase().endsWith(".pdf") ? (
-                                  <div className="flex flex-col items-center justify-center gap-1 text-slate-500">
-                                    <FileText className="w-8 h-8 text-rose-500" />
-                                    <span className="text-[8px] font-black uppercase tracking-wider">{proofFileName || "PDF Document"}</span>
+                                  <div className="flex flex-col items-center justify-center gap-1.5 text-slate-500">
+                                    <FileText className="w-10 h-10 text-rose-500" />
+                                    <span className="text-[10px] font-black uppercase tracking-wider">{proofFileName || "PDF Document"}</span>
                                   </div>
                                 ) : (
                                   <>
@@ -1057,24 +1072,24 @@ export function CedulaAppointmentClient({
                                       className="object-cover w-full h-full group-hover/preview:scale-105 transition-all"
                                     />
                                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/preview:opacity-100 transition-opacity flex items-center justify-center">
-                                      <span className="text-[9px] text-white font-black uppercase tracking-widest">🔍 VIEW FULL SIZE</span>
+                                      <span className="text-xs text-white font-black uppercase tracking-widest">🔍 VIEW FULL SIZE</span>
                                     </div>
                                   </>
                                 )}
                               </div>
 
-                              <div className="flex items-center gap-2 pt-1 w-full">
+                              <div className="flex items-center gap-3 pt-2 w-full">
                                 <button
                                   type="button"
                                   onClick={() => handleViewFile(null, existingProofUrl, "Proof of Income")}
-                                  className="px-3 py-1.5 rounded-full bg-slate-200 dark:bg-white/10 hover:bg-slate-300 text-slate-800 dark:text-white font-black text-[8px] uppercase tracking-wider transition-all flex-1"
+                                  className="px-4 py-2.5 rounded-xl bg-slate-200 dark:bg-white/10 hover:bg-slate-300 text-slate-800 dark:text-white font-black text-[10px] md:text-xs uppercase tracking-wider transition-all flex-1 cursor-pointer"
                                 >
                                   View Document
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => startHandoff("proofFile")}
-                                  className="px-3 py-1.5 rounded-full bg-theme-primary text-white font-black text-[8px] uppercase tracking-wider transition-all flex-1"
+                                  className="px-4 py-2.5 rounded-xl bg-theme-primary text-white font-black text-[10px] md:text-xs uppercase tracking-wider transition-all flex-1 cursor-pointer"
                                   style={{ backgroundColor: themeColor }}
                                 >
                                   Change
@@ -1082,18 +1097,20 @@ export function CedulaAppointmentClient({
                               </div>
                             </div>
                           ) : (
-                            <div className="flex flex-col items-center justify-between h-full w-full space-y-3">
-                              <div className="space-y-1">
-                                <FileText className="text-slate-400 mx-auto w-8 h-8" />
-                                <h5 className="font-black text-slate-800 dark:text-slate-200 text-[10px] uppercase tracking-wider">Proof of Income</h5>
-                                <p className="text-slate-400 text-[8px] leading-relaxed max-w-[200px] mx-auto">
+                            <div className="flex flex-col items-center justify-between h-full w-full space-y-4 my-auto">
+                              <div className="space-y-2">
+                                <div className="w-16 h-16 rounded-2xl bg-slate-200/50 dark:bg-white/5 flex items-center justify-center mx-auto">
+                                  <FileText className="text-slate-400 w-8 h-8" />
+                                </div>
+                                <h5 className="font-black text-slate-800 dark:text-slate-200 text-sm md:text-base uppercase tracking-wider">Proof of Income</h5>
+                                <p className="text-slate-400 text-xs leading-relaxed max-w-[240px] mx-auto font-medium">
                                   Optional: Payslips, ITR, or Barangay Certificate of Low Income.
                                 </p>
                               </div>
                               <button
                                 type="button"
                                 onClick={() => startHandoff("proofFile")}
-                                className="px-4 py-2 rounded-lg bg-slate-200 dark:bg-white/10 text-slate-800 dark:text-white hover:bg-slate-300 font-black uppercase tracking-widest text-[8px] transition-all"
+                                className="px-6 py-3 rounded-xl bg-slate-200 dark:bg-white/10 text-slate-800 dark:text-white hover:bg-theme-primary hover:text-white font-black uppercase tracking-widest text-[10px] md:text-xs transition-all shadow-sm cursor-pointer"
                               >
                                 Upload via QR
                               </button>
