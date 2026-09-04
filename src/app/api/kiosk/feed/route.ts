@@ -73,7 +73,7 @@ export async function GET() {
       prisma.official.findMany({
         where: { isActive: true },
         orderBy: { order: "asc" },
-        take: 8,
+        take: 16,
         select: {
           id: true,
           name: true,
@@ -88,7 +88,7 @@ export async function GET() {
       prisma.project.findMany({
         where: { isPublished: true },
         orderBy: { updatedAt: "desc" },
-        take: 6,
+        take: 8,
         select: {
           id: true,
           title: true,
