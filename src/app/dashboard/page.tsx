@@ -585,28 +585,8 @@ function DashboardContent() {
       {/* MAIN VIEWPORT WRAPPER */}
       <div className="flex-1 flex flex-col relative min-w-0 h-full overflow-hidden transition-colors duration-300 ease-out">
 
-        {/* TOPBAR HEADER - ULTRA MODERN FROSTED CIVIC BANNER (UN-CROWDED & ADAPTIVE) */}
-        <header className="min-h-[4.5rem] md:min-h-[5.5rem] py-3 px-4 sm:px-6 lg:px-8 bg-white/90 dark:bg-[#0b1020]/90 backdrop-blur-2xl border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shadow-sm z-20 shrink-0 transition-colors duration-300 ease-out gap-4">
-          {/* LEFT: CIVIC BRANDING & TITLE */}
-          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-            <div className="hidden sm:block shrink-0">
-              <div className="w-1.5 h-10 md:h-12 bg-gradient-to-b from-theme-primary to-theme-secondary rounded-full shadow-sm shadow-theme-primary/30"></div>
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 mb-0.5">
-                <Badge className="bg-theme-primary border-none text-white font-black text-[8px] tracking-widest uppercase py-0.5 px-2 shadow-sm shadow-theme-primary/20 shrink-0">
-                  {TRANSLATIONS[lang].verifiedSession}
-                </Badge>
-                <div className="flex items-center gap-1 text-slate-400 dark:text-slate-500 text-[8px] sm:text-[9px] font-black uppercase tracking-widest shrink-0">
-                  <Clock size={11} className="text-theme-secondary" />
-                  <span>Kiosk Map-01</span>
-                </div>
-              </div>
-              <h1 className="text-base sm:text-xl md:text-2xl font-black text-slate-900 dark:text-white tracking-tight uppercase truncate transition-colors duration-300 ease-out leading-tight">
-                {type === "municipal" ? TRANSLATIONS[lang].municipalCenter : TRANSLATIONS[lang].barangayCenter}
-              </h1>
-            </div>
-          </div>
+        {/* TOPBAR HEADER - ULTRA MODERN FROSTED CIVIC BANNER (CLEAN & MINIMAL) */}
+        <header className="min-h-[4rem] md:min-h-[4.75rem] py-2 px-4 sm:px-6 lg:px-8 bg-white/90 dark:bg-[#0b1020]/90 backdrop-blur-2xl border-b border-slate-200/80 dark:border-white/10 flex items-center justify-end shadow-sm z-20 shrink-0 transition-colors duration-300 ease-out gap-4">
 
           {/* RIGHT: COMPACT CONTROLS CLUSTER */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
@@ -935,44 +915,31 @@ function DashboardContent() {
           </div>
         </main>
 
-        {/* FOOTER BAR - SEGMENTED LANGUAGE TOGGLES & STATUS LIGHT (SENIOR ACCESSIBLE) */}
+        {/* FOOTER BAR - SEGMENTED LANGUAGE TOGGLES (UN-CROWDED) */}
         <footer className="h-16 md:h-20 bg-white/95 dark:bg-[#0b1020]/95 backdrop-blur-2xl border-t border-slate-200/80 dark:border-white/10 px-4 sm:px-8 md:px-12 flex items-center justify-between z-20 shrink-0 transition-colors duration-300 ease-out">
-          <div className="flex items-center gap-4 md:gap-8 h-full">
-            {/* LARGE SYSTEM ONLINE BADGE */}
-            <div className="flex items-center gap-3 text-theme-primary bg-emerald-500/10 dark:bg-emerald-500/15 border border-theme-primary/20 px-3.5 py-2 md:px-4 md:py-2.5 rounded-2xl shadow-sm">
-              <span className="relative flex h-3.5 w-3.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-theme-primary"></span>
-              </span>
-              <span className="text-xs md:text-sm font-black uppercase tracking-wider">
-                {TRANSLATIONS[lang].systemOnline}
-              </span>
-            </div>
-
-            {/* LARGE ACCESSIBLE SEGMENTED LANGUAGE SWITCHER */}
-            <div className="flex items-center bg-slate-100 dark:bg-slate-900/80 p-1.5 rounded-2xl border border-slate-200 dark:border-white/10 shadow-inner gap-1">
-              {[
-                { id: "en", label: "English" },
-                { id: "fil", label: "Filipino" },
-                { id: "pang", label: "Pangasinan" },
-                { id: "ilo", label: "Ilocano" }
-              ].map(({ id, label }) => {
-                const isSelected = lang === id;
-                return (
-                  <button
-                    key={id}
-                    onClick={() => setLang(id as "en" | "fil" | "pang" | "ilo")}
-                    className={`font-black uppercase tracking-wider px-3.5 sm:px-5 py-2 md:py-2.5 text-xs sm:text-sm rounded-xl transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer select-none ${
-                      isSelected
-                        ? "bg-theme-primary text-white shadow-md shadow-theme-primary/30 scale-105 font-black ring-2 ring-theme-primary/40"
-                        : "text-slate-600 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white hover:bg-white/60 dark:hover:bg-white/5"
-                    }`}
-                  >
-                    <span>{label}</span>
-                  </button>
-                );
-              })}
-            </div>
+          {/* ACCESSIBLE SEGMENTED LANGUAGE SWITCHER */}
+          <div className="flex items-center bg-slate-100 dark:bg-slate-900/80 p-1.5 rounded-2xl border border-slate-200 dark:border-white/10 shadow-inner gap-1">
+            {[
+              { id: "en", label: "English" },
+              { id: "fil", label: "Filipino" },
+              { id: "pang", label: "Pangasinan" },
+              { id: "ilo", label: "Ilocano" }
+            ].map(({ id, label }) => {
+              const isSelected = lang === id;
+              return (
+                <button
+                  key={id}
+                  onClick={() => setLang(id as "en" | "fil" | "pang" | "ilo")}
+                  className={`font-black uppercase tracking-wider px-4 sm:px-6 py-2 md:py-2.5 text-xs sm:text-sm rounded-xl transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer select-none ${
+                    isSelected
+                      ? "bg-theme-primary text-white shadow-md shadow-theme-primary/30 scale-105 font-black ring-2 ring-theme-primary/40"
+                      : "text-slate-600 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white hover:bg-white/60 dark:hover:bg-white/5"
+                  }`}
+                >
+                  <span>{label}</span>
+                </button>
+              );
+            })}
           </div>
 
           <div className="text-[11px] md:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest hidden lg:block">
