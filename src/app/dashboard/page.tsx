@@ -566,19 +566,29 @@ function DashboardContent() {
           ))}
         </nav>
 
-        {/* EXIT BUTTON */}
-        <div className="md:mt-auto md:px-2 md:w-full md:pt-6 md:border-t md:border-slate-200/80 md:dark:border-white/10 shrink-0">
+        {/* EXIT BUTTON & SIDEBAR FOOTER */}
+        <div className="md:mt-auto md:px-2 md:w-full md:pt-4 md:border-t md:border-slate-200/80 md:dark:border-white/10 shrink-0 flex flex-col items-center">
           <button
             onClick={() => {
               sessionStorage.removeItem("active_resident");
               router.push("/");
             }}
-            className="flex flex-col items-center justify-center p-2.5 md:py-4 md:px-2 text-red-500 dark:text-red-400 hover:bg-red-500/10 rounded-2xl transition-all active:scale-95 group md:w-full"
+            className="flex flex-col items-center justify-center p-2.5 md:py-3 md:px-2 text-red-500 dark:text-red-400 hover:bg-red-500/10 rounded-2xl transition-all active:scale-95 group md:w-full cursor-pointer"
             title="Exit Session"
           >
             <LogOut className="w-5 h-5 md:w-6 md:h-6 mb-0.5 md:mb-1 transition-transform group-hover:translate-x-[-2px]" />
             <span className="text-[8px] md:text-[9px] font-black uppercase tracking-widest">{TRANSLATIONS[lang].exit}</span>
           </button>
+
+          {/* SIDEBAR CIVIC FOOTER */}
+          <div className="hidden md:flex flex-col items-center text-center mt-3 pt-3 border-t border-slate-200/60 dark:border-white/5 w-full">
+            <span className="text-[7px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-tight">
+              Municipality of Mapandan
+            </span>
+            <span className="text-[7px] font-bold text-slate-400/80 dark:text-slate-500/80 tracking-wider mt-0.5">
+              © 2026
+            </span>
+          </div>
         </div>
       </aside>
 
@@ -915,8 +925,8 @@ function DashboardContent() {
           </div>
         </main>
 
-        {/* FOOTER BAR - RESPONSIVE SEGMENTED LANGUAGE TOGGLES (FLUID & ADAPTIVE) */}
-        <footer className="min-h-[3.5rem] md:min-h-[4.25rem] py-2 bg-white/95 dark:bg-[#0b1020]/95 backdrop-blur-2xl border-t border-slate-200/80 dark:border-white/10 px-3 sm:px-6 md:px-10 flex items-center justify-between z-20 shrink-0 transition-colors duration-300 ease-out gap-3">
+        {/* FOOTER BAR - RESPONSIVE SEGMENTED LANGUAGE TOGGLES (CLEAN & CENTERED) */}
+        <footer className="min-h-[3.5rem] md:min-h-[4.25rem] py-2 bg-white/95 dark:bg-[#0b1020]/95 backdrop-blur-2xl border-t border-slate-200/80 dark:border-white/10 px-3 sm:px-6 md:px-10 flex items-center justify-start z-20 shrink-0 transition-colors duration-300 ease-out">
           {/* ACCESSIBLE ADAPTIVE LANGUAGE SWITCHER */}
           <div className="flex items-center bg-slate-100/90 dark:bg-slate-900/80 p-1 sm:p-1.5 rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-inner gap-1 max-w-full overflow-x-auto no-scrollbar">
             {[
@@ -940,10 +950,6 @@ function DashboardContent() {
                 </button>
               );
             })}
-          </div>
-
-          <div className="text-[9px] sm:text-[10px] md:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest hidden md:block shrink-0">
-            Municipality of Mapandan • © 2026
           </div>
         </footer>
 
