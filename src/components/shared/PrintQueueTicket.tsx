@@ -158,29 +158,19 @@ export default function PrintQueueTicket({
               font-size: 6.5px;
               letter-spacing: 0.5px;
             }
-            .portal-badge {
-              font-size: 7.5px;
-              text-transform: uppercase;
-              letter-spacing: 0.5px;
-              margin-top: 3px;
-              border: 1px solid #000;
-              padding: 1px 4px;
-              border-radius: 3px;
-              display: inline-block;
-            }
             .dotted-sep {
               border-top: 1.5px dotted #000;
-              margin: 6px 0;
+              margin: 4px 0;
             }
             .queue-box {
               border: 1.5px dashed #000;
-              padding: 8px 4px;
+              padding: 6px 4px;
               border-radius: 6px;
               background: #fcfcfc;
               margin-top: 2px;
             }
             .queue-num {
-              font-size: 20px;
+              font-size: 22px;
               font-weight: 900;
               letter-spacing: 0.5px;
               display: block;
@@ -199,37 +189,19 @@ export default function PrintQueueTicket({
               border-bottom: 1px dotted #000;
               padding-bottom: 2px;
             }
-            .instructions {
-              font-size: 8px;
-              line-height: 1.3;
-              background: #fafafa;
-              padding: 6px;
-              border: 1px solid #000;
-              border-radius: 6px;
-              margin-bottom: 6px;
-            }
             .qr-img {
-              width: 85px;
-              height: 85px;
+              width: 80px;
+              height: 80px;
               border: 1px solid #000;
               padding: 3px;
               border-radius: 3px;
-            }
-            .footer-slogan {
-              font-size: 7px;
-              letter-spacing: 0.5px;
-              text-transform: uppercase;
-              margin-top: 4px;
             }
           </style>
         </head>
         <body>
           <div class="ticket-card">
             ${branding?.logo ? `<img src="${branding.logo}" class="header-logo" alt="Seal" />` : ""}
-            <div class="country-title">Republic of the Philippines</div>
             <div class="muni-title">Municipality of Mapandan</div>
-            <div class="prov-title">Province of Pangasinan</div>
-            <div class="portal-badge">EMapandan Queue Portal</div>
 
             <div class="dotted-sep"></div>
 
@@ -251,22 +223,10 @@ export default function PrintQueueTicket({
 
             <div class="dotted-sep"></div>
 
-            <div class="instructions">
-              <p>Please wait for your number to be called.</p>
-              <p style="font-style: italic; font-size: 7.5px;">(Mangyaring hintayin na tawagin ang inyong numero.)</p>
-              <p style="margin-top: 2px;">Please have your physical documents ready.</p>
-              <p style="font-style: italic; font-size: 7.5px;">(Ihanda ang mga kinakailangang dokumento.)</p>
-            </div>
-
-            <div style="display: flex; flex-direction: column; align-items: center; gap: 3px;">
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 3px; margin-top: 2px;">
               <img src="${qrDataUrl}" class="qr-img" alt="QR" />
               <span style="font-size: 6.5px; text-transform: uppercase; letter-spacing: 0.5px;">Scan QR Code at Counter</span>
             </div>
-
-            <div class="dotted-sep"></div>
-
-            <div class="footer-slogan">Serbisyong Tapat at Totoo</div>
-            <div style="font-size: 6px; margin-top: 1px;">Mapandan, Pangasinan</div>
           </div>
         </body>
       </html>

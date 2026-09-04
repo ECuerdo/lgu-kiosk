@@ -232,11 +232,11 @@ export default function KioskAppointmentDetailsPage() {
   const appointmentSlot = "Standard Office Hours";
 
   return (
-    <div className="flex min-h-screen w-full flex-col bg-slate-50 dark:bg-[#050816] transition-colors duration-300 font-sans select-none">
+    <div className="flex h-screen w-full flex-col bg-slate-50 dark:bg-[#050816] transition-colors duration-300 font-sans select-none overflow-y-auto overscroll-contain scroll-smooth">
       <SecureIdleTimer />
       <ServiceHeader />
 
-      <main className="flex-1 max-w-4xl mx-auto px-6 py-10 w-full space-y-8 relative">
+      <main className="flex-1 max-w-4xl mx-auto px-6 py-10 pb-24 w-full space-y-8 relative">
         <div className="flex items-center justify-between">
           <button
             onClick={() => router.push("/dashboard/appointment")}

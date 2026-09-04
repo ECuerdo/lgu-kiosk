@@ -114,11 +114,11 @@ export default function KioskAppointmentsPage() {
   });
 
   return (
-    <div className="flex min-h-screen w-full flex-col bg-slate-50 dark:bg-[#050816] transition-colors duration-300 font-sans select-none">
+    <div className="flex h-screen w-full flex-col bg-slate-50 dark:bg-[#050816] transition-colors duration-300 font-sans select-none overflow-y-auto overscroll-contain scroll-smooth">
       <SecureIdleTimer />
       <ServiceHeader />
 
-      <main className="flex-1 max-w-6xl mx-auto px-6 md:px-12 py-10 w-full space-y-8 relative">
+      <main className="flex-1 max-w-6xl mx-auto px-6 md:px-12 py-10 pb-24 w-full space-y-8 relative">
         {/* Navigation & Actions Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">

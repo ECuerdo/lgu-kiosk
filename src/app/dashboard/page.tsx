@@ -945,36 +945,47 @@ function DashboardContent() {
           </div>
         </main>
 
-        {/* FOOTER BAR - SEGMENTED LANGUAGE TOGGLES & STATUS LIGHT */}
-        <footer className="h-14 md:h-16 bg-white/90 dark:bg-[#0b1020]/90 backdrop-blur-2xl border-t border-slate-200/80 dark:border-white/10 px-4 sm:px-8 md:px-12 flex items-center justify-between z-20 shrink-0 transition-colors duration-300 ease-out">
-          <div className="flex items-center gap-4 md:gap-8 text-[10px] md:text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest h-full">
-            <div className="flex items-center gap-2.5 text-theme-primary">
-              <span className="relative flex h-2.5 w-2.5">
+        {/* FOOTER BAR - SEGMENTED LANGUAGE TOGGLES & STATUS LIGHT (SENIOR ACCESSIBLE) */}
+        <footer className="h-16 md:h-20 bg-white/95 dark:bg-[#0b1020]/95 backdrop-blur-2xl border-t border-slate-200/80 dark:border-white/10 px-4 sm:px-8 md:px-12 flex items-center justify-between z-20 shrink-0 transition-colors duration-300 ease-out">
+          <div className="flex items-center gap-4 md:gap-8 h-full">
+            {/* LARGE SYSTEM ONLINE BADGE */}
+            <div className="flex items-center gap-3 text-theme-primary bg-emerald-500/10 dark:bg-emerald-500/15 border border-theme-primary/20 px-3.5 py-2 md:px-4 md:py-2.5 rounded-2xl shadow-sm">
+              <span className="relative flex h-3.5 w-3.5">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-theme-primary"></span>
+                <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-theme-primary"></span>
               </span>
-              <span className="hidden sm:inline">{TRANSLATIONS[lang].systemOnline}</span>
+              <span className="text-xs md:text-sm font-black uppercase tracking-wider">
+                {TRANSLATIONS[lang].systemOnline}
+              </span>
             </div>
 
-            {/* Segmented language switcher */}
-            <div className="flex bg-slate-100 dark:bg-white/5 p-1 rounded-2xl border border-slate-200/60 dark:border-white/10">
-              {(["en", "fil", "pang", "ilo"] as const).map((l) => (
-                <button
-                  key={l}
-                  onClick={() => setLang(l)}
-                  className={`font-black uppercase tracking-wider px-2.5 md:px-3 py-1 text-[9px] md:text-[10px] rounded-xl transition-all active:scale-95 ${
-                    lang === l
-                      ? "bg-theme-primary text-white shadow-sm font-black"
-                      : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-                  }`}
-                >
-                  {l === "en" ? "ENG" : l === "fil" ? "FIL" : l === "pang" ? "PANG" : "ILO"}
-                </button>
-              ))}
+            {/* LARGE ACCESSIBLE SEGMENTED LANGUAGE SWITCHER */}
+            <div className="flex items-center bg-slate-100 dark:bg-slate-900/80 p-1.5 rounded-2xl border border-slate-200 dark:border-white/10 shadow-inner gap-1">
+              {[
+                { id: "en", label: "English" },
+                { id: "fil", label: "Filipino" },
+                { id: "pang", label: "Pangasinan" },
+                { id: "ilo", label: "Ilocano" }
+              ].map(({ id, label }) => {
+                const isSelected = lang === id;
+                return (
+                  <button
+                    key={id}
+                    onClick={() => setLang(id as "en" | "fil" | "pang" | "ilo")}
+                    className={`font-black uppercase tracking-wider px-3.5 sm:px-5 py-2 md:py-2.5 text-xs sm:text-sm rounded-xl transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer select-none ${
+                      isSelected
+                        ? "bg-theme-primary text-white shadow-md shadow-theme-primary/30 scale-105 font-black ring-2 ring-theme-primary/40"
+                        : "text-slate-600 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white hover:bg-white/60 dark:hover:bg-white/5"
+                    }`}
+                  >
+                    <span>{label}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          <div className="text-[9px] md:text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest hidden sm:block">
+          <div className="text-[11px] md:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest hidden lg:block">
             Municipality of Mapandan • © 2026
           </div>
         </footer>
