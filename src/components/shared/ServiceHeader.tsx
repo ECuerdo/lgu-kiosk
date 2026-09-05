@@ -5,7 +5,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import { Home, LogOut, User, X, Ticket, ChevronDown, ChevronRight } from "lucide-react";
+import { Home, LogOut, User, X, Ticket, ChevronDown, ChevronRight, Sun, Moon } from "lucide-react";
 
 type Resident = {
   fullName?: string;
@@ -228,6 +228,30 @@ export default function ServiceHeader() {
                       </div>
                     </div>
                     <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600 group-hover:text-theme-primary group-hover:translate-x-0.5 transition-all" />
+                  </button>
+
+                  {/* Option: Theme Mode Toggle */}
+                  <button
+                    type="button"
+                    onClick={() => setTheme(isDarkMode ? "light" : "dark")}
+                    className="w-full flex items-center justify-between p-2.5 rounded-2xl hover:bg-slate-100 dark:hover:bg-slate-800/60 text-left transition-colors group cursor-pointer active:scale-98"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 shadow-sm">
+                        {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                      </div>
+                      <div>
+                        <p className="text-xs font-black text-slate-900 dark:text-white transition-colors">
+                          Theme Mode
+                        </p>
+                        <p className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                          {isDarkMode ? "Currently Dark" : "Currently Light"}
+                        </p>
+                      </div>
+                    </div>
+                    <span className={`relative flex h-6 w-11 items-center rounded-full p-0.5 transition-colors ${isDarkMode ? "bg-theme-primary" : "bg-slate-200"}`}>
+                      <span className={`h-5 w-5 rounded-full bg-white shadow-md transition-transform ${isDarkMode ? "translate-x-5" : "translate-x-0"}`} />
+                    </span>
                   </button>
 
                   {/* Font Size Selector */}

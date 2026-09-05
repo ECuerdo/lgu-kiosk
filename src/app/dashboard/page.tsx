@@ -600,19 +600,6 @@ function DashboardContent() {
 
           {/* RIGHT: COMPACT CONTROLS CLUSTER */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            {/* THEME QUICK TOGGLE (COMPACT & INTUITIVE) */}
-            <Button
-              onClick={() => setTheme(isDarkMode ? "light" : "dark")}
-              className="h-10 w-10 sm:h-11 sm:w-11 p-0 rounded-2xl flex items-center justify-center shadow-sm active:scale-95 transition-all shrink-0 border bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 border-slate-200 dark:border-white/10 cursor-pointer"
-              title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-            >
-              {isDarkMode ? (
-                <Sun className="w-5 h-5 text-amber-400 animate-in spin-in-90 duration-300" />
-              ) : (
-                <Moon className="w-5 h-5 text-slate-600 animate-in spin-in-90 duration-300" />
-              )}
-            </Button>
-
             {/* VOICE GUIDE QUICK TOGGLE WITH DYNAMIC SOUNDWAVE */}
             <Button
               onClick={toggleVoice}

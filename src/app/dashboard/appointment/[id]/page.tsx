@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
+import React, { useState, useEffect, useMemo, useCallback, Suspense } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
   Clock,
   CheckCircle2,
@@ -46,10 +46,12 @@ function formatPHDate(date: string | Date): string {
   }).format(new Date(date));
 }
 
-export default function KioskAppointmentDetailsPage() {
+function KioskAppointmentDetailsContent() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const id = params.id as string;
+  const fromTab = searchParams.get("fromTab");
 
   const [userId, setUserId] = useState<string | null>(null);
   const [request, setRequest] = useState<any>(null);
@@ -205,6 +207,12 @@ export default function KioskAppointmentDetailsPage() {
     }
   }, [request]);
 
+  const isPrintable = useMemo(() => {
+    if (!request) return false;
+    if (request.isCancelled) return false;
+    return !["RELEASED", "REJECTED", "DISPUTE_REJECTED"].includes(request.status);
+  }, [request]);
+
   if (loading || !request || !residentData) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-[#050816] flex flex-col font-sans select-none">
@@ -239,7 +247,13 @@ export default function KioskAppointmentDetailsPage() {
       <main className="flex-1 max-w-4xl mx-auto px-6 py-10 pb-24 w-full space-y-8 relative">
         <div className="flex items-center justify-between">
           <button
-            onClick={() => router.push("/dashboard/appointment")}
+            onClick={() => {
+              if (fromTab === "history" || !isPrintable) {
+                router.push("/dashboard/appointment?tab=history");
+              } else {
+                router.push("/dashboard/appointment");
+              }
+            }}
             className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-theme-primary transition-all active:scale-95 border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 px-4 py-2 rounded-xl shadow-sm"
           >
             <ChevronLeft className="w-4 h-4" />
@@ -247,83 +261,142 @@ export default function KioskAppointmentDetailsPage() {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
-          {/* Left Column - Kiosk Ticket Card */}
-          <div className="md:col-span-1 space-y-6">
-            <Card className="bg-white dark:bg-[#0c1120] border-slate-200/60 dark:border-white/5 p-6 rounded-3xl shadow-xl flex flex-col items-center text-center relative overflow-hidden">
-              <div className="absolute top-0 inset-x-0 h-1.5 bg-theme-primary" />
-              
-              <div className="w-14 h-14 rounded-2xl bg-theme-primary/10 text-theme-primary flex items-center justify-center mb-4 mt-2">
-                <QrCode className="w-8 h-8" />
-              </div>
-
-              <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block mb-1">
-                Queue Ticket Number
-              </span>
-              <h2 className="text-xs md:text-sm font-black font-mono text-slate-900 dark:text-white tracking-tight border-2 border-dashed border-slate-200 dark:border-white/10 px-4 py-2 rounded-2xl bg-slate-50 dark:bg-white/5 w-full uppercase break-all">
-                {request.queueNumber || request.id.substring(0, 8)}
-              </h2>
-
-              <Separator className="my-5 bg-slate-100 dark:bg-white/5" />
-
-              <div className="w-full text-left space-y-4 text-xs font-bold leading-none text-slate-500 dark:text-slate-400">
-                <div>
-                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Service Type</span>
-                  <span className="text-slate-800 dark:text-white text-sm font-black uppercase">{request.type?.name}</span>
+        {isPrintable ? (
+          /* Active / Printable View: 2-column grid with Queue Ticket on left */
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
+            {/* Left Column - Kiosk Ticket Card */}
+            <div className="md:col-span-1 space-y-6">
+              <Card className="bg-white dark:bg-[#0c1120] border-slate-200/60 dark:border-white/5 p-6 rounded-3xl shadow-xl flex flex-col items-center text-center relative overflow-hidden">
+                <div className="absolute top-0 inset-x-0 h-1.5 bg-theme-primary" />
+                
+                <div className="w-14 h-14 rounded-2xl bg-theme-primary/10 text-theme-primary flex items-center justify-center mb-4 mt-2">
+                  <QrCode className="w-8 h-8" />
                 </div>
-                <div>
-                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Date Created</span>
-                  <span className="text-slate-800 dark:text-white text-sm font-black">{formatPHDate(request.createdAt)}</span>
+
+                <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block mb-1">
+                  Queue Ticket Number
+                </span>
+                <h2 className="text-xs md:text-sm font-black font-mono text-slate-900 dark:text-white tracking-tight border-2 border-dashed border-slate-200 dark:border-white/10 px-4 py-2 rounded-2xl bg-slate-50 dark:bg-white/5 w-full uppercase break-all">
+                  {request.queueNumber || request.id.substring(0, 8)}
+                </h2>
+
+                <Separator className="my-5 bg-slate-100 dark:bg-white/5" />
+
+                <div className="w-full text-left space-y-4 text-xs font-bold leading-none text-slate-500 dark:text-slate-400">
+                  <div>
+                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Service Type</span>
+                    <span className="text-slate-800 dark:text-white text-sm font-black uppercase">{request.type?.name}</span>
+                  </div>
+                  <div>
+                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Date Created</span>
+                    <span className="text-slate-800 dark:text-white text-sm font-black">{formatPHDate(request.createdAt)}</span>
+                  </div>
                 </div>
-              </div>
-            </Card>
+              </Card>
 
-            {/* Print Ticket Button */}
-            <Button
-              disabled={printTriggered}
-              onClick={() => {
-                toast.info("Sending ticket to thermal printer...");
-                setPrintTriggered(true);
-              }}
-              className="w-full bg-theme-primary hover:bg-theme-primary/95 text-white rounded-2xl shadow-lg flex items-center justify-center gap-2 py-5 text-xs font-black uppercase tracking-wider select-none disabled:opacity-75"
-            >
-              <Printer className={`w-4 h-4 ${printTriggered ? "animate-bounce" : ""}`} />
-              {printTriggered ? "Printing Ticket..." : "Print Ticket"}
-            </Button>
-
-            {/* Cancel Button */}
-            {!request.isCancelled && !["RELEASED", "REJECTED", "PAID", "DELIVERED"].includes(request.status) && (
+              {/* Print Ticket Button */}
               <Button
-                variant="outline"
-                onClick={() => setCancelConfirmOpen(true)}
-                className="w-full border-red-200 hover:bg-red-50 text-red-600 font-black uppercase tracking-wider text-xs py-5 rounded-2xl border bg-white dark:border-red-950/20 dark:bg-red-950/10 dark:hover:bg-red-950/20"
+                disabled={printTriggered}
+                onClick={() => {
+                  toast.info("Sending ticket to thermal printer...");
+                  setPrintTriggered(true);
+                }}
+                className="w-full bg-theme-primary hover:bg-theme-primary/95 text-white rounded-2xl shadow-lg flex items-center justify-center gap-2 py-5 text-xs font-black uppercase tracking-wider select-none disabled:opacity-75 active:scale-95 transition-all"
               >
-                <X className="w-4 h-4 mr-2" />
-                Cancel Application
+                <Printer className={`w-4 h-4 ${printTriggered ? "animate-bounce" : ""}`} />
+                {printTriggered ? "Printing Ticket..." : "Print Ticket"}
               </Button>
-            )}
-          </div>
 
-          {/* Right Column - Status and Specific View */}
-          <div className="md:col-span-2 space-y-6">
-            {/* Status Panel */}
-            <Card className="bg-white dark:bg-[#0c1120] border-slate-200/60 dark:border-white/5 p-6 rounded-3xl shadow-xl space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Ticket Status</span>
-                <Badge className={`border px-3 py-1 text-[8px] font-black uppercase tracking-wider rounded-lg ${statusConfig?.color}`}>
-                  <div className="flex items-center gap-1">
-                    {statusConfig && <statusConfig.icon className="w-3.5 h-3.5" />}
+              {/* Cancel Button */}
+              {!request.isCancelled && !["RELEASED", "REJECTED", "PAID", "DELIVERED"].includes(request.status) && (
+                <Button
+                  variant="outline"
+                  onClick={() => setCancelConfirmOpen(true)}
+                  className="w-full border-red-200 hover:bg-red-50 text-red-600 font-black uppercase tracking-wider text-xs py-5 rounded-2xl border bg-white dark:border-red-950/20 dark:bg-red-950/10 dark:hover:bg-red-950/20"
+                >
+                  <X className="w-4 h-4 mr-2" />
+                  Cancel Application
+                </Button>
+              )}
+            </div>
+
+            {/* Right Column - Status and Specific View */}
+            <div className="md:col-span-2 space-y-6">
+              {/* Status Panel */}
+              <Card className="bg-white dark:bg-[#0c1120] border-slate-200/60 dark:border-white/5 p-6 rounded-3xl shadow-xl space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Ticket Status</span>
+                  <Badge className={`border px-3 py-1 text-[8px] font-black uppercase tracking-wider rounded-lg ${statusConfig?.color}`}>
+                    <div className="flex items-center gap-1">
+                      {statusConfig && <statusConfig.icon className="w-3.5 h-3.5" />}
+                      <span>{statusConfig?.label}</span>
+                    </div>
+                  </Badge>
+                </div>
+
+                {request.rejectReason && (
+                  <div className="bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/40 p-4 rounded-2xl flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                    <div className="space-y-1">
+                      <span className="text-[9px] font-black uppercase tracking-wider text-red-600 dark:text-red-400 block">Feedback / Reason</span>
+                      <p className="text-xs font-semibold text-red-700 dark:text-red-300">{request.rejectReason}</p>
+                    </div>
+                  </div>
+                )}
+              </Card>
+
+              {/* Assessment Details Panel */}
+              <Card className="bg-white dark:bg-[#0c1120] border-slate-200/60 dark:border-white/5 p-8 rounded-3xl shadow-xl">
+                {isCedula && (
+                  <CedulaView request={request} additionalData={additionalData} />
+                )}
+                {isBusinessPermit && (
+                  <BusinessPermitView request={request} additionalData={additionalData} />
+                )}
+                {!isCedula && !isBusinessPermit && (
+                  <div className="text-center py-6 space-y-3">
+                    <FileText className="w-12 h-12 text-slate-300 mx-auto" />
+                    <p className="text-xs font-black uppercase tracking-wider text-slate-400">Assessment Info Under Evaluation</p>
+                    <p className="text-xs font-bold text-slate-500 max-w-xs mx-auto">
+                      This transaction doesn't have an active assessment snapshot yet. Please wait for municipal review.
+                    </p>
+                  </div>
+                )}
+              </Card>
+            </div>
+          </div>
+        ) : (
+          /* Closed / Historical View (Released, Cancelled, Rejected): Clean, Focused layout without Ticket Card */
+          <div className="space-y-6 max-w-3xl mx-auto">
+            {/* Clean Status & Metadata Header Card */}
+            <Card className="bg-white dark:bg-[#0c1120] border-slate-200/60 dark:border-white/5 p-8 rounded-3xl shadow-xl space-y-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-white/5 pb-6">
+                <div>
+                  <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 block mb-1">
+                    Service Record
+                  </span>
+                  <h2 className="text-2xl font-black uppercase text-slate-900 dark:text-white tracking-tight">
+                    {request.type?.name}
+                  </h2>
+                  <p className="text-xs font-mono text-slate-400 mt-1">
+                    Reference ID: #{request.id.substring(0, 8).toUpperCase()} • Created on {formatPHDate(request.createdAt)}
+                  </p>
+                </div>
+
+                <Badge className={`border px-4 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl ${statusConfig?.color}`}>
+                  <div className="flex items-center gap-1.5">
+                    {statusConfig && <statusConfig.icon className="w-4 h-4" />}
                     <span>{statusConfig?.label}</span>
                   </div>
                 </Badge>
               </div>
 
               {request.rejectReason && (
-                <div className="bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/40 p-4 rounded-2xl flex items-start gap-3">
+                <div className="bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/40 p-5 rounded-2xl flex items-start gap-3.5">
                   <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
                   <div className="space-y-1">
-                    <span className="text-[9px] font-black uppercase tracking-wider text-red-600 dark:text-red-400 block">Feedback / Reason</span>
-                    <p className="text-xs font-semibold text-red-700 dark:text-red-300">{request.rejectReason}</p>
+                    <span className="text-[10px] font-black uppercase tracking-wider text-red-600 dark:text-red-400 block">Rejection Feedback</span>
+                    <p className="text-xs font-bold text-red-700 dark:text-red-300 leading-relaxed">{request.rejectReason}</p>
                   </div>
                 </div>
               )}
@@ -338,21 +411,21 @@ export default function KioskAppointmentDetailsPage() {
                 <BusinessPermitView request={request} additionalData={additionalData} />
               )}
               {!isCedula && !isBusinessPermit && (
-                <div className="text-center py-6 space-y-3">
+                <div className="text-center py-8 space-y-3">
                   <FileText className="w-12 h-12 text-slate-300 mx-auto" />
-                  <p className="text-xs font-black uppercase tracking-wider text-slate-400">Assessment Info Under Evaluation</p>
-                  <p className="text-xs font-bold text-slate-500 max-w-xs mx-auto">
-                    This transaction doesn't have an active assessment snapshot yet. Please wait for municipal review.
+                  <p className="text-xs font-black uppercase tracking-wider text-slate-400">Application Record Summary</p>
+                  <p className="text-xs font-bold text-slate-500 max-w-sm mx-auto">
+                    This completed or closed record is stored in your municipal transaction history.
                   </p>
                 </div>
               )}
             </Card>
           </div>
-        </div>
+        )}
       </main>
 
       {/* Printer Portal portal integration */}
-      {printTriggered && (
+      {printTriggered && isPrintable && (
         <>
           {/* Visual Kiosk Print Mask: Masks any 100ms browser canvas repaints gracefully */}
           <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 backdrop-blur-sm transition-all duration-300">
@@ -420,5 +493,17 @@ export default function KioskAppointmentDetailsPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+export default function KioskAppointmentDetailsPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex h-screen w-full items-center justify-center bg-slate-50 dark:bg-[#050816]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-theme-primary"></div>
+      </div>
+    }>
+      <KioskAppointmentDetailsContent />
+    </Suspense>
   );
 }
